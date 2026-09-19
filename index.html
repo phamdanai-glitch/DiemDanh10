@@ -32,9 +32,8 @@
   <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       <div class="flex items-center gap-4">
-        
-        <!-- LOGO TRƯỜNG THPT VỊ THANH -->
-        <img src="logo.jpg" alt="Logo THPT Vị Thanh" class="h-14 w-14 object-contain shrink-0">
+        <!-- Logo Trường THPT Vị Thanh -->
+        <img src="logo.jpg" alt="Logo THPT Vị Thanh" class="h-14 w-14 object-contain shrink-0" onerror="this.onerror=null; this.src='https://via.placeholder.com/56?text=LOGO';">
 
         <div>
           <h1 class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -47,18 +46,18 @@
 
       <!-- Khu vực Đăng Nhập / Quản Lý Giáo Viên -->
       <div class="flex items-center gap-2">
+        <div id="sync-status" class="hidden md:flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Đã đồng bộ Cloud</span>
+        </div>
+
         <!-- Chức năng Giáo Viên (Chỉ hiện khi ĐÃ ĐĂNG NHẬP) -->
         <div id="admin-actions" class="hidden flex items-center gap-2">
-          <label class="cursor-pointer bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
-            <i data-lucide="upload" class="w-4 h-4 text-slate-500"></i>
-            <span>Nhập Excel</span>
+          <label class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+            <span>Nhập Excel & Cập Nhật Toàn Trường</span>
             <input type="file" id="excel-input" accept=".xlsx, .xls, .csv" class="hidden">
           </label>
-          
-          <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
-            <i data-lucide="download" class="w-4 h-4"></i>
-            <span>Xuất Excel</span>
-          </button>
 
           <button onclick="logoutTeacher()" class="bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all">
             <i data-lucide="log-out" class="w-4 h-4"></i>
@@ -82,10 +81,13 @@
       <div class="flex items-start gap-3">
         <i data-lucide="info" class="w-5 h-5 text-indigo-600 mt-0.5 shrink-0"></i>
         <div>
-          <h3 class="text-sm font-semibold text-indigo-900">Trang Tra Cứu Điểm Danh Phụ Huynh</h3>
-          <p class="text-sm text-indigo-700 mt-0.5">Phụ huynh nhập Họ tên, chọn Khối/Lớp bên dưới để tra cứu thời gian và trạng thái điểm danh của học sinh.</p>
+          <h3 class="text-sm font-semibold text-indigo-900">Trang Tra Cứu Điểm Danh Trực Tuyến Phụ Huynh</h3>
+          <p class="text-sm text-indigo-700 mt-0.5">Dữ liệu tự động cập nhật hàng ngày khi Giáo viên tải danh sách điểm danh mới lên.</p>
         </div>
       </div>
+      <button onclick="fetchCloudData(true)" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 shadow-sm">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Tải Dữ Liệu Mới
+      </button>
     </div>
 
     <!-- Thống kê -->
@@ -199,7 +201,7 @@
 
   <!-- POPUP BẢNG ĐĂNG NHẬP GIÁO VIÊN -->
   <div id="login-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden transform transition-all">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
       <div class="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
@@ -215,14 +217,14 @@
       <form onsubmit="handleLogin(event)" class="p-6 space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tài Khoản</label>
-          <input type="text" id="username" placeholder="Nhập tài khoản (vd: admin)" required
-                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+          <input type="text" id="username" placeholder="admin" required
+                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
         </div>
 
         <div>
           <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Mật Khẩu</label>
-          <input type="password" id="password" placeholder="Nhập mật khẩu" required
-                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+          <input type="password" id="password" placeholder="123456" required
+                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
         </div>
 
         <div id="login-error" class="hidden text-xs text-rose-600 font-medium bg-rose-50 p-2.5 rounded-lg border border-rose-100">
@@ -233,16 +235,15 @@
           <button type="button" onclick="toggleLoginModal(false)" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50">Hủy</button>
           <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm">Đăng Nhập</button>
         </div>
-
-        <div class="mt-4 pt-4 border-t border-slate-100 text-center text-xs text-slate-400">
-          Mặc định: Tài khoản <b class="text-slate-600">admin</b> | Mật khẩu <b class="text-slate-600">123456</b>
-        </div>
       </form>
     </div>
   </div>
 
   <script>
-    const STORAGE_KEY = "THPT_VI_THANH_OFFLINE_DATA";
+    // KHO LƯU TRỮ CLOUD CÔNG KHAI DÙNG CHUNG CHO THPT VỊ THANH
+    const BIN_ID = "65f0a00b1f5677401f31f9ab"; // Cloud ID tự động
+    const JSONBIN_URL = `https://api.jsonbin.io/v3/b/65f1e8a0dc12154d8076d1a9`; 
+    const STORAGE_KEY = "THPT_VI_THANH_LOCAL_CACHE";
     const AUTH_KEY = "THPT_VI_THANH_IS_TEACHER";
 
     let students = [];
@@ -252,7 +253,9 @@
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       checkAuthStatus();
-      loadOfflineData();
+      
+      // Ưu tiên nạp Cloud trước, nếu mất mạng thì nạp Cache
+      fetchCloudData();
 
       document.getElementById("search-input").addEventListener("input", () => { currentPage = 1; renderTable(); });
       document.getElementById("khoi-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
@@ -261,7 +264,6 @@
       document.getElementById("excel-input").addEventListener("change", handleExcelUpload);
     });
 
-    // Kiểm tra trạng thái đã đăng nhập chưa
     function checkAuthStatus() {
       const isTeacher = localStorage.getItem(AUTH_KEY) === "true";
       const adminActions = document.getElementById("admin-actions");
@@ -281,6 +283,47 @@
       }
     }
 
+    // LẤY DỮ LIỆU TỪ DÁM MÂY TỰ ĐỘNG CHO PHỤ HUYNH
+    async function fetchCloudData(isManual = false) {
+      try {
+        const localData = localStorage.getItem(STORAGE_KEY);
+        if (localData) {
+          students = JSON.parse(localData);
+          populateLopDropdown();
+          renderTable();
+        }
+
+        // Tải từ Cloud công khai
+        const res = await fetch("https://api.myjson.online/v1/records/48366914-6fa6-4d74-9efc-7a988dcd6b99");
+        if (res.ok) {
+          const result = await res.json();
+          if (result && result.data && Array.isArray(result.data)) {
+            students = result.data;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+            populateLopDropdown();
+            renderTable();
+            if (isManual) alert("Đã tải dữ liệu mới nhất từ Giáo viên thành công!");
+          }
+        }
+      } catch (e) {
+        console.log("Offline mode fallback");
+      }
+    }
+
+    // ĐẨY DỮ LIỆU LÊN ĐÁM MÂY KHI GIÁO VIÊN TẢI EXCEL
+    async function uploadToCloud(newData) {
+      try {
+        const res = await fetch("https://api.myjson.online/v1/records/48366914-6fa6-4d74-9efc-7a988dcd6b99", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: newData })
+        });
+        return res.ok;
+      } catch (e) {
+        return false;
+      }
+    }
+
     function toggleLoginModal(show) {
       const modal = document.getElementById("login-modal");
       document.getElementById("login-error").classList.add("hidden");
@@ -288,79 +331,41 @@
       else modal.classList.add("hidden");
     }
 
-    // Xử lý Đăng Nhập
     function handleLogin(e) {
       e.preventDefault();
       const user = document.getElementById("username").value.trim();
       const pass = document.getElementById("password").value.trim();
 
-      // Tài khoản & Mật khẩu mặc định
       if ((user === "admin" || user === "giaovien") && pass === "123456") {
         localStorage.setItem(AUTH_KEY, "true");
         toggleLoginModal(false);
         checkAuthStatus();
-        alert("Đăng nhập thành công! Bạn hiện đang ở chế độ Quản lý Giáo viên.");
+        alert("Đăng nhập thành công!");
       } else {
         document.getElementById("login-error").classList.remove("hidden");
       }
     }
 
-    // Đăng xuất Giáo viên
     function logoutTeacher() {
       localStorage.removeItem(AUTH_KEY);
       checkAuthStatus();
-      alert("Đã đăng xuất! Chuyển về Chế độ Tra cứu Phụ huynh.");
+      alert("Đã đăng xuất Chế độ Giáo viên!");
     }
 
-    // Nạp dữ liệu
-    function loadOfflineData() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try { students = JSON.parse(saved); } catch (e) { students = generateSampleData(); }
-      } else {
-        students = generateSampleData();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-      }
-      populateLopDropdown();
-      renderTable();
-    }
-
-    function generateSampleData() {
-      const list = [];
-      const names = ["Nguyễn Văn", "Trần Thị", "Lê Hoàng", "Phạm Quốc", "Võ Thị", "Đặng Minh", "Bùi Thanh"];
-      const sub = ["An", "Bình", "Cường", "Dương", "Em", "Phúc", "Giang", "Hương", "Kiệt", "Linh"];
-      let count = 1;
-      [10, 11, 12].forEach(k => {
-        for (let l = 1; l <= 4; l++) {
-          for (let s = 1; s <= 10; s++) {
-            list.push({
-              stt: count++,
-              name: `${names[count % names.length]} ${sub[count % sub.length]}`,
-              khoi: String(k),
-              lop: `${k}A${l}`,
-              time: s % 5 === 0 ? "--:--:--" : `07:0${s % 5}:00`,
-              status: s % 5 === 0 ? "VẮNG MẶT" : (s % 3 === 0 ? "TRỄ 10 PHÚT" : "ĐÚNG GIỜ")
-            });
-          }
-        }
-      });
-      return list;
-    }
-
-    // Đọc Excel
-    function handleExcelUpload(e) {
+    // XỬ LÝ EXCEL VÀ ĐỒNG BỘ TOÀN MẠNG
+    async function handleExcelUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = function(evt) {
+      reader.onload = async function(evt) {
         try {
           const data = new Uint8Array(evt.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-          if (!json || json.length < 2) return alert("File Excel không đúng định dạng!");
+          if (!json || json.length < 2) return alert("File Excel trống hoặc lỗi!");
 
           let headerIdx = 0;
           for (let i = 0; i < Math.min(json.length, 10); i++) {
@@ -412,9 +417,16 @@
             populateLopDropdown();
             currentPage = 1;
             renderTable();
-            alert(`Cập nhật thành công ${newStudents.length} học sinh!`);
+
+            // Đẩy tự động lên Đám Mây cho Phụ Huynh
+            const ok = await uploadToCloud(students);
+            if (ok) {
+              alert(`ĐÃ CẬP NHẬT THÀNH CÔNG ${newStudents.length} HỌC SINH LÊN ĐÁM MÂY!\n\nTất cả Phụ huynh khi mở link trên điện thoại từ bây giờ sẽ nhìn thấy dữ liệu mới này.`);
+            } else {
+              alert(`Lưu trên máy thành công (${newStudents.length} HS), tuy nhiên không thể kết nối Cloud. Hãy kiểm tra lại kết nối Internet.`);
+            }
           } else {
-            alert("Không tìm thấy dữ liệu học sinh trong file Excel!");
+            alert("Không tìm thấy học sinh trong Excel!");
           }
         } catch (err) { alert("Lỗi khi đọc file Excel: " + err.message); }
       };
@@ -531,13 +543,6 @@
       document.getElementById("status-filter").value = "ALL";
       currentPage = 1;
       renderTable();
-    }
-
-    function exportToExcel() {
-      const ws = XLSX.utils.json_to_sheet(students);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "DiemDanh");
-      XLSX.writeFile(wb, "DiemDanh_THPT_ViThanh_ToanTruong.xlsx");
     }
   </script>
 </body>
