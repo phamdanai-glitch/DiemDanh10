@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý & Tra Cứu Điểm Danh 10A1</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS (XLSX) Full JS Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <header class="sticky top-0 z-30 glass-header border-b border-slate-200/80 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+            <!-- Logo & App Title -->
+            <div class="flex items-center gap-3">
+                <div id="appLogoBg" class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-200 transition-colors">
+                    <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Điểm Danh Lớp 10A1</h1>
+                        <span id="roleBadge" class="bg-indigo-100 text-indigo-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Giáo Viên</span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium">Hôm nay: <span id="currentDateDisplay">--/--/----</span></p>
+                </div>
+            </div>
+
+            <!-- Teacher Toolbar (Hidden in Parent Mode) -->
+            <div id="teacherActions" class="hidden flex items-center gap-1.5 sm:gap-2">
+                <!-- Share Link Button -->
+                <button onclick="copyParentLink()" class="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-semibold px-3 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition-all" title="Lấy link gửi Zalo cho Phụ huynh">
+                    <i data-lucide="share-2" class="w-4 h-4 text-purple-600"></i>
+                    <span class="hidden md:inline">Link Phụ Huynh</span>
+                </button>
+
+                <!-- Import Excel -->
+                <label class="cursor-pointer bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold px-3 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition-all">
+                    <i data-lucide="upload" class="w-4 h-4 text-indigo-600"></i>
+                    <span class="hidden sm:inline">Nhập Excel</span>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)">
+                </label>
+
+                <!-- Export Excel -->
+                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-sm shadow-emerald-200 transition-all">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Xuất Excel</span>
+                </button>
+
+                <!-- Add Student -->
+                <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-sm shadow-indigo-200 transition-all">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Thêm Học Sinh</span>
+                </button>
+
+                <!-- Switch View Preview -->
+                <button onclick="togglePreviewMode()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium p-2 rounded-xl text-xs transition-all" title="Xem giao diện Phụ huynh">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Parent Mode Banner -->
+        <div id="parentWelcomeBanner" class="hidden bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 rounded-2xl p-5 sm:p-6 text-white shadow-lg shadow-indigo-100">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <span class="inline-block bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase">Cổng Tra Cứu Phụ Huynh</span>
+                    <h2 class="text-xl sm:text-2xl font-bold">Tra Cứu Điểm Danh Học Sinh Lớp 10A1</h2>
+                    <p class="text-xs sm:text-sm text-indigo-100">Phụ huynh nhập Họ và Tên của con ở ô tìm kiếm bên dưới để kiểm tra giờ đến lớp.</p>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 text-xs sm:text-sm shrink-0">
+                    <i data-lucide="calendar-check" class="w-4 h-4 text-emerald-300"></i>
+                    <span>Cập nhật ngày: <strong id="parentDateDisplay">Hôm nay</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Overview Grid -->
+        <div id="statsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Sĩ Số Lớp</p>
+                    <h3 id="statTotal" class="text-xl sm:text-2xl font-bold text-slate-900 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                    <i data-lucide="users" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Đúng Giờ</p>
+                    <h3 id="statOnTime" class="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                    <i data-lucide="check-circle-2" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Trễ Giờ</p>
+                    <h3 id="statLate" class="text-xl sm:text-2xl font-bold text-amber-600 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                    <i data-lucide="clock" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Vắng Mặt</p>
+                    <h3 id="statAbsent" class="text-xl sm:text-2xl font-bold text-rose-600 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center shrink-0">
+                    <i data-lucide="user-x" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Nhập tên học sinh cần tìm..." class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="relative min-w-[160px] flex-1 sm:flex-initial">
+                    <select id="statusFilter" onchange="applyFilters()" class="w-full appearance-none pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer">
+                        <option value="ALL">Tất cả trạng thái</option>
+                        <option value="ĐÚNG GIỜ">Đúng giờ</option>
+                        <option value="TRỄ">Trễ giờ</option>
+                        <option value="VẮNG">Vắng mặt</option>
+                    </select>
+                    <i data-lucide="chevron-down" class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                </div>
+
+                <button onclick="resetFilters()" class="px-3 py-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 shrink-0">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Đặt lại</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <th class="py-3.5 px-4 w-16 text-center">STT</th>
+                            <th class="py-3.5 px-6">Họ và Tên Học Sinh</th>
+                            <th class="py-3.5 px-6">Thời Gian Điểm Danh</th>
+                            <th class="py-3.5 px-6">Trạng Thái / Ghi Chú</th>
+                            <th id="thActions" class="hidden py-3.5 px-6 text-right">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody" class="divide-y divide-slate-100 text-sm">
+                        <!-- Student Rows Rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty Search Results -->
+            <div id="emptyState" class="hidden py-12 text-center">
+                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="search-x" class="w-8 h-8 text-slate-400"></i>
+                </div>
+                <h3 class="text-slate-800 font-semibold text-base">Không tìm thấy thông tin</h3>
+                <p class="text-slate-400 text-xs mt-1">Phụ huynh/Thầy cô vui lòng kiểm tra lại từ khóa tìm kiếm.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="studentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 id="modalTitle" class="font-bold text-slate-800 text-base">Thêm Học Sinh mới</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 rounded-lg p-1 hover:bg-slate-100 transition-all">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="studentForm" onsubmit="saveStudent(event)" class="p-6 space-y-4">
+                <input type="hidden" id="studentId">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Họ và Tên <span class="text-rose-500">*</span></label>
+                    <input type="text" id="inputName" required placeholder="Ví dụ: NGUYỄN VĂN A" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Thời Gian</label>
+                        <input type="time" step="1" id="inputTime" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Lấy Hiện Tại</label>
+                        <button type="button" onclick="setCurrentTime()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i> Giờ hiện tại
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Trạng Thái / Ghi Chú <span class="text-rose-500">*</span></label>
+                    <input type="text" id="inputNote" required placeholder="ĐÚNG GIỜ / TRỄ 15 / VẮNG..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="flex gap-1.5 mt-2">
+                        <button type="button" onclick="setQuickNote('ĐÚNG GIỜ')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-medium border border-emerald-200">ĐÚNG GIỜ</button>
+                        <button type="button" onclick="setQuickNote('TRỄ 15')" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-medium border border-amber-200">TRỄ 15</button>
+                        <button type="button" onclick="setQuickNote('VẮNG MẶT')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-medium border border-rose-200">VẮNG MẶT</button>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl text-sm font-semibold transition-all">Hủy</button>
+                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-indigo-200 transition-all">Lưu Học Sinh</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-10 opacity-0">
+        <div class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-medium">
+            <i id="toastIcon" data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
+            <span id="toastMessage">Thông báo</span>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo-project" };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'diemdanh-10a1-app';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Demo Initial Student Data
+        const DEFAULT_STUDENTS = [
+            { id: 1, name: "NGUYỄN VĂN A", time: "07:15:00", note: "TRỄ 15" },
+            { id: 2, name: "NGUYỄN VĂN B", time: "07:00:00", note: "ĐÚNG GIỜ" },
+            { id: 3, name: "TRẦN THỊ C", time: "06:55:12", note: "ĐÚNG GIỜ" },
+            { id: 4, name: "LÊ HOÀNG D", time: "07:20:00", note: "TRỄ 20" },
+            { id: 5, name: "PHẠM THỊ E", time: "--:--:--", note: "VẮNG MẶT" }
+        ];
+
+        let studentList = [];
+        let filteredList = [];
+        let isAdminMode = false;
+
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_attendance', 'class_10a1');
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            checkUserPermissionByUrl();
+            updateDateDisplay();
+            loadLocalBackup();
+            await initAuthenticationAndData();
+            lucide.createIcons();
+        });
+
+        // Load data from LocalStorage immediately for instant UI display
+        function loadLocalBackup() {
+            try {
+                const localData = localStorage.getItem('diemdanh_10a1_data');
+                if (localData) {
+                    studentList = JSON.parse(localData);
+                } else {
+                    studentList = [...DEFAULT_STUDENTS];
+                }
+                filteredList = [...studentList];
+                renderTable();
+                updateStatistics();
+            } catch (e) {
+                studentList = [...DEFAULT_STUDENTS];
+                filteredList = [...studentList];
+                renderTable();
+                updateStatistics();
+            }
+        }
+
+        function checkUserPermissionByUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+            const key = urlParams.get('key');
+
+            if (mode === 'admin' || key === '10A1') {
+                isAdminMode = true;
+            } else {
+                isAdminMode = false;
+            }
+
+            applyRoleUI();
+        }
+
+        function applyRoleUI() {
+            const teacherActions = document.getElementById('teacherActions');
+            const parentWelcomeBanner = document.getElementById('parentWelcomeBanner');
+            const thActions = document.getElementById('thActions');
+            const roleBadge = document.getElementById('roleBadge');
+            const appLogoBg = document.getElementById('appLogoBg');
+
+            if (isAdminMode) {
+                teacherActions.classList.remove('hidden');
+                parentWelcomeBanner.classList.add('hidden');
+                thActions.classList.remove('hidden');
+                roleBadge.innerText = "Giáo Viên (Admin)";
+                roleBadge.className = "bg-indigo-100 text-indigo-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider";
+                appLogoBg.className = "bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-200";
+            } else {
+                teacherActions.classList.add('hidden');
+                parentWelcomeBanner.classList.remove('hidden');
+                thActions.classList.add('hidden');
+                roleBadge.innerText = "Phụ Huynh";
+                roleBadge.className = "bg-rose-100 text-rose-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider";
+                appLogoBg.className = "bg-rose-600 text-white p-2.5 rounded-xl shadow-md shadow-rose-200";
+            }
+            renderTable();
+        }
+
+        window.togglePreviewMode = function() {
+            isAdminMode = !isAdminMode;
+            applyRoleUI();
+            showToast(isAdminMode ? "Đã chuyển sang chế độ Giáo Viên" : "Đã chuyển sang xem giao diện Phụ Huynh");
+        }
+
+        function updateDateDisplay() {
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('vi-VN', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+            document.getElementById('currentDateDisplay').innerText = dateStr;
+            document.getElementById('parentDateDisplay').innerText = dateStr;
+        }
+
+        async function initAuthenticationAndData() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const cloudData = docSnap.data();
+                        if (cloudData.students && Array.isArray(cloudData.students)) {
+                            studentList = cloudData.students;
+                            localStorage.setItem('diemdanh_10a1_data', JSON.stringify(studentList));
+                            filteredList = [...studentList];
+                            renderTable();
+                            updateStatistics();
+                        }
+                    }
+                }, (error) => {
+                    console.warn("Môi trường dùng bộ nhớ cục bộ:", error);
+                });
+            } catch (err) {
+                console.warn("Không sử dụng được kết nối cloud, sử dụng dữ liệu offline.");
+            }
+        }
+
+        async function saveToCloudStorage(newList) {
+            localStorage.setItem('diemdanh_10a1_data', JSON.stringify(newList));
+            try {
+                await setDoc(docRef, {
+                    students: newList,
+                    updatedAt: new Date().toISOString()
+                });
+            } catch (e) {
+                console.warn("Đã lưu dữ liệu vào bộ nhớ máy tính.");
+            }
+        }
+
+        // --- ROBUST EXCEL IMPORT ENGINE ---
+        window.handleFileUpload = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true, raw: false });
+                    
+                    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                        alert("File Excel không có dữ liệu!");
+                        return;
+                    }
+
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    // Convert sheet to array of rows (2D Array)
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+
+                    if (!rows || rows.length === 0) {
+                        alert("File Excel rỗng!");
+                        return;
+                    }
+
+                    // 1. Scan rows 0 to 10 to auto-detect header row
+                    let headerRowIndex = -1;
+                    let nameColIdx = -1;
+                    let timeColIdx = -1;
+                    let noteColIdx = -1;
+
+                    for (let r = 0; r < Math.min(rows.length, 10); r++) {
+                        const rowStr = rows[r].map(cell => String(cell).toUpperCase().trim());
+                        
+                        // Check for Name Column
+                        const nameIdx = rowStr.findIndex(cell => 
+                            cell.includes("HỌ VÀ TÊN") || cell.includes("HỌ TÊN") || cell.includes("HO TEN") || 
+                            cell.includes("TÊN HỌC SINH") || cell.includes("TEN HOC SINH") || cell === "TÊN" || cell === "NAME" || cell === "STUDENT"
+                        );
+
+                        if (nameIdx !== -1) {
+                            headerRowIndex = r;
+                            nameColIdx = nameIdx;
+                            
+                            // Find Time Column
+                            timeColIdx = rowStr.findIndex(cell => 
+                                cell.includes("THỜI GIAN") || cell.includes("ĐIỂM DANH") || cell.includes("DIEM DANH") || 
+                                cell.includes("GIỜ") || cell.includes("TIME")
+                            );
+
+                            // Find Note/Status Column
+                            noteColIdx = rowStr.findIndex(cell => 
+                                cell.includes("TRẠNG THÁI") || cell.includes("TRANG THAI") || 
+                                cell.includes("GHI CHÚ") || cell.includes("GHI CHU") || cell.includes("NOTE") || cell.includes("STATUS")
+                            );
+                            break;
+                        }
+                    }
+
+                    // Fallback: If no explicit header row found, assume Column B is Name, Column C is Time, Column D is Note
+                    if (headerRowIndex === -1) {
+                        headerRowIndex = 0; // start from row 1
+                        nameColIdx = 1; // Col B
+                        timeColIdx = 2; // Col C
+                        noteColIdx = 3; // Col D
+                    }
+
+                    const importedList = [];
+                    let studentIdCount = 1;
+
+                    // Parse data starting after header row
+                    for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length === 0) continue;
+
+                        let nameVal = nameColIdx !== -1 && row[nameColIdx] !== undefined ? String(row[nameColIdx]).trim() : '';
+                        
+                        // Ignore header repeat or empty names
+                        if (!nameVal || nameVal.toUpperCase().includes("HỌ TÊN") || nameVal.toUpperCase().includes("STT")) continue;
+
+                        let timeVal = timeColIdx !== -1 && row[timeColIdx] !== undefined ? formatExcelTime(row[timeColIdx]) : '--:--:--';
+                        let noteVal = noteColIdx !== -1 && row[noteColIdx] !== undefined ? String(row[noteColIdx]).trim() : 'ĐÚNG GIỜ';
+
+                        if (!noteVal) noteVal = 'ĐÚNG GIỜ';
+
+                        importedList.push({
+                            id: studentIdCount++,
+                            name: nameVal,
+                            time: timeVal,
+                            note: noteVal
+                        });
+                    }
+
+                    if (importedList.length === 0) {
+                        alert("Không tìm thấy dữ liệu học sinh trong file! Vui lòng kiểm tra lại cột Họ và Tên.");
+                        return;
+                    }
+
+                    // Save and sync state immediately
+                    studentList = importedList;
+                    filteredList = [...studentList];
+                    saveToCloudStorage(studentList);
+                    renderTable();
+                    updateStatistics();
+
+                    showToast(`Đã nhập thành công ${importedList.length} học sinh từ Excel!`);
+
+                } catch (err) {
+                    console.error("Lỗi đọc file Excel:", err);
+                    alert("Có lỗi xảy ra khi đọc file Excel. Vui lòng đảm bảo file không bị đặt mật khẩu và đúng định dạng (.xlsx, .xls, .csv).");
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+            e.target.value = ''; // Reset file input
+        }
+
+        // Helper to format Excel time values
+        function formatExcelTime(val) {
+            if (val === null || val === undefined || val === '') return '--:--:--';
+            
+            const strVal = String(val).trim();
+            if (strVal.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) return strVal;
+
+            // Handle decimal serial times from Excel (e.g., 0.302083)
+            const num = parseFloat(strVal);
+            if (!isNaN(num) && num < 1 && num > 0) {
+                const totalSeconds = Math.round(num * 86400);
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            return strVal;
+        }
+
+        window.renderTable = function() {
+            const tbody = document.getElementById('studentTableBody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            if (filteredList.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                
+                filteredList.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-50/80 transition-colors';
+
+                    let badgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+                    const upperNote = (item.note || '').toUpperCase();
+                    
+                    if (upperNote.includes('ĐÚNG')) {
+                        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200/80';
+                    } else if (upperNote.includes('TRỄ') || upperNote.includes('TRE')) {
+                        badgeClass = 'bg-amber-50 text-amber-700 border-amber-200/80';
+                    } else if (upperNote.includes('VẮNG') || upperNote.includes('VANG')) {
+                        badgeClass = 'bg-rose-50 text-rose-700 border-rose-200/80';
+                    }
+
+                    const actionsHtml = isAdminMode ? `
+                        <td class="py-3.5 px-6 text-right space-x-1">
+                            <button onclick="openEditModal(${item.id})" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Sửa">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteStudent(${item.id})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Xóa">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    ` : '';
+
+                    row.innerHTML = `
+                        <td class="py-3.5 px-4 text-center font-medium text-slate-400">${index + 1}</td>
+                        <td class="py-3.5 px-6 font-semibold text-slate-800">${escapeHtml(item.name)}</td>
+                        <td class="py-3.5 px-6 font-mono text-slate-600 text-xs sm:text-sm">${item.time || '--:--:--'}</td>
+                        <td class="py-3.5 px-6">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${badgeClass}">
+                                ${escapeHtml(item.note)}
+                            </span>
+                        </td>
+                        ${actionsHtml}
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            lucide.createIcons();
+        }
+
+        window.updateStatistics = function() {
+            const total = studentList.length;
+            let onTime = 0, late = 0, absent = 0;
+
+            studentList.forEach(item => {
+                const note = (item.note || '').toUpperCase();
+                if (note.includes('ĐÚNG')) onTime++;
+                else if (note.includes('TRỄ') || note.includes('TRE')) late++;
+                else if (note.includes('VẮNG') || note.includes('VANG')) absent++;
+            });
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statOnTime').innerText = onTime;
+            document.getElementById('statLate').innerText = late;
+            document.getElementById('statAbsent').innerText = absent;
+        }
+
+        window.applyFilters = function() {
+            const searchVal = document.getElementById('searchInput').value.trim().toLowerCase();
+            const statusVal = document.getElementById('statusFilter').value;
+            const clearBtn = document.getElementById('clearSearchBtn');
+
+            if (searchVal.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            filteredList = studentList.filter(student => {
+                const matchesName = student.name.toLowerCase().includes(searchVal);
+                const noteUpper = (student.note || '').toUpperCase();
+
+                let matchesStatus = true;
+                if (statusVal === 'ĐÚNG GIỜ') matchesStatus = noteUpper.includes('ĐÚNG');
+                else if (statusVal === 'TRỄ') matchesStatus = noteUpper.includes('TRỄ') || noteUpper.includes('TRE');
+                else if (statusVal === 'VẮNG') matchesStatus = noteUpper.includes('VẮNG') || noteUpper.includes('VANG');
+
+                return matchesName && matchesStatus;
+            });
+
+            renderTable();
+        }
+
+        window.clearSearch = function() {
+            document.getElementById('searchInput').value = '';
+            applyFilters();
+        }
+
+        window.resetFilters = function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = 'ALL';
+            applyFilters();
+        }
+
+        window.exportToExcel = function() {
+            const exportData = studentList.map((item, index) => ({
+                'STT': index + 1,
+                'HỌ VÀ TÊN': item.name,
+                'THỜI GIAN ĐIỂM DANH': item.time,
+                'TRẠNG THÁI / GHI CHÚ': item.note
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "DiemDanh_10A1");
+            XLSX.writeFile(workbook, `DiemDanh_10A1_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showToast('Đã tải xuống file Excel báo cáo!');
+        }
+
+        window.copyParentLink = function() {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const parentUrl = `${baseUrl}?mode=parent`;
+
+            const tempInput = document.createElement('input');
+            tempInput.value = parentUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast('Đã sao chép Link Phụ Huynh vào bộ nhớ tạm!');
+        }
+
+        // CRUD Modal Controls
+        window.openAddModal = function() {
+            if (!isAdminMode) return;
+            document.getElementById('modalTitle').innerText = 'Thêm Học Sinh Điểm Danh';
+            document.getElementById('studentId').value = '';
+            document.getElementById('inputName').value = '';
+            document.getElementById('inputTime').value = new Date().toTimeString().split(' ')[0];
+            document.getElementById('inputNote').value = 'ĐÚNG GIỜ';
+            document.getElementById('studentModal').classList.remove('hidden');
+        }
+
+        window.openEditModal = function(id) {
+            if (!isAdminMode) return;
+            const student = studentList.find(s => s.id === id);
+            if (!student) return;
+
+            document.getElementById('modalTitle').innerText = 'Chỉnh Sửa Thông Tin Học Sinh';
+            document.getElementById('studentId').value = student.id;
+            document.getElementById('inputName').value = student.name;
+            document.getElementById('inputTime').value = student.time !== '--:--:--' ? student.time : '';
+            document.getElementById('inputNote').value = student.note;
+            document.getElementById('studentModal').classList.remove('hidden');
+        }
+
+        window.closeModal = function() {
+            document.getElementById('studentModal').classList.add('hidden');
+        }
+
+        window.setCurrentTime = function() {
+            document.getElementById('inputTime').value = new Date().toTimeString().split(' ')[0];
+        }
+
+        window.setQuickNote = function(val) {
+            document.getElementById('inputNote').value = val;
+        }
+
+        window.saveStudent = function(e) {
+            e.preventDefault();
+            if (!isAdminMode) return;
+
+            const id = document.getElementById('studentId').value;
+            const name = document.getElementById('inputName').value.trim();
+            const time = document.getElementById('inputTime').value || '--:--:--';
+            const note = document.getElementById('inputNote').value.trim();
+
+            if (id) {
+                const index = studentList.findIndex(s => s.id == id);
+                if (index !== -1) {
+                    studentList[index] = { ...studentList[index], name, time, note };
+                }
+            } else {
+                const newId = studentList.length ? Math.max(...studentList.map(s => s.id)) + 1 : 1;
+                studentList.push({ id: newId, name, time, note });
+            }
+
+            studentList = [...studentList];
+            filteredList = [...studentList];
+            saveToCloudStorage(studentList);
+            renderTable();
+            updateStatistics();
+            closeModal();
+            showToast('Đã lưu thông tin học sinh!');
+        }
+
+        window.deleteStudent = function(id) {
+            if (!isAdminMode) return;
+            if (confirm('Bạn có chắc chắn muốn xóa học sinh này khỏi danh sách?')) {
+                studentList = studentList.filter(s => s.id !== id);
+                filteredList = [...studentList];
+                saveToCloudStorage(studentList);
+                renderTable();
+                updateStatistics();
+                showToast('Đã xóa học sinh.');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+    </script>
+</body>
+</html>
