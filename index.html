@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRƯỜNG THPT VỊ THANH - Tra Cứu & Điểm Danh Học Sinh</title>
+  <title>TRƯỜNG THPT VỊ THANH - Tra Cứu Điểm Danh Học Sinh</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,127 +26,67 @@
   <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <img src="logo.jpg" alt="Logo THPT Vị Thanh" class="h-14 w-14 object-contain shrink-0" onerror="this.onerror=null; this.src='https://via.placeholder.com/56?text=LOGO';">
+        <img src="logo.jpg" alt="Logo THPT Vị Thanh" class="h-12 w-12 object-contain shrink-0" onerror="this.onerror=null; this.src='https://via.placeholder.com/48?text=THPT';">
         <div>
-          <h1 class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            TRƯỜNG THPT VỊ THANH
-            <span id="role-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">Trang Tra Cứu</span>
-          </h1>
-          <p class="text-sm text-slate-500">Hệ thống tra cứu điểm danh học sinh trực tuyến</p>
+          <h1 class="text-lg font-bold text-slate-900 tracking-tight">TRƯỜNG THPT VỊ THANH</h1>
+          <p class="text-xs text-slate-500">Trang tra cứu điểm danh dành cho Phụ huynh</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
-        <div id="admin-actions" class="hidden flex items-center gap-2">
-          <label class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
-            <i data-lucide="upload" class="w-4 h-4"></i>
-            <span>Tải Excel Mới Để Xuất Code</span>
-            <input type="file" id="excel-input" accept=".xlsx, .xls, .csv" class="hidden">
-          </label>
+        <!-- Nút chọn file dùng khi thử nghiệm Offline -->
+        <label id="btn-offline-upload" class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all">
+          <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+          <span>Mở file data.xlsx (Offline)</span>
+          <input type="file" id="local-file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleLocalFile(event)">
+        </label>
 
-          <button onclick="logoutTeacher()" class="bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all">
-            <i data-lucide="log-out" class="w-4 h-4"></i>
-            <span>Đăng Xuất</span>
-          </button>
-        </div>
-
-        <button id="btn-login-modal" onclick="toggleLoginModal(true)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
-          <i data-lucide="lock" class="w-4 h-4"></i>
-          <span>Đăng Nhập Quản Lý</span>
+        <button onclick="loadDataFromExcel()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>Làm mới</span>
         </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
+  <main class="max-w-5xl mx-auto px-4 pt-8 space-y-6">
 
-    <!-- Thống kê -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sĩ Số Học Sinh</p>
-          <p id="stat-total" class="text-2xl font-bold text-slate-900 mt-1">0</p>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-          <i data-lucide="users" class="w-5 h-5"></i>
-        </div>
+    <!-- KHU VỰC TÌM KIẾM DÀNH CHO PHỤ HUYNH -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <div class="text-center max-w-md mx-auto space-y-1">
+        <h2 class="text-xl font-bold text-slate-800">Tra Cứu Trạng Thái Điểm Danh</h2>
+        <p class="text-xs text-slate-500">Nhập tên hoặc chọn lớp của con để kiểm tra thông tin hôm nay</p>
       </div>
 
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Đúng Giờ</p>
-          <p id="stat-ontime" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+      <div class="flex flex-col sm:flex-row gap-3 pt-2">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="search-input" placeholder="Nhập Họ và Tên học sinh..." 
+                 class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium">
         </div>
-        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-          <i data-lucide="check-circle-2" class="w-5 h-5"></i>
-        </div>
-      </div>
 
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Đi Muộn</p>
-          <p id="stat-late" class="text-2xl font-bold text-amber-600 mt-1">0</p>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-          <i data-lucide="clock" class="w-5 h-5"></i>
-        </div>
-      </div>
-
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Vắng Mặt</p>
-          <p id="stat-absent" class="text-2xl font-bold text-rose-600 mt-1">0</p>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-          <i data-lucide="user-x" class="w-5 h-5"></i>
-        </div>
-      </div>
-    </div>
-
-    <!-- BỘ LỌC -->
-    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
-      <div class="relative w-full md:w-80">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-        <input type="text" id="search-input" placeholder="Nhập HỌ VÀ TÊN học sinh..." 
-               class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-        <select id="khoi-filter" onchange="onKhoiChange()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="ALL">Tất cả Khối</option>
-          <option value="10">Khối 10</option>
-          <option value="11">Khối 11</option>
-          <option value="12">Khối 12</option>
-        </select>
-
-        <select id="lop-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <select id="lop-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
           <option value="ALL">Tất cả Lớp</option>
         </select>
-
-        <select id="status-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="ALL">Tất cả trạng thái</option>
-          <option value="ON_TIME">Đúng giờ</option>
-          <option value="LATE">Đi muộn / Trễ</option>
-          <option value="ABSENT">Vắng mặt</option>
-        </select>
-
-        <button onclick="resetFilters()" class="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-slate-700" title="Đặt lại bộ lọc">
-          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-        </button>
       </div>
     </div>
 
-    <!-- Bảng Dữ Liệu -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <!-- BẢNG HỌC SINH -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div id="loading-spinner" class="py-12 text-center text-slate-400 text-sm flex flex-col items-center justify-center gap-2">
+        <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-indigo-600"></i>
+        <span id="status-text">Đang tự động nạp dữ liệu từ data.xlsx...</span>
+      </div>
+
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
+        <table id="data-table" class="w-full text-left text-sm hidden">
           <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
             <tr>
               <th class="py-3.5 px-4 w-16 text-center">STT</th>
               <th class="py-3.5 px-4">HỌ VÀ TÊN</th>
               <th class="py-3.5 px-4 text-center">KHỐI</th>
               <th class="py-3.5 px-4 text-center">LỚP</th>
-              <th class="py-3.5 px-4 text-center">THỜI GIAN ĐIỂM DANH</th>
+              <th class="py-3.5 px-4 text-center">GIỜ ĐIỂM DANH</th>
               <th class="py-3.5 px-4 text-center">TRẠNG THÁI</th>
             </tr>
           </thead>
@@ -155,256 +95,166 @@
         </table>
       </div>
 
-      <div class="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 text-sm">
-        <span id="pagination-info" class="text-slate-500">Hiển thị 0 học sinh</span>
+      <div id="pagination-bar" class="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 text-sm hidden">
+        <span id="pagination-info" class="text-xs text-slate-500">Hiển thị 0 học sinh</span>
         <div class="flex items-center gap-2">
-          <button id="btn-prev" onclick="changePage(-1)" class="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-100 font-medium">Trước</button>
-          <span id="page-num" class="font-semibold text-slate-700 px-2">Trang 1 / 1</span>
-          <button id="btn-next" onclick="changePage(1)" class="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-100 font-medium">Sau</button>
+          <button id="btn-prev" onclick="changePage(-1)" class="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-100 text-xs font-semibold">Trước</button>
+          <span id="page-num" class="text-xs font-semibold text-slate-700 px-2">Trang 1 / 1</span>
+          <button id="btn-next" onclick="changePage(1)" class="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-100 text-xs font-semibold">Sau</button>
         </div>
       </div>
     </div>
 
   </main>
 
-  <!-- POPUP ĐĂNG NHẬP -->
-  <div id="login-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
-      <div class="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
-            <i data-lucide="shield-check" class="w-5 h-5"></i>
-          </div>
-          <h3 class="font-bold text-slate-900 text-lg">Đăng Nhập Quản Lý</h3>
-        </div>
-        <button onclick="toggleLoginModal(false)" class="text-slate-400 hover:text-slate-600 p-1">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <form onsubmit="handleLogin(event)" class="p-6 space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tài Khoản</label>
-          <input type="text" id="username" placeholder="admin" required
-                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Mật Khẩu</label>
-          <input type="password" id="password" placeholder="123456" required
-                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
-        </div>
-
-        <div id="login-error" class="hidden text-xs text-rose-600 font-medium bg-rose-50 p-2.5 rounded-lg border border-rose-100">
-          Tài khoản hoặc mật khẩu không chính xác!
-        </div>
-
-        <div class="pt-2 flex items-center justify-end gap-2">
-          <button type="button" onclick="toggleLoginModal(false)" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50">Hủy</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm">Đăng Nhập</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script>
-    // DỮ LIỆU ĐƯỢC NHÚNG TRỰC TIẾP TẠI ĐÂY (SẼ KHÔNG BAO GIỜ LỖI ĐIỆN THOẠI)
-    let rawEmbeddedData = [];
-
-    const AUTH_KEY = "THPT_VI_THANH_IS_TEACHER";
-    let students = rawEmbeddedData;
+    let students = [];
     let currentPage = 1;
-    const pageSize = 50;
+    const pageSize = 20;
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
-      checkAuthStatus();
-      populateLopDropdown();
-      renderTable();
+      loadDataFromExcel();
 
       document.getElementById("search-input").addEventListener("input", () => { currentPage = 1; renderTable(); });
-      document.getElementById("khoi-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
       document.getElementById("lop-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
-      document.getElementById("status-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
-      document.getElementById("excel-input").addEventListener("change", handleExcelUpload);
     });
 
-    function checkAuthStatus() {
-      const isTeacher = localStorage.getItem(AUTH_KEY) === "true";
-      const adminActions = document.getElementById("admin-actions");
-      const btnLoginModal = document.getElementById("btn-login-modal");
-      const roleBadge = document.getElementById("role-badge");
+    // TỰ ĐỘNG NẠP FILE KHI ONLINE (GITHUB)
+    function loadDataFromExcel() {
+      const spinner = document.getElementById("loading-spinner");
+      const statusText = document.getElementById("status-text");
+      const table = document.getElementById("data-table");
 
-      if (isTeacher) {
-        adminActions.classList.remove("hidden");
-        btnLoginModal.classList.add("hidden");
-        roleBadge.innerText = "Chế Độ Admin";
-        roleBadge.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium";
-      } else {
-        adminActions.classList.add("hidden");
-        btnLoginModal.classList.remove("hidden");
-        roleBadge.innerText = "Trang Tra Cứu";
-        roleBadge.className = "text-xs px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium";
-      }
+      spinner.classList.remove("hidden");
+      statusText.innerText = "Đang tự động nạp dữ liệu từ data.xlsx...";
+
+      const url = "data.xlsx?v=" + new Date().getTime();
+
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error("CORS_OR_NOT_FOUND");
+          return res.arrayBuffer();
+        })
+        .then(buffer => {
+          processExcelBuffer(buffer);
+        })
+        .catch(err => {
+          // Báo lỗi rõ ràng nếu đang mở file Offline trực tiếp
+          if (window.location.protocol === "file:") {
+            statusText.innerHTML = `
+              <span class="text-amber-600 font-semibold">Bạn đang chạy thử trang web dưới dạng Offline (file://).</span><br>
+              <span class="text-xs text-slate-500">Trình duyệt chặn tự đọc file local. Vui lòng bấm nút <b>"Mở file data.xlsx (Offline)"</b> ở góc trên bên phải để nạp dữ liệu!</span>
+            `;
+          } else {
+            statusText.innerHTML = `<span class="text-rose-500 font-medium">Chưa có dữ liệu (Không tìm thấy file 'data.xlsx' trên server).</span>`;
+          }
+        });
     }
 
-    function toggleLoginModal(show) {
-      const modal = document.getElementById("login-modal");
-      document.getElementById("login-error").classList.add("hidden");
-      if (show) modal.classList.remove("hidden");
-      else modal.classList.add("hidden");
-    }
-
-    function handleLogin(e) {
-      e.preventDefault();
-      const user = document.getElementById("username").value.trim();
-      const pass = document.getElementById("password").value.trim();
-
-      if ((user === "admin" || user === "giaovien") && pass === "123456") {
-        localStorage.setItem(AUTH_KEY, "true");
-        toggleLoginModal(false);
-        checkAuthStatus();
-      } else {
-        document.getElementById("login-error").classList.remove("hidden");
-      }
-    }
-
-    function logoutTeacher() {
-      localStorage.removeItem(AUTH_KEY);
-      checkAuthStatus();
-    }
-
-    // TỰ ĐỘNG CHUYỂN FILE EXCEL THÀNH MÃ CỐ ĐỊNH NẠP THẲNG VÀO CODE
-    function handleExcelUpload(e) {
+    // NẠP THỦ CÔNG KHI CHẠY OFFLINE
+    function handleLocalFile(e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = function(evt) {
-        try {
-          const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-          
-          let headerIdx = 0;
-          for (let i = 0; i < Math.min(json.length, 10); i++) {
-            const rowStr = json[i].join(" ").toUpperCase();
-            if (rowStr.includes("HỌ") || rowStr.includes("TÊN") || rowStr.includes("NAME")) {
-              headerIdx = i;
-              break;
-            }
-          }
-
-          const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
-          let colName = headers.findIndex(h => h.includes("HỌ") || h.includes("TÊN") || h.includes("NAME"));
-          let colKhoi = headers.findIndex(h => h.includes("KHỐI") || h.includes("GRADE"));
-          let colLop = headers.findIndex(h => h.includes("LỚP") || h.includes("CLASS"));
-          let colTime = headers.findIndex(h => h.includes("THỜI GIAN") || h.includes("GIỜ") || h.includes("TIME"));
-          let colStatus = headers.findIndex(h => h.includes("TRẠNG THÁI") || h.includes("GHI CHÚ") || h.includes("STATUS"));
-
-          if (colName === -1) colName = 1;
-          let newStudents = [];
-
-          for (let i = headerIdx + 1; i < json.length; i++) {
-            const row = json[i];
-            if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
-
-            let nameVal = String(row[colName]).trim();
-            let khoiVal = colKhoi !== -1 && row[colKhoi] ? String(row[colKhoi]).replace(/[^0-9]/g, '') : "";
-            let lopVal = colLop !== -1 && row[colLop] ? String(row[colLop]).trim() : "";
-            
-            if (!khoiVal && lopVal) {
-              const match = lopVal.match(/\d+/);
-              if (match) khoiVal = match[0];
-            }
-            if (!khoiVal) khoiVal = "10";
-            if (!lopVal) lopVal = `${khoiVal}A1`;
-
-            newStudents.push({
-              stt: newStudents.length + 1,
-              name: nameVal,
-              khoi: khoiVal,
-              lop: lopVal,
-              time: colTime !== -1 && row[colTime] ? String(row[colTime]).trim() : "07:00:00",
-              status: colStatus !== -1 && row[colStatus] ? String(row[colStatus]).trim() : "ĐÚNG GIỜ"
-            });
-          }
-
-          if (newStudents.length > 0) {
-            students = newStudents;
-            populateLopDropdown();
-            renderTable();
-
-            // TẠO ĐOẠN CODE DỮ LIỆU ĐỂ GIÁO VIÊN COPY DÁN LẠI VÀO INDEX.HTML
-            const jsonText = JSON.stringify(newStudents);
-            const promptCode = prompt("ĐÃ ĐỌC XONG " + newStudents.length + " HỌC SINH!\n\nHãy bấm 'Ctrl + C' (hoặc Sao Chép) đoạn mã bên dưới và dán đè vào biến 'let rawEmbeddedData = [...]' ở dòng 141 trong index.html trên GitHub:", jsonText);
-          }
-        } catch (err) { alert("Lỗi khi đọc file Excel: " + err.message); }
+        processExcelBuffer(evt.target.result);
       };
       reader.readAsArrayBuffer(file);
     }
 
-    function populateLopDropdown() {
-      const khoiSelect = document.getElementById("khoi-filter").value;
-      const lopSelect = document.getElementById("lop-filter");
-      const currentVal = lopSelect.value;
-      lopSelect.innerHTML = `<option value="ALL">Tất cả Lớp</option>`;
+    function processExcelBuffer(buffer) {
+      try {
+        const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "" });
 
-      const classes = new Set();
-      students.forEach(s => {
-        if (khoiSelect === "ALL" || String(s.khoi) === khoiSelect) {
-          if (s.lop) classes.add(s.lop);
+        parseExcelData(json);
+
+        document.getElementById("loading-spinner").classList.add("hidden");
+        document.getElementById("data-table").classList.remove("hidden");
+        document.getElementById("pagination-bar").classList.remove("hidden");
+      } catch (err) {
+        alert("Lỗi khi đọc dữ liệu Excel: " + err.message);
+      }
+    }
+
+    function parseExcelData(json) {
+      if (!json || json.length < 2) return;
+
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(json.length, 10); i++) {
+        const rowStr = json[i].join(" ").toUpperCase();
+        if (rowStr.includes("HỌ") || rowStr.includes("TÊN") || rowStr.includes("NAME")) {
+          headerIdx = i;
+          break;
         }
-      });
+      }
 
+      const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
+      let colName = headers.findIndex(h => h.includes("HỌ") || h.includes("TÊN") || h.includes("NAME"));
+      let colKhoi = headers.findIndex(h => h.includes("KHỐI") || h.includes("GRADE"));
+      let colLop = headers.findIndex(h => h.includes("LỚP") || h.includes("CLASS"));
+      let colTime = headers.findIndex(h => h.includes("THỜI GIAN") || h.includes("GIỜ") || h.includes("TIME"));
+      let colStatus = headers.findIndex(h => h.includes("TRẠNG THÁI") || h.includes("GHI CHÚ") || h.includes("STATUS"));
+
+      if (colName === -1) colName = 1;
+      students = [];
+
+      for (let i = headerIdx + 1; i < json.length; i++) {
+        const row = json[i];
+        if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
+
+        let nameVal = String(row[colName]).trim();
+        let lopVal = colLop !== -1 && row[colLop] ? String(row[colLop]).trim() : "";
+        let khoiVal = colKhoi !== -1 && row[colKhoi] ? String(row[colKhoi]).replace(/[^0-9]/g, '') : "";
+
+        if (!khoiVal && lopVal) {
+          const match = lopVal.match(/\d+/);
+          if (match) khoiVal = match[0];
+        }
+
+        students.push({
+          stt: students.length + 1,
+          name: nameVal,
+          khoi: khoiVal || "10",
+          lop: lopVal || "Chưa chia",
+          time: colTime !== -1 && row[colTime] ? String(row[colTime]).trim() : "--:--",
+          status: colStatus !== -1 && row[colStatus] ? String(row[colStatus]).trim() : "ĐÚNG GIỜ"
+        });
+      }
+
+      populateLopDropdown();
+      renderTable();
+    }
+
+    function populateLopDropdown() {
+      const lopSelect = document.getElementById("lop-filter");
+      lopSelect.innerHTML = `<option value="ALL">Tất cả Lớp</option>`;
+      const classes = new Set();
+
+      students.forEach(s => { if (s.lop) classes.add(s.lop); });
       Array.from(classes).sort().forEach(l => {
         const opt = document.createElement("option");
         opt.value = l;
         opt.innerText = `Lớp ${l}`;
         lopSelect.appendChild(opt);
       });
-      lopSelect.value = classes.has(currentVal) ? currentVal : "ALL";
-    }
-
-    function onKhoiChange() {
-      populateLopDropdown();
-      currentPage = 1;
-      renderTable();
     }
 
     function renderTable() {
       const tbody = document.getElementById("student-table-body");
       const search = document.getElementById("search-input").value.toLowerCase().trim();
-      const khoi = document.getElementById("khoi-filter").value;
       const lop = document.getElementById("lop-filter").value;
-      const status = document.getElementById("status-filter").value;
 
       tbody.innerHTML = "";
-      let onTime = 0, late = 0, absent = 0;
 
       const filtered = students.filter(s => {
-        const st = String(s.status || '').toUpperCase();
-        if (st.includes("ĐÚNG")) onTime++;
-        else if (st.includes("TRỄ") || st.includes("MUỘN")) late++;
-        else if (st.includes("VẮNG")) absent++;
-
         const matchName = String(s.name || '').toLowerCase().includes(search);
-        const matchKhoi = khoi === "ALL" || String(s.khoi) === khoi;
         const matchLop = lop === "ALL" || String(s.lop) === lop;
-        
-        let matchStatus = true;
-        if (status === "ON_TIME") matchStatus = st.includes("ĐÚNG");
-        else if (status === "LATE") matchStatus = st.includes("TRỄ") || st.includes("MUỘN");
-        else if (status === "ABSENT") matchStatus = st.includes("VẮNG");
-
-        return matchName && matchKhoi && matchLop && matchStatus;
+        return matchName && matchLop;
       });
-
-      document.getElementById("stat-total").innerText = students.length;
-      document.getElementById("stat-ontime").innerText = onTime;
-      document.getElementById("stat-late").innerText = late;
-      document.getElementById("stat-absent").innerText = absent;
 
       const totalPages = Math.ceil(filtered.length / pageSize) || 1;
       if (currentPage > totalPages) currentPage = totalPages;
@@ -413,7 +263,7 @@
       const pageData = filtered.slice(start, start + pageSize);
 
       if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Chưa có dữ liệu học sinh trong mã nguồn. Vui lòng chọn Tải Excel Mới Để Xuất Code!</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Không tìm thấy học sinh phù hợp</td></tr>`;
       } else {
         pageData.forEach((s, idx) => {
           const tr = document.createElement("tr");
@@ -425,14 +275,14 @@
           else if (st.includes("VẮNG")) badgeClass = "badge-absent";
 
           tr.innerHTML = `
-            <td class="py-3 px-4 text-center text-slate-400 font-medium">${start + idx + 1}</td>
-            <td class="py-3 px-4 font-semibold text-slate-900">${s.name || 'Học sinh'}</td>
-            <td class="py-3 px-4 text-center text-slate-600">Khối ${s.khoi || '10'}</td>
-            <td class="py-3 px-4 text-center font-bold text-blue-700">${s.lop || '10A1'}</td>
-            <td class="py-3 px-4 text-center font-mono text-slate-600">${s.time || '07:00:00'}</td>
-            <td class="py-3 px-4 text-center">
+            <td class="py-3.5 px-4 text-center text-slate-400 font-medium">${start + idx + 1}</td>
+            <td class="py-3.5 px-4 font-semibold text-slate-900">${s.name}</td>
+            <td class="py-3.5 px-4 text-center text-slate-500">Khối ${s.khoi}</td>
+            <td class="py-3.5 px-4 text-center font-bold text-indigo-600">${s.lop}</td>
+            <td class="py-3.5 px-4 text-center font-mono text-slate-600">${s.time}</td>
+            <td class="py-3.5 px-4 text-center">
               <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">
-                ${s.status || 'ĐÚNG GIỜ'}
+                ${s.status}
               </span>
             </td>
           `;
@@ -447,15 +297,6 @@
     }
 
     function changePage(delta) { currentPage += delta; renderTable(); }
-
-    function resetFilters() {
-      document.getElementById("search-input").value = "";
-      document.getElementById("khoi-filter").value = "ALL";
-      populateLopDropdown();
-      document.getElementById("status-filter").value = "ALL";
-      currentPage = 1;
-      renderTable();
-    }
   </script>
 </body>
 </html>
