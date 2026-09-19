@@ -5,18 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRƯỜNG THPT VỊ THANH - Tra Cứu & Điểm Danh Học Sinh</title>
   
-  <!-- Font Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- SheetJS (xlsx) đọc file Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -32,9 +26,7 @@
   <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <!-- Logo Trường THPT Vị Thanh -->
         <img src="logo.jpg" alt="Logo THPT Vị Thanh" class="h-14 w-14 object-contain shrink-0" onerror="this.onerror=null; this.src='https://via.placeholder.com/56?text=LOGO';">
-
         <div>
           <h1 class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             TRƯỜNG THPT VỊ THANH
@@ -45,11 +37,10 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- Chức năng Quản Lý Giáo Viên -->
         <div id="admin-actions" class="hidden flex items-center gap-2">
           <label class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
             <i data-lucide="upload" class="w-4 h-4"></i>
-            <span>Tải Excel Mới Xem Tạm</span>
+            <span>Tải Excel Mới Để Xuất Code</span>
             <input type="file" id="excel-input" accept=".xlsx, .xls, .csv" class="hidden">
           </label>
 
@@ -59,7 +50,6 @@
           </button>
         </div>
 
-        <!-- Nút Đăng Nhập -->
         <button id="btn-login-modal" onclick="toggleLoginModal(true)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
           <i data-lucide="lock" class="w-4 h-4"></i>
           <span>Đăng Nhập Quản Lý</span>
@@ -69,20 +59,6 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
-
-    <!-- Thông báo Phụ Huynh -->
-    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <i data-lucide="info" class="w-5 h-5 text-indigo-600 shrink-0"></i>
-        <div>
-          <h3 class="text-sm font-semibold text-indigo-900">Trang Tra Cứu Điểm Danh Trực Tuyến</h3>
-          <p class="text-xs text-indigo-700 mt-0.5">Dữ liệu được đồng bộ trực tiếp từ danh sách điểm danh của nhà trường.</p>
-        </div>
-      </div>
-      <button onclick="loadDefaultData()" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 shadow-sm">
-        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Làm Mới Dữ Liệu
-      </button>
-    </div>
 
     <!-- Thống kê -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -127,7 +103,7 @@
       </div>
     </div>
 
-    <!-- Ô TÌM KIẾM & BỘ LỌC KHỐI, LỚP -->
+    <!-- BỘ LỌC -->
     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
       <div class="relative w-full md:w-80">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
@@ -175,12 +151,10 @@
             </tr>
           </thead>
           <tbody id="student-table-body" class="divide-y divide-slate-100 text-slate-700">
-            <!-- Render rows -->
           </tbody>
         </table>
       </div>
 
-      <!-- Phân trang -->
       <div class="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 text-sm">
         <span id="pagination-info" class="text-slate-500">Hiển thị 0 học sinh</span>
         <div class="flex items-center gap-2">
@@ -234,15 +208,19 @@
   </div>
 
   <script>
+    // DỮ LIỆU ĐƯỢC NHÚNG TRỰC TIẾP TẠI ĐÂY (SẼ KHÔNG BAO GIỜ LỖI ĐIỆN THOẠI)
+    let rawEmbeddedData = [];
+
     const AUTH_KEY = "THPT_VI_THANH_IS_TEACHER";
-    let students = [];
+    let students = rawEmbeddedData;
     let currentPage = 1;
     const pageSize = 50;
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       checkAuthStatus();
-      loadDefaultData();
+      populateLopDropdown();
+      renderTable();
 
       document.getElementById("search-input").addEventListener("input", () => { currentPage = 1; renderTable(); });
       document.getElementById("khoi-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
@@ -250,32 +228,6 @@
       document.getElementById("status-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
       document.getElementById("excel-input").addEventListener("change", handleExcelUpload);
     });
-
-    // ĐỌC FILE DỮ LIỆU TỰ ĐỘNG TỪ KHO GITHUB HOẶC FILE MAU
-    async function loadDefaultData() {
-      try {
-        // Tải file excel "diemdanh.xlsx" hoặc "data.json" cùng thư mục trên GitHub
-        const res = await fetch('diemdanh.xlsx?v=' + new Date().getTime());
-        if (res.ok) {
-          const ab = await res.arrayBuffer();
-          const workbook = XLSX.read(ab, { type: 'array' });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-          processRawData(json);
-          return;
-        }
-      } catch (e) {
-        console.log("Không tìm thấy file diemdanh.xlsx, nạp dữ liệu từ máy");
-      }
-
-      // Nếu chưa up file diemdanh.xlsx thì lấy dữ liệu đã lưu gần nhất
-      const cached = localStorage.getItem("THPT_VI_THANH_DATA");
-      if (cached) {
-        students = JSON.parse(cached);
-        populateLopDropdown();
-        renderTable();
-      }
-    }
 
     function checkAuthStatus() {
       const isTeacher = localStorage.getItem(AUTH_KEY) === "true";
@@ -322,6 +274,7 @@
       checkAuthStatus();
     }
 
+    // TỰ ĐỘNG CHUYỂN FILE EXCEL THÀNH MÃ CỐ ĐỊNH NẠP THẲNG VÀO CODE
     function handleExcelUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -333,67 +286,63 @@
           const workbook = XLSX.read(data, { type: 'array' });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-          processRawData(json);
-          alert("Đã tải dữ liệu lên xem thử thành công!");
+          
+          let headerIdx = 0;
+          for (let i = 0; i < Math.min(json.length, 10); i++) {
+            const rowStr = json[i].join(" ").toUpperCase();
+            if (rowStr.includes("HỌ") || rowStr.includes("TÊN") || rowStr.includes("NAME")) {
+              headerIdx = i;
+              break;
+            }
+          }
+
+          const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
+          let colName = headers.findIndex(h => h.includes("HỌ") || h.includes("TÊN") || h.includes("NAME"));
+          let colKhoi = headers.findIndex(h => h.includes("KHỐI") || h.includes("GRADE"));
+          let colLop = headers.findIndex(h => h.includes("LỚP") || h.includes("CLASS"));
+          let colTime = headers.findIndex(h => h.includes("THỜI GIAN") || h.includes("GIỜ") || h.includes("TIME"));
+          let colStatus = headers.findIndex(h => h.includes("TRẠNG THÁI") || h.includes("GHI CHÚ") || h.includes("STATUS"));
+
+          if (colName === -1) colName = 1;
+          let newStudents = [];
+
+          for (let i = headerIdx + 1; i < json.length; i++) {
+            const row = json[i];
+            if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
+
+            let nameVal = String(row[colName]).trim();
+            let khoiVal = colKhoi !== -1 && row[colKhoi] ? String(row[colKhoi]).replace(/[^0-9]/g, '') : "";
+            let lopVal = colLop !== -1 && row[colLop] ? String(row[colLop]).trim() : "";
+            
+            if (!khoiVal && lopVal) {
+              const match = lopVal.match(/\d+/);
+              if (match) khoiVal = match[0];
+            }
+            if (!khoiVal) khoiVal = "10";
+            if (!lopVal) lopVal = `${khoiVal}A1`;
+
+            newStudents.push({
+              stt: newStudents.length + 1,
+              name: nameVal,
+              khoi: khoiVal,
+              lop: lopVal,
+              time: colTime !== -1 && row[colTime] ? String(row[colTime]).trim() : "07:00:00",
+              status: colStatus !== -1 && row[colStatus] ? String(row[colStatus]).trim() : "ĐÚNG GIỜ"
+            });
+          }
+
+          if (newStudents.length > 0) {
+            students = newStudents;
+            populateLopDropdown();
+            renderTable();
+
+            // TẠO ĐOẠN CODE DỮ LIỆU ĐỂ GIÁO VIÊN COPY DÁN LẠI VÀO INDEX.HTML
+            const jsonText = JSON.stringify(newStudents);
+            const promptCode = prompt("ĐÃ ĐỌC XONG " + newStudents.length + " HỌC SINH!\n\nHãy bấm 'Ctrl + C' (hoặc Sao Chép) đoạn mã bên dưới và dán đè vào biến 'let rawEmbeddedData = [...]' ở dòng 141 trong index.html trên GitHub:", jsonText);
+          }
         } catch (err) { alert("Lỗi khi đọc file Excel: " + err.message); }
       };
       reader.readAsArrayBuffer(file);
-    }
-
-    function processRawData(json) {
-      if (!json || json.length < 2) return;
-
-      let headerIdx = 0;
-      for (let i = 0; i < Math.min(json.length, 10); i++) {
-        const rowStr = json[i].join(" ").toUpperCase();
-        if (rowStr.includes("HỌ") || rowStr.includes("TÊN") || rowStr.includes("NAME")) {
-          headerIdx = i;
-          break;
-        }
-      }
-
-      const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
-      let colName = headers.findIndex(h => h.includes("HỌ") || h.includes("TÊN") || h.includes("NAME"));
-      let colKhoi = headers.findIndex(h => h.includes("KHỐI") || h.includes("GRADE"));
-      let colLop = headers.findIndex(h => h.includes("LỚP") || h.includes("CLASS"));
-      let colTime = headers.findIndex(h => h.includes("THỜI GIAN") || h.includes("GIỜ") || h.includes("TIME"));
-      let colStatus = headers.findIndex(h => h.includes("TRẠNG THÁI") || h.includes("GHI CHÚ") || h.includes("STATUS"));
-
-      if (colName === -1) colName = 1;
-      let newStudents = [];
-
-      for (let i = headerIdx + 1; i < json.length; i++) {
-        const row = json[i];
-        if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
-
-        let nameVal = String(row[colName]).trim();
-        let khoiVal = colKhoi !== -1 && row[colKhoi] ? String(row[colKhoi]).replace(/[^0-9]/g, '') : "";
-        let lopVal = colLop !== -1 && row[colLop] ? String(row[colLop]).trim() : "";
-        
-        if (!khoiVal && lopVal) {
-          const match = lopVal.match(/\d+/);
-          if (match) khoiVal = match[0];
-        }
-        if (!khoiVal) khoiVal = "10";
-        if (!lopVal) lopVal = `${khoiVal}A1`;
-
-        newStudents.push({
-          stt: newStudents.length + 1,
-          name: nameVal,
-          khoi: khoiVal,
-          lop: lopVal,
-          time: colTime !== -1 && row[colTime] ? String(row[colTime]).trim() : "07:00:00",
-          status: colStatus !== -1 && row[colStatus] ? String(row[colStatus]).trim() : "ĐÚNG GIỜ"
-        });
-      }
-
-      if (newStudents.length > 0) {
-        students = newStudents;
-        localStorage.setItem("THPT_VI_THANH_DATA", JSON.stringify(students));
-        populateLopDropdown();
-        currentPage = 1;
-        renderTable();
-      }
     }
 
     function populateLopDropdown() {
@@ -464,7 +413,7 @@
       const pageData = filtered.slice(start, start + pageSize);
 
       if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Chưa có dữ liệu học sinh. Vui lòng tải file Excel lên GitHub!</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Chưa có dữ liệu học sinh trong mã nguồn. Vui lòng chọn Tải Excel Mới Để Xuất Code!</td></tr>`;
       } else {
         pageData.forEach((s, idx) => {
           const tr = document.createElement("tr");
