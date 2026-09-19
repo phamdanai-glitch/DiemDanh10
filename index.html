@@ -38,24 +38,18 @@
         <div>
           <h1 class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             TRƯỜNG THPT VỊ THANH
-            <span id="role-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">Trang Phụ Huynh</span>
+            <span id="role-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">Trang Tra Cứu</span>
           </h1>
-          <p class="text-sm text-slate-500">Hệ thống tra cứu & điểm danh học sinh (Khối 10, 11, 12)</p>
+          <p class="text-sm text-slate-500">Hệ thống tra cứu điểm danh học sinh trực tuyến</p>
         </div>
       </div>
 
-      <!-- Khu vực Đăng Nhập / Quản Lý Giáo Viên -->
       <div class="flex items-center gap-2">
-        <div id="sync-status" class="hidden md:flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Đã đồng bộ Cloud</span>
-        </div>
-
-        <!-- Chức năng Giáo Viên (Chỉ hiện khi ĐÃ ĐĂNG NHẬP) -->
+        <!-- Chức năng Quản Lý Giáo Viên -->
         <div id="admin-actions" class="hidden flex items-center gap-2">
           <label class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
             <i data-lucide="upload" class="w-4 h-4"></i>
-            <span>Nhập Excel & Cập Nhật Toàn Trường</span>
+            <span>Tải Excel Mới Xem Tạm</span>
             <input type="file" id="excel-input" accept=".xlsx, .xls, .csv" class="hidden">
           </label>
 
@@ -65,10 +59,10 @@
           </button>
         </div>
 
-        <!-- Nút Đăng Nhập (Chỉ hiện khi CHƯA ĐĂNG NHẬP) -->
+        <!-- Nút Đăng Nhập -->
         <button id="btn-login-modal" onclick="toggleLoginModal(true)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all">
           <i data-lucide="lock" class="w-4 h-4"></i>
-          <span>Đăng Nhập Giáo Viên</span>
+          <span>Đăng Nhập Quản Lý</span>
         </button>
       </div>
     </div>
@@ -77,16 +71,16 @@
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
 
     <!-- Thông báo Phụ Huynh -->
-    <div id="parent-banner" class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-start justify-between gap-3">
-      <div class="flex items-start gap-3">
-        <i data-lucide="info" class="w-5 h-5 text-indigo-600 mt-0.5 shrink-0"></i>
+    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <i data-lucide="info" class="w-5 h-5 text-indigo-600 shrink-0"></i>
         <div>
-          <h3 class="text-sm font-semibold text-indigo-900">Trang Tra Cứu Điểm Danh Trực Tuyến Phụ Huynh</h3>
-          <p class="text-sm text-indigo-700 mt-0.5">Dữ liệu tự động cập nhật hàng ngày khi Giáo viên tải danh sách điểm danh mới lên.</p>
+          <h3 class="text-sm font-semibold text-indigo-900">Trang Tra Cứu Điểm Danh Trực Tuyến</h3>
+          <p class="text-xs text-indigo-700 mt-0.5">Dữ liệu được đồng bộ trực tiếp từ danh sách điểm danh của nhà trường.</p>
         </div>
       </div>
-      <button onclick="fetchCloudData(true)" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 shadow-sm">
-        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Tải Dữ Liệu Mới
+      <button onclick="loadDefaultData()" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 shadow-sm">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Làm Mới Dữ Liệu
       </button>
     </div>
 
@@ -177,7 +171,7 @@
               <th class="py-3.5 px-4 text-center">KHỐI</th>
               <th class="py-3.5 px-4 text-center">LỚP</th>
               <th class="py-3.5 px-4 text-center">THỜI GIAN ĐIỂM DANH</th>
-              <th class="py-3.5 px-4 text-center">TRẠNG THÁI / GHI CHÚ</th>
+              <th class="py-3.5 px-4 text-center">TRẠNG THÁI</th>
             </tr>
           </thead>
           <tbody id="student-table-body" class="divide-y divide-slate-100 text-slate-700">
@@ -199,7 +193,7 @@
 
   </main>
 
-  <!-- POPUP BẢNG ĐĂNG NHẬP GIÁO VIÊN -->
+  <!-- POPUP ĐĂNG NHẬP -->
   <div id="login-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
       <div class="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
@@ -207,7 +201,7 @@
           <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
             <i data-lucide="shield-check" class="w-5 h-5"></i>
           </div>
-          <h3 class="font-bold text-slate-900 text-lg">Đăng Nhập Giáo Viên</h3>
+          <h3 class="font-bold text-slate-900 text-lg">Đăng Nhập Quản Lý</h3>
         </div>
         <button onclick="toggleLoginModal(false)" class="text-slate-400 hover:text-slate-600 p-1">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -240,12 +234,7 @@
   </div>
 
   <script>
-    // KHO LƯU TRỮ CLOUD CÔNG KHAI DÙNG CHUNG CHO THPT VỊ THANH
-    const BIN_ID = "65f0a00b1f5677401f31f9ab"; // Cloud ID tự động
-    const JSONBIN_URL = `https://api.jsonbin.io/v3/b/65f1e8a0dc12154d8076d1a9`; 
-    const STORAGE_KEY = "THPT_VI_THANH_LOCAL_CACHE";
     const AUTH_KEY = "THPT_VI_THANH_IS_TEACHER";
-
     let students = [];
     let currentPage = 1;
     const pageSize = 50;
@@ -253,9 +242,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       checkAuthStatus();
-      
-      // Ưu tiên nạp Cloud trước, nếu mất mạng thì nạp Cache
-      fetchCloudData();
+      loadDefaultData();
 
       document.getElementById("search-input").addEventListener("input", () => { currentPage = 1; renderTable(); });
       document.getElementById("khoi-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
@@ -263,6 +250,32 @@
       document.getElementById("status-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
       document.getElementById("excel-input").addEventListener("change", handleExcelUpload);
     });
+
+    // ĐỌC FILE DỮ LIỆU TỰ ĐỘNG TỪ KHO GITHUB HOẶC FILE MAU
+    async function loadDefaultData() {
+      try {
+        // Tải file excel "diemdanh.xlsx" hoặc "data.json" cùng thư mục trên GitHub
+        const res = await fetch('diemdanh.xlsx?v=' + new Date().getTime());
+        if (res.ok) {
+          const ab = await res.arrayBuffer();
+          const workbook = XLSX.read(ab, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+          processRawData(json);
+          return;
+        }
+      } catch (e) {
+        console.log("Không tìm thấy file diemdanh.xlsx, nạp dữ liệu từ máy");
+      }
+
+      // Nếu chưa up file diemdanh.xlsx thì lấy dữ liệu đã lưu gần nhất
+      const cached = localStorage.getItem("THPT_VI_THANH_DATA");
+      if (cached) {
+        students = JSON.parse(cached);
+        populateLopDropdown();
+        renderTable();
+      }
+    }
 
     function checkAuthStatus() {
       const isTeacher = localStorage.getItem(AUTH_KEY) === "true";
@@ -273,54 +286,13 @@
       if (isTeacher) {
         adminActions.classList.remove("hidden");
         btnLoginModal.classList.add("hidden");
-        roleBadge.innerText = "Giáo Viên (Chế Độ Quản Lý)";
+        roleBadge.innerText = "Chế Độ Admin";
         roleBadge.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium";
       } else {
         adminActions.classList.add("hidden");
         btnLoginModal.classList.remove("hidden");
-        roleBadge.innerText = "Trang Phụ Huynh";
+        roleBadge.innerText = "Trang Tra Cứu";
         roleBadge.className = "text-xs px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium";
-      }
-    }
-
-    // LẤY DỮ LIỆU TỪ DÁM MÂY TỰ ĐỘNG CHO PHỤ HUYNH
-    async function fetchCloudData(isManual = false) {
-      try {
-        const localData = localStorage.getItem(STORAGE_KEY);
-        if (localData) {
-          students = JSON.parse(localData);
-          populateLopDropdown();
-          renderTable();
-        }
-
-        // Tải từ Cloud công khai
-        const res = await fetch("https://api.myjson.online/v1/records/48366914-6fa6-4d74-9efc-7a988dcd6b99");
-        if (res.ok) {
-          const result = await res.json();
-          if (result && result.data && Array.isArray(result.data)) {
-            students = result.data;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-            populateLopDropdown();
-            renderTable();
-            if (isManual) alert("Đã tải dữ liệu mới nhất từ Giáo viên thành công!");
-          }
-        }
-      } catch (e) {
-        console.log("Offline mode fallback");
-      }
-    }
-
-    // ĐẨY DỮ LIỆU LÊN ĐÁM MÂY KHI GIÁO VIÊN TẢI EXCEL
-    async function uploadToCloud(newData) {
-      try {
-        const res = await fetch("https://api.myjson.online/v1/records/48366914-6fa6-4d74-9efc-7a988dcd6b99", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: newData })
-        });
-        return res.ok;
-      } catch (e) {
-        return false;
       }
     }
 
@@ -340,7 +312,6 @@
         localStorage.setItem(AUTH_KEY, "true");
         toggleLoginModal(false);
         checkAuthStatus();
-        alert("Đăng nhập thành công!");
       } else {
         document.getElementById("login-error").classList.remove("hidden");
       }
@@ -349,88 +320,80 @@
     function logoutTeacher() {
       localStorage.removeItem(AUTH_KEY);
       checkAuthStatus();
-      alert("Đã đăng xuất Chế độ Giáo viên!");
     }
 
-    // XỬ LÝ EXCEL VÀ ĐỒNG BỘ TOÀN MẠNG
-    async function handleExcelUpload(e) {
+    function handleExcelUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = async function(evt) {
+      reader.onload = function(evt) {
         try {
           const data = new Uint8Array(evt.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-
-          if (!json || json.length < 2) return alert("File Excel trống hoặc lỗi!");
-
-          let headerIdx = 0;
-          for (let i = 0; i < Math.min(json.length, 10); i++) {
-            const rowStr = json[i].join(" ").toUpperCase();
-            if (rowStr.includes("HỌ") || rowStr.includes("TÊN") || rowStr.includes("NAME")) {
-              headerIdx = i;
-              break;
-            }
-          }
-
-          const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
-          let colName = headers.findIndex(h => h.includes("HỌ") || h.includes("TÊN") || h.includes("NAME"));
-          let colKhoi = headers.findIndex(h => h.includes("KHỐI") || h.includes("GRADE"));
-          let colLop = headers.findIndex(h => h.includes("LỚP") || h.includes("CLASS"));
-          let colTime = headers.findIndex(h => h.includes("THỜI GIAN") || h.includes("GIỜ") || h.includes("TIME"));
-          let colStatus = headers.findIndex(h => h.includes("TRẠNG THÁI") || h.includes("GHI CHÚ") || h.includes("STATUS"));
-
-          if (colName === -1) colName = 1;
-          let newStudents = [];
-
-          for (let i = headerIdx + 1; i < json.length; i++) {
-            const row = json[i];
-            if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
-
-            let nameVal = String(row[colName]).trim();
-            let khoiVal = colKhoi !== -1 && row[colKhoi] ? String(row[colKhoi]).replace(/[^0-9]/g, '') : "";
-            let lopVal = colLop !== -1 && row[colLop] ? String(row[colLop]).trim() : "";
-            
-            if (!khoiVal && lopVal) {
-              const match = lopVal.match(/\d+/);
-              if (match) khoiVal = match[0];
-            }
-            if (!khoiVal) khoiVal = "10";
-            if (!lopVal) lopVal = `${khoiVal}A1`;
-
-            newStudents.push({
-              stt: newStudents.length + 1,
-              name: nameVal,
-              khoi: khoiVal,
-              lop: lopVal,
-              time: colTime !== -1 && row[colTime] ? String(row[colTime]).trim() : "07:00:00",
-              status: colStatus !== -1 && row[colStatus] ? String(row[colStatus]).trim() : "ĐÚNG GIỜ"
-            });
-          }
-
-          if (newStudents.length > 0) {
-            students = newStudents;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-            populateLopDropdown();
-            currentPage = 1;
-            renderTable();
-
-            // Đẩy tự động lên Đám Mây cho Phụ Huynh
-            const ok = await uploadToCloud(students);
-            if (ok) {
-              alert(`ĐÃ CẬP NHẬT THÀNH CÔNG ${newStudents.length} HỌC SINH LÊN ĐÁM MÂY!\n\nTất cả Phụ huynh khi mở link trên điện thoại từ bây giờ sẽ nhìn thấy dữ liệu mới này.`);
-            } else {
-              alert(`Lưu trên máy thành công (${newStudents.length} HS), tuy nhiên không thể kết nối Cloud. Hãy kiểm tra lại kết nối Internet.`);
-            }
-          } else {
-            alert("Không tìm thấy học sinh trong Excel!");
-          }
+          processRawData(json);
+          alert("Đã tải dữ liệu lên xem thử thành công!");
         } catch (err) { alert("Lỗi khi đọc file Excel: " + err.message); }
       };
       reader.readAsArrayBuffer(file);
+    }
+
+    function processRawData(json) {
+      if (!json || json.length < 2) return;
+
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(json.length, 10); i++) {
+        const rowStr = json[i].join(" ").toUpperCase();
+        if (rowStr.includes("HỌ") || rowStr.includes("TÊN") || rowStr.includes("NAME")) {
+          headerIdx = i;
+          break;
+        }
+      }
+
+      const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
+      let colName = headers.findIndex(h => h.includes("HỌ") || h.includes("TÊN") || h.includes("NAME"));
+      let colKhoi = headers.findIndex(h => h.includes("KHỐI") || h.includes("GRADE"));
+      let colLop = headers.findIndex(h => h.includes("LỚP") || h.includes("CLASS"));
+      let colTime = headers.findIndex(h => h.includes("THỜI GIAN") || h.includes("GIỜ") || h.includes("TIME"));
+      let colStatus = headers.findIndex(h => h.includes("TRẠNG THÁI") || h.includes("GHI CHÚ") || h.includes("STATUS"));
+
+      if (colName === -1) colName = 1;
+      let newStudents = [];
+
+      for (let i = headerIdx + 1; i < json.length; i++) {
+        const row = json[i];
+        if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
+
+        let nameVal = String(row[colName]).trim();
+        let khoiVal = colKhoi !== -1 && row[colKhoi] ? String(row[colKhoi]).replace(/[^0-9]/g, '') : "";
+        let lopVal = colLop !== -1 && row[colLop] ? String(row[colLop]).trim() : "";
+        
+        if (!khoiVal && lopVal) {
+          const match = lopVal.match(/\d+/);
+          if (match) khoiVal = match[0];
+        }
+        if (!khoiVal) khoiVal = "10";
+        if (!lopVal) lopVal = `${khoiVal}A1`;
+
+        newStudents.push({
+          stt: newStudents.length + 1,
+          name: nameVal,
+          khoi: khoiVal,
+          lop: lopVal,
+          time: colTime !== -1 && row[colTime] ? String(row[colTime]).trim() : "07:00:00",
+          status: colStatus !== -1 && row[colStatus] ? String(row[colStatus]).trim() : "ĐÚNG GIỜ"
+        });
+      }
+
+      if (newStudents.length > 0) {
+        students = newStudents;
+        localStorage.setItem("THPT_VI_THANH_DATA", JSON.stringify(students));
+        populateLopDropdown();
+        currentPage = 1;
+        renderTable();
+      }
     }
 
     function populateLopDropdown() {
@@ -501,7 +464,7 @@
       const pageData = filtered.slice(start, start + pageSize);
 
       if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Không tìm thấy dữ liệu học sinh phù hợp</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Chưa có dữ liệu học sinh. Vui lòng tải file Excel lên GitHub!</td></tr>`;
       } else {
         pageData.forEach((s, idx) => {
           const tr = document.createElement("tr");
@@ -528,7 +491,7 @@
         });
       }
 
-      document.getElementById("pagination-info").innerText = `Hiển thị ${filtered.length > 0 ? start + 1 : 0} - ${Math.min(start + pageSize, filtered.length)} trên ${filtered.length} học sinh lọc được`;
+      document.getElementById("pagination-info").innerText = `Hiển thị ${filtered.length > 0 ? start + 1 : 0} - ${Math.min(start + pageSize, filtered.length)} trên ${filtered.length} học sinh`;
       document.getElementById("page-num").innerText = `Trang ${currentPage} / ${totalPages}`;
       document.getElementById("btn-prev").disabled = currentPage === 1;
       document.getElementById("btn-next").disabled = currentPage === totalPages;
