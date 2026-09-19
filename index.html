@@ -29,21 +29,20 @@
         <img src="logo.jpg" alt="Logo THPT Vị Thanh" class="h-12 w-12 object-contain shrink-0" onerror="this.onerror=null; this.src='https://via.placeholder.com/48?text=THPT';">
         <div>
           <h1 class="text-lg font-bold text-slate-900 tracking-tight">TRƯỜNG THPT VỊ THANH</h1>
-          <p class="text-xs text-slate-500">Trang tra cứu điểm danh dành cho Phụ huynh</p>
+          <p class="text-xs text-slate-500">Trang tra cứu điểm danh dành cho Phụ huynh & Giáo viên</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <!-- Nút chọn file dùng khi thử nghiệm Offline -->
-        <label id="btn-offline-upload" class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all">
-          <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
-          <span>Mở file data.xlsx (Offline)</span>
-          <input type="file" id="local-file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleLocalFile(event)">
-        </label>
+      <div class="flex items-center gap-3">
+        <!-- Hiển thị thời gian cập nhật -->
+        <div id="update-time-box" class="hidden sm:flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-medium">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-600"></i>
+          <span id="update-time-text">Chưa rõ thời gian</span>
+        </div>
 
-        <button onclick="loadDataFromExcel()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all">
+        <button onclick="autoFetchData()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all">
           <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          <span>Làm mới</span>
+          <span>Cập nhật</span>
         </button>
       </div>
     </div>
@@ -51,11 +50,11 @@
 
   <main class="max-w-5xl mx-auto px-4 pt-8 space-y-6">
 
-    <!-- KHU VỰC TÌM KIẾM DÀNH CHO PHỤ HUYNH -->
+    <!-- KHU VỰC TÌM KIẾM -->
     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
       <div class="text-center max-w-md mx-auto space-y-1">
         <h2 class="text-xl font-bold text-slate-800">Tra Cứu Trạng Thái Điểm Danh</h2>
-        <p class="text-xs text-slate-500">Nhập tên hoặc chọn lớp của con để kiểm tra thông tin hôm nay</p>
+        <p class="text-xs text-slate-500" id="sub-title-time">Nhập tên hoặc chọn lớp để kiểm tra thông tin hôm nay</p>
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3 pt-2">
@@ -114,17 +113,16 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
-      loadDataFromExcel();
+      autoFetchData();
 
       document.getElementById("search-input").addEventListener("input", () => { currentPage = 1; renderTable(); });
       document.getElementById("lop-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
     });
 
-    // TỰ ĐỘNG NẠP FILE KHI ONLINE (GITHUB)
-    function loadDataFromExcel() {
+    // TỰ ĐỘNG TẢI DỮ LIỆU TỪ FILE DATA.XLSX
+    function autoFetchData() {
       const spinner = document.getElementById("loading-spinner");
       const statusText = document.getElementById("status-text");
-      const table = document.getElementById("data-table");
 
       spinner.classList.remove("hidden");
       statusText.innerText = "Đang tự động nạp dữ liệu từ data.xlsx...";
@@ -133,37 +131,44 @@
 
       fetch(url)
         .then(res => {
-          if (!res.ok) throw new Error("CORS_OR_NOT_FOUND");
+          if (!res.ok) throw new Error("Không tìm thấy file data.xlsx");
+
+          // Lấy thông tin thời gian cập nhật file từ header 'Last-Modified'
+          const lastModifiedHeader = res.headers.get("Last-Modified");
+          if (lastModifiedHeader) {
+            const modDate = new Date(lastModifiedHeader);
+            displayUpdateTime(modDate);
+          } else {
+            // Nếu không có header thì dùng thời gian hiện tại
+            displayUpdateTime(new Date());
+          }
+
           return res.arrayBuffer();
         })
         .then(buffer => {
           processExcelBuffer(buffer);
         })
         .catch(err => {
-          // Báo lỗi rõ ràng nếu đang mở file Offline trực tiếp
-          if (window.location.protocol === "file:") {
-            statusText.innerHTML = `
-              <span class="text-amber-600 font-semibold">Bạn đang chạy thử trang web dưới dạng Offline (file://).</span><br>
-              <span class="text-xs text-slate-500">Trình duyệt chặn tự đọc file local. Vui lòng bấm nút <b>"Mở file data.xlsx (Offline)"</b> ở góc trên bên phải để nạp dữ liệu!</span>
-            `;
-          } else {
-            statusText.innerHTML = `<span class="text-rose-500 font-medium">Chưa có dữ liệu (Không tìm thấy file 'data.xlsx' trên server).</span>`;
-          }
+          statusText.innerHTML = `<span class="text-rose-500 font-medium">Chưa có dữ liệu (Không tìm thấy file 'data.xlsx' trên server).</span>`;
         });
     }
 
-    // NẠP THỦ CÔNG KHI CHẠY OFFLINE
-    function handleLocalFile(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    // HIỂN THỊ THỜI GIAN CẬP NHẬT LÊN GIAO DIỆN
+    function displayUpdateTime(dateObj) {
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
 
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        processExcelBuffer(evt.target.result);
-      };
-      reader.readAsArrayBuffer(file);
+      const timeString = `Cập nhật: ${hours}:${minutes} - ${day}/${month}/${year}`;
+
+      document.getElementById("update-time-text").innerText = timeString;
+      document.getElementById("update-time-box").classList.remove("hidden");
+      document.getElementById("sub-title-time").innerText = `Dữ liệu điểm danh ngày ${day}/${month}/${year}`;
     }
 
+    // XỬ LÝ DỮ LIỆU EXCEL
     function processExcelBuffer(buffer) {
       try {
         const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
@@ -176,7 +181,7 @@
         document.getElementById("data-table").classList.remove("hidden");
         document.getElementById("pagination-bar").classList.remove("hidden");
       } catch (err) {
-        alert("Lỗi khi đọc dữ liệu Excel: " + err.message);
+        alert("Lỗi khi đọc file Excel: " + err.message);
       }
     }
 
