@@ -29,14 +29,14 @@
     </div>
 
     <!-- CẤU HÌNH GITHUB -->
-    <details open class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+    <details class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
       <summary class="font-bold text-slate-700 cursor-pointer flex items-center gap-2">
         <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i> Cấu hình kết nối GitHub (Dành cho BQT)
       </summary>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
         <input type="text" id="gh-user" placeholder="User GitHub..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
         <input type="text" id="gh-repo" placeholder="Tên Repo..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-        <input type="password" id="gh-token" placeholder="GitHub Token..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white md:col-span-1">
+        <input type="password" id="gh-token" placeholder="GitHub Token..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
         <button onclick="saveGithubConfig()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl px-4 py-2 transition-all flex items-center justify-center gap-2">
           <i data-lucide="save" class="w-4 h-4"></i> Lưu & Tải Dữ Liệu
         </button>
@@ -70,12 +70,13 @@
             <th class="p-3 w-16">STT</th>
             <th class="p-3">Họ và Tên</th>
             <th class="p-3 w-28">Lớp</th>
-            <th class="p-3 w-40">Trạng thái</th>
+            <th class="p-3 w-40">Thời Gian</th>
+            <th class="p-3 w-40">Trạng Thái</th>
           </tr>
         </thead>
         <tbody id="attendance-tbody" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="5" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh từ GitHub...</td>
+            <td colspan="6" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh từ GitHub...</td>
           </tr>
         </tbody>
       </table>
@@ -113,7 +114,6 @@
     </div>
   </div>
 
-  <!-- SCRIPT XỬ LÝ -->
   <script>
     const CLASS_PASSWORDS = {
       "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
@@ -124,13 +124,22 @@
       "12A6": "123456", "12A7": "123456", "12A8": "123456", "12A9": "123456", "12A10": "123456"
     };
 
+    // Chỉ số cột (0-based):
+    // Cột 2 (B) = Index 1: Họ và Tên
+    // Cột 3 (C) = Index 2: Lớp
+    // Cột 11 (K) = Index 10: Thời gian điểm danh
+    // Cột 17 (Q) = Index 16: Trạng thái điểm danh
+    const COL_NAME = 1;      // Cột 2
+    const COL_LOP = 2;       // Cột 3
+    const COL_THOIGIAN = 10; // Cột 11
+    const COL_TRANGTHAI = 16;// Cột 17
+
     let students = [];
     let filteredStudents = [];
     let rawExcelJson = null;
     let currentSheetName = "";
     let fileSha = "";
     let pendingStudents = [];
-    let colIndices = { lop: 2, name: 3, vangMat: 9, coPhep: 10 };
 
     function cleanInput(str) {
       if (!str) return "";
@@ -158,9 +167,6 @@
       const repo = cleanInput(document.getElementById("gh-repo").value);
       const token = document.getElementById("gh-token").value.trim();
 
-      document.getElementById("gh-user").value = user;
-      document.getElementById("gh-repo").value = repo;
-
       localStorage.setItem("gh_user", user);
       localStorage.setItem("gh_repo", repo);
       localStorage.setItem("gh_token", token);
@@ -175,20 +181,13 @@
       const token = localStorage.getItem("gh_token");
       const tbody = document.getElementById("attendance-tbody");
 
-      if (!user || !repo) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-amber-600 font-semibold">Vui lòng nhập "User GitHub" và "Tên Repo" trong mục Cấu hình rồi bấm "Lưu & Tải Dữ Liệu".</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh từ GitHub...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh từ GitHub...</td></tr>`;
 
       try {
         const headers = token ? { "Authorization": `token ${token}` } : {};
         const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, { headers });
 
-        if (!response.ok) {
-          throw new Error("Không tìm thấy file data.xlsx hoặc Repo ở chế độ riêng tư chưa có Token!");
-        }
+        if (!response.ok) throw new Error("Không tìm thấy file data.xlsx hoặc Repo ở chế độ riêng tư chưa có Token!");
 
         const data = await response.json();
         fileSha = data.sha;
@@ -205,49 +204,21 @@
 
         rawExcelJson = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
 
-        if (!rawExcelJson || rawExcelJson.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">File Excel trống.</td></tr>`;
-          return;
-        }
-
-        // TỰ ĐỘNG DÒ CỘT TƯƠNG ỨNG VỚI FILE EXCEL DỰA TRÊN DÒNG TIÊU ĐỀ
-        colIndices = { lop: 2, name: 3, vangMat: 9, coPhep: 10 };
-        let headerRowIdx = -1;
-
-        for (let r = 0; r < Math.min(rawExcelJson.length, 20); r++) {
-          const row = rawExcelJson[r];
-          if (!row) continue;
-
-          row.forEach((cell, cIdx) => {
-            const val = String(cell || "").toLowerCase().trim();
-            if (val.includes("lớp")) colIndices.lop = cIdx;
-            if (val.includes("họ và tên") || val.includes("họ tên")) colIndices.name = cIdx;
-            if (val.includes("vắng mặt") || val.includes("vắng")) colIndices.vangMat = cIdx;
-            if (val.includes("có phép")) colIndices.coPhep = cIdx;
-          });
-
-          if (String(row[colIndices.name] || "").toLowerCase().includes("họ")) {
-            headerRowIdx = r;
-            break;
-          }
-        }
-
         students = [];
-        const startRow = headerRowIdx !== -1 ? headerRowIdx + 1 : 1;
-
-        for (let i = startRow; i < rawExcelJson.length; i++) {
+        for (let i = 0; i < rawExcelJson.length; i++) {
           const row = rawExcelJson[i];
-          if (!row) continue;
+          if (!row || row.length === 0) continue;
 
-          const name = String(row[colIndices.name] || "").trim();
-          const lop = String(row[colIndices.lop] || "").trim().toUpperCase();
+          let name = row[COL_NAME] ? String(row[COL_NAME]).trim() : "";
+          let lop = row[COL_LOP] ? String(row[COL_LOP]).trim().toUpperCase() : "";
 
-          if (!name || name.toLowerCase().includes("họ và tên")) continue;
+          if (!name || name.toLowerCase().includes("họ và tên") || name.toLowerCase().includes("stt")) continue;
 
-          const coPhepVal = String(row[colIndices.coPhep] || "").trim().toLowerCase();
-          
+          let thoiGian = row[COL_THOIGIAN] ? String(row[COL_THOIGIAN]).trim() : "---";
+          let valTrangThai = row[COL_TRANGTHAI] ? String(row[COL_TRANGTHAI]).trim().toLowerCase() : "";
+
           let status = "VẮNG KHÔNG PHÉP";
-          if (coPhepVal && coPhepVal !== "false" && coPhepVal !== "0" && coPhepVal !== "không") {
+          if (valTrangThai.includes("có phép") || valTrangThai.includes("phes") || valTrangThai === "cp") {
             status = "VẮNG CÓ PHÉP";
           }
 
@@ -255,6 +226,7 @@
             id: i,
             name: name,
             lop: lop || "---",
+            time: thoiGian,
             status: status,
             selected: false
           });
@@ -264,7 +236,7 @@
         filterData();
 
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
       }
     }
 
@@ -272,10 +244,10 @@
       const select = document.getElementById("filter-class");
       const currentVal = select.value;
       const classes = [...new Set(students.map(s => s.lop))].filter(c => c !== "---").sort();
-      
+
       select.innerHTML = '<option value="">Tất cả lớp</option>' + 
         classes.map(c => `<option value="${c}">${c}</option>`).join('');
-      
+
       select.value = currentVal;
     }
 
@@ -302,7 +274,7 @@
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       if (!filteredStudents || filteredStudents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
         return;
       }
 
@@ -312,6 +284,7 @@
           <td class="p-3 text-slate-400 font-medium">${idx + 1}</td>
           <td class="p-3 font-semibold text-slate-800">${s.name}</td>
           <td class="p-3"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
+          <td class="p-3 text-slate-500 font-mono text-xs">${s.time}</td>
           <td class="p-3">
             <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${
               s.status === 'VẮNG CÓ PHÉP' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
@@ -340,7 +313,7 @@
 
       pendingStudents = students.filter(s => s.selected);
       if (pendingStudents.length === 0) {
-        alert("Vui lòng tích chọn ít nhất 1 học sinh để duyệt có phép.");
+        alert("Vui lòng chọn ít nhất 1 học sinh để duyệt có phép.");
         return;
       }
 
@@ -367,7 +340,7 @@
       }
 
       if (!CLASS_PASSWORDS[targetClass]) {
-        alert(`Lớp '${targetClass}' không tồn tại trong danh sách 32 lớp!`);
+        alert(`Lớp '${targetClass}' không tồn tại trong danh sách!`);
         return;
       }
 
@@ -391,14 +364,15 @@
           s.selected = false;
           
           if (rawExcelJson && rawExcelJson[s.id]) {
-            rawExcelJson[s.id][colIndices.coPhep] = "Có phép";
+            // Cập nhật trạng thái "VẮNG CÓ PHÉP" vào Cột 17 (COL_TRANGTHAI)
+            rawExcelJson[s.id][COL_TRANGTHAI] = "VẮNG CÓ PHÉP";
           }
           count++;
         }
       });
 
       if (count === 0) {
-        alert(`Tất cả học sinh được chọn thuộc lớp ${targetClass} đã ở trạng thái Có phép!`);
+        alert(`Tất cả học sinh được chọn đã ở trạng thái Có phép!`);
         return;
       }
 
