@@ -109,7 +109,7 @@
   <script>
     let students = [];
     let currentPage = 1;
-    const pageSize = 20;
+    const pageSize = 50; // Đã cập nhật hiển thị 50 học sinh mỗi trang
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
@@ -170,7 +170,6 @@
       try {
         const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
         
-        // Lấy sheet 'data' hoặc sheet đầu tiên nếu không tìm thấy 'data'
         let sheetName = workbook.SheetNames.find(s => s.toLowerCase() === 'data') || workbook.SheetNames[0];
         const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "" });
 
@@ -187,55 +186,29 @@
     function parseExcelData(json) {
       if (!json || json.length < 5) return;
 
-      // Tìm hàng tiêu đề chứa cột 'HỌ VÀ TÊN'
-      let headerIdx = 2; // Mặc định hàng 3 trong file
-      for (let i = 0; i < Math.min(json.length, 10); i++) {
-        const rowStr = json[i].join(" ").toUpperCase();
-        if (rowStr.includes("HỌ VÀ TÊN") || rowStr.includes("HỌ TÊN")) {
-          headerIdx = i;
-          break;
-        }
-      }
-
-      // Đọc tiêu đề dòng 1 & dòng 2 (nếu gộp)
-      const rowA = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
-      const rowB = json[headerIdx + 1] ? json[headerIdx + 1].map(h => String(h || '').trim().toUpperCase()) : [];
-
-      // Xác định chỉ số các cột
-      let colName = rowA.findIndex(h => h.includes("HỌ VÀ TÊN") || h.includes("HỌ TÊN"));
-      let colLop = rowA.findIndex(h => h.includes("LỚP"));
-      let colTime = rowB.findIndex(h => h.includes("THỜI GIAN") || h.includes("CHECK IN") || h.includes("GIỜ"));
-      let colTre = rowB.findIndex(h => h.includes("VÔ TRỄ") || h.includes("TRỄ"));
-      let colP = rowB.findIndex(h => h === "P" || h.includes("PHÉP"));
-      let colKP = rowB.findIndex(h => h === "K" || h.includes("KHÔNG PHÉP"));
-
-      // Gán vị trí chuẩn theo mẫu data.xlsx nếu không tự động khớp
-      if (colName === -1) colName = 1;
-      if (colLop === -1) colLop = 2;
-      if (colTime === -1) colTime = 10;
-      if (colTre === -1) colTre = 11;
-      if (colP === -1) colP = 15;
-      if (colKP === -1) colKP = 16;
+      const colName = 1;  // Cột 2: Họ và tên
+      const colLop = 2;   // Cột 3: Lớp
+      const colTime = 10; // Cột 11: Giờ điểm danh
+      const colTre = 11;  // Cột 12: Vô trễ
+      const colP = 15;    // Cột 16: Phép
+      const colKP = 16;   // Cột 17: Không phép
 
       students = [];
 
-      for (let i = headerIdx + 2; i < json.length; i++) {
+      for (let i = 4; i < json.length; i++) {
         const row = json[i];
         if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
 
         let nameVal = String(row[colName]).trim();
         let lopVal = String(row[colLop] || '').trim();
         
-        // Trích xuất Khối từ Tên Lớp (VD: 10A1 -> Khối 10)
         let khoiVal = "10";
         const matchKhoi = lopVal.match(/\d+/);
         if (matchKhoi) khoiVal = matchKhoi[0];
 
-        // Lấy thời gian Check-in
         let timeVal = row[colTime] ? String(row[colTime]).trim() : "";
         if (!timeVal || timeVal === "undefined") timeVal = "--:--";
 
-        // Xác định Trạng thái Điểm danh
         let statusVal = "ĐÚNG GIỜ";
         let valTre = row[colTre] ? String(row[colTre]).trim().toUpperCase() : "";
         let valP = row[colP] ? String(row[colP]).trim() : "";
