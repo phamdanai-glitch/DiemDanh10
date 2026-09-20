@@ -18,7 +18,7 @@
         <h1 class="text-2xl font-bold text-slate-800">Tra Cứu & Duyệt Điểm Danh</h1>
         <p class="text-xs text-slate-400 mt-1">Trường THPT Vị Thanh — Tổng số học sinh: <span id="total-students" class="font-bold text-indigo-600">0</span></p>
       </div>
-      <button onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all">
+      <button onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
         <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
       </button>
     </div>
@@ -96,7 +96,7 @@
 
       <div class="flex gap-2 pt-2">
         <button onclick="closePasswordModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold">Hủy</button>
-        <button onclick="confirmApproval()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1">
+        <button id="btn-confirm-approval" onclick="confirmApproval()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1">
           <i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận
         </button>
       </div>
@@ -165,7 +165,7 @@
       try {
         let arrayBuffer = null;
 
-        // Ưu tiên 1: Lấy qua Raw github (Nhanh, không phụ thuộc Token/Rate-limit)
+        // Ưu tiên 1: Lấy qua Raw github
         const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/data.xlsx?v=${Date.now()}`;
         try {
           const rawRes = await fetch(rawUrl);
@@ -196,17 +196,15 @@
         currentSheetName = rawWorkbook.SheetNames.includes("data") ? "data" : rawWorkbook.SheetNames[0];
         const worksheet = rawWorkbook.Sheets[currentSheetName];
 
-        // Đọc toàn bộ ô trong Sheet mà không dựa vào header tự động
         const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z2000');
         allStudents = [];
 
-        // Duyệt từ dòng 5 (r = 4 trong JS array 0-indexed)[cite: 1]
         for (let r = 4; r <= range.e.r; r++) {
-          const nameCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 1 })]; // Cột B: Họ và Tên[cite: 1]
-          const lopCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 2 })];  // Cột C: Lớp[cite: 1]
-          const maHsCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 4 })]; // Cột E: Mã HS[cite: 1]
-          const timeCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 10 })];// Cột K: Thời gian[cite: 1]
-          const phepCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 15 })];// Cột P: Có phép[cite: 1]
+          const nameCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 1 })]; // Cột B: Họ và Tên
+          const lopCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 2 })];  // Cột C: Lớp
+          const maHsCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 4 })]; // Cột E: Mã HS
+          const timeCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 10 })];// Cột K: Thời gian
+          const phepCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 15 })];// Cột P: VẮNG CÓ PHÉP
 
           if (!nameCell || !nameCell.v) continue;
 
@@ -219,12 +217,12 @@
           let phepVal = phepCell && phepCell.v ? String(phepCell.v).trim() : "";
 
           let status = "VẮNG KHÔNG PHÉP";
-          if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p" || phepVal.includes("Có phép")) {
+          if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p" || phepVal.includes("Có phép") || phepVal === "P") {
             status = "VẮNG CÓ PHÉP";
           }
 
           allStudents.push({
-            rowIdx: r + 1, // Dòng Excel thực tế (1-indexed)[cite: 1]
+            rowIdx: r + 1, // Dòng Excel 1-indexed
             name: name,
             lop: lop,
             maHs: maHs,
@@ -236,7 +234,6 @@
 
         document.getElementById("total-students").innerText = allStudents.length;
 
-        // Tạo danh sách Lớp vào Dropdown Lọc
         const classes = [...new Set(allStudents.map(s => s.lop))].sort();
         const classSelect = document.getElementById("class-filter");
         classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
@@ -278,7 +275,7 @@
 
       tbody.innerHTML = filteredStudents.map((s, idx) => `
         <tr class="hover:bg-slate-50 transition-colors">
-          <td class="p-3"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="s.selected = this.checked"></td>
+          <td class="p-3"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="toggleStudentSelect(${idx}, this.checked)"></td>
           <td class="p-3 text-slate-400 font-medium">${idx + 1}</td>
           <td class="p-3 font-semibold text-slate-800">${s.name}</td>
           <td class="p-3"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
@@ -295,13 +292,19 @@
       `).join('');
     }
 
+    function toggleStudentSelect(index, isChecked) {
+      if (filteredStudents[index]) {
+        filteredStudents[index].selected = isChecked;
+      }
+    }
+
     function approveSelected() {
       const user = cleanInput(localStorage.getItem("gh_user"));
       const repo = cleanInput(localStorage.getItem("gh_repo"));
       const token = localStorage.getItem("gh_token");
 
       if (!user || !repo || !token) {
-        alert("Để lưu trực tiếp lên GitHub, bạn cần điền đầy đủ GitHub Token vào mục Cấu hình!");
+        alert("Để lưu trực tiếp lên GitHub, bạn cần nhập GitHub Token vào mục Cấu hình!");
         return;
       }
 
@@ -331,7 +334,9 @@
         return;
       }
 
-      closePasswordModal();
+      const confirmBtn = document.getElementById("btn-confirm-approval");
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = "Đang xử lý...";
 
       const worksheet = rawWorkbook.Sheets[currentSheetName];
       let count = 0;
@@ -341,15 +346,19 @@
           s.status = "VẮNG CÓ PHÉP";
           s.selected = false;
           
-          // Ghi chữ "Có phép" vào Cột P (Cột 16 trong Excel, index 15)[cite: 1]
+          // Điền "P" vào Cột P (Cột 16, index 15)
           const phepCellAddr = XLSX.utils.encode_cell({ r: s.rowIdx - 1, c: 15 });
-          worksheet[phepCellAddr] = { t: 's', v: 'Có phép' };
+          worksheet[phepCellAddr] = { t: 's', v: 'P' };
           count++;
         }
       });
 
       if (count === 0) {
-        alert(`Học sinh được chọn đã ở trạng thái Có phép.`);
+        alert(`Các học sinh được chọn đã ở trạng thái Có phép.`);
+        closePasswordModal();
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
+        lucide.createIcons();
         return;
       }
 
@@ -360,15 +369,13 @@
       try {
         const wbout = XLSX.write(rawWorkbook, { bookType: 'xlsx', type: 'base64' });
 
-        // Lấy SHA mới nhất nếu chưa có
-        if (!fileSha) {
-          const getShaRes = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
-            headers: { "Authorization": `token ${token}` }
-          });
-          if (getShaRes.ok) {
-            const getShaData = await getShaRes.json();
-            fileSha = getShaData.sha;
-          }
+        // Tải SHA mới nhất từ GitHub
+        const getShaRes = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
+          headers: { "Authorization": `token ${token}` }
+        });
+        if (getShaRes.ok) {
+          const getShaData = await getShaRes.json();
+          fileSha = getShaData.sha;
         }
 
         const bodyData = {
@@ -391,12 +398,17 @@
         if (response.ok) {
           fileSha = resJson.content.sha;
           alert(`Thành công! Đã duyệt có phép cho ${count} học sinh và lưu lên GitHub.`);
+          closePasswordModal();
           filterData();
         } else {
-          alert("Lỗi khi ghi đè file Excel: " + (resJson.message || "Token không hợp lệ"));
+          alert("Lỗi khi ghi đè file Excel: " + (resJson.message || "Token không đủ quyền ghi (contents: write)"));
         }
       } catch (err) {
         alert("Lỗi kết nối GitHub API: " + err.message);
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
+        lucide.createIcons();
       }
     }
   </script>
