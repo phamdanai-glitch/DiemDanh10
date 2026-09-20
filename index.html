@@ -50,11 +50,42 @@
 
   <main class="max-w-5xl mx-auto px-4 pt-8 space-y-6">
 
-    <!-- KHU VỰC TÌM KIẾM -->
+    <!-- KHU VỰC THỐNG KÊ (DỰA TRÊN DỮ LIỆU ĐANG LỌC) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <span class="text-xs font-medium text-emerald-600 flex items-center gap-1">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Có Mặt
+        </span>
+        <span id="stat-present" class="text-2xl font-bold text-slate-800 mt-2">0</span>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <span class="text-xs font-medium text-amber-600 flex items-center gap-1">
+          <i data-lucide="clock" class="w-4 h-4"></i> Trễ Giờ
+        </span>
+        <span id="stat-late" class="text-2xl font-bold text-slate-800 mt-2">0</span>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <span class="text-xs font-medium text-blue-600 flex items-center gap-1">
+          <i data-lucide="file-text" class="w-4 h-4"></i> Vắng Có Phép
+        </span>
+        <span id="stat-p" class="text-2xl font-bold text-slate-800 mt-2">0</span>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <span class="text-xs font-medium text-rose-600 flex items-center gap-1">
+          <i data-lucide="alert-circle" class="w-4 h-4"></i> Vắng Không Phép
+        </span>
+        <span id="stat-kp" class="text-2xl font-bold text-slate-800 mt-2">0</span>
+      </div>
+    </div>
+
+    <!-- KHU VỰC TÌM KIẾM VÀ BỘ LỌC -->
     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
       <div class="text-center max-w-md mx-auto space-y-1">
         <h2 class="text-xl font-bold text-slate-800">Tra Cứu Trạng Thái Điểm Danh</h2>
-        <p class="text-xs text-slate-500" id="sub-title-time">Nhập tên hoặc chọn lớp để kiểm tra thông tin hôm nay</p>
+        <p class="text-xs text-slate-500" id="sub-title-time">Nhập tên hoặc lọc theo Lớp/Trạng thái để kiểm tra thông tin</p>
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3 pt-2">
@@ -64,8 +95,18 @@
                  class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium">
         </div>
 
+        <!-- Lọc Lớp -->
         <select id="lop-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
           <option value="ALL">Tất cả Lớp</option>
+        </select>
+
+        <!-- Lọc Trạng Thái -->
+        <select id="status-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+          <option value="ALL">Tất cả Trạng Thái</option>
+          <option value="ĐÚNG GIỜ">Có mặt (Đúng giờ)</option>
+          <option value="TRỄ GIỜ">Trễ giờ</option>
+          <option value="VẮNG CÓ PHÉP">Vắng có phép</option>
+          <option value="VẮNG KHÔNG PHÉP">Vắng không phép</option>
         </select>
       </div>
     </div>
@@ -109,7 +150,7 @@
   <script>
     let students = [];
     let currentPage = 1;
-    const pageSize = 50; // Đã cập nhật hiển thị 50 học sinh mỗi trang
+    const pageSize = 50;
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
@@ -117,6 +158,7 @@
 
       document.getElementById("search-input").addEventListener("input", () => { currentPage = 1; renderTable(); });
       document.getElementById("lop-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
+      document.getElementById("status-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
     });
 
     // TỰ ĐỘNG TẢI DỮ LIỆU TỪ FILE DATA.XLSX
@@ -254,20 +296,30 @@
       const tbody = document.getElementById("student-table-body");
       const search = document.getElementById("search-input").value.toLowerCase().trim();
       const lop = document.getElementById("lop-filter").value;
+      const statusFilter = document.getElementById("status-filter").value;
 
       tbody.innerHTML = "";
 
-      const filtered = students.filter(s => {
+      // Lọc theo tên và lớp trước để phục vụ cho việc thống kê số liệu
+      const baseFiltered = students.filter(s => {
         const matchName = String(s.name || '').toLowerCase().includes(search);
         const matchLop = lop === "ALL" || String(s.lop) === lop;
         return matchName && matchLop;
       });
 
-      const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+      // Cập nhật thẻ thống kê theo tập dữ liệu lớp/tên đang lọc
+      updateStatistics(baseFiltered);
+
+      // Tiếp tục lọc theo Trạng thái để hiển thị danh sách
+      const finalFiltered = baseFiltered.filter(s => {
+        return statusFilter === "ALL" || s.status === statusFilter;
+      });
+
+      const totalPages = Math.ceil(finalFiltered.length / pageSize) || 1;
       if (currentPage > totalPages) currentPage = totalPages;
 
       const start = (currentPage - 1) * pageSize;
-      const pageData = filtered.slice(start, start + pageSize);
+      const pageData = finalFiltered.slice(start, start + pageSize);
 
       if (pageData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Không tìm thấy học sinh phù hợp</td></tr>`;
@@ -297,10 +349,30 @@
         });
       }
 
-      document.getElementById("pagination-info").innerText = `Hiển thị ${filtered.length > 0 ? start + 1 : 0} - ${Math.min(start + pageSize, filtered.length)} trên ${filtered.length} học sinh`;
+      document.getElementById("pagination-info").innerText = `Hiển thị ${finalFiltered.length > 0 ? start + 1 : 0} - ${Math.min(start + pageSize, finalFiltered.length)} trên ${finalFiltered.length} học sinh`;
       document.getElementById("page-num").innerText = `Trang ${currentPage} / ${totalPages}`;
       document.getElementById("btn-prev").disabled = currentPage === 1;
       document.getElementById("btn-next").disabled = currentPage === totalPages;
+    }
+
+    // TÍNH TOÁN VÀ CẬP NHẬT CÁC THẺ THỐNG KÊ
+    function updateStatistics(data) {
+      let presentCount = 0;
+      let lateCount = 0;
+      let pCount = 0;
+      let kpCount = 0;
+
+      data.forEach(s => {
+        if (s.status === "ĐÚNG GIỜ") presentCount++;
+        else if (s.status === "TRỄ GIỜ") lateCount++;
+        else if (s.status === "VẮNG CÓ PHÉP") pCount++;
+        else if (s.status === "VẮNG KHÔNG PHÉP") kpCount++;
+      });
+
+      document.getElementById("stat-present").innerText = presentCount;
+      document.getElementById("stat-late").innerText = lateCount;
+      document.getElementById("stat-p").innerText = pCount;
+      document.getElementById("stat-kp").innerText = kpCount;
     }
 
     function changePage(delta) { currentPage += delta; renderTable(); }
