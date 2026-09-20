@@ -1,416 +1,668 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tra Cứu & Duyệt Điểm Danh</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Điểm Danh Học Sinh - Trực Tuyến</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (xlsx) for processing Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-6">
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col">
 
-  <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-6 border border-slate-100 space-y-6">
-    
-    <!-- HEADER -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-800">Tra Cứu & Duyệt Điểm Danh</h1>
-        <p class="text-xs text-slate-400 mt-1">Trường THPT Vị Thanh — Tổng số học sinh: <span id="total-students" class="font-bold text-indigo-600">0</span></p>
-      </div>
-      <button onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
-        <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
-      </button>
-    </div>
+    <!-- TOP NAVIGATION -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
+                    <i data-lucide="clipboard-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-slate-900">Sổ Điểm Danh Điện Tử</h1>
+                    <p class="text-xs text-slate-500 font-medium">Hệ thống theo dõi & tra cứu chuyên cần</p>
+                </div>
+            </div>
 
-    <!-- BỘ LỌC TÌM KIẾM & LỚP -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <input type="text" id="search-input" oninput="filterData()" placeholder="🔍 Tìm theo tên hoặc mã HS..." class="px-4 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-      <select id="class-filter" onchange="filterData()" class="px-4 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-        <option value="">-- Tất cả các lớp --</option>
-      </select>
-      <select id="status-filter" onchange="filterData()" class="px-4 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-        <option value="">-- Tất cả trạng thái --</option>
-        <option value="VẮNG KHÔNG PHÉP">VẮNG KHÔNG PHÉP</option>
-        <option value="VẮNG CÓ PHÉP">VẮNG CÓ PHÉP</option>
-      </select>
-    </div>
+            <!-- Role Badge / Switch Controls -->
+            <div class="flex items-center space-x-2">
+                <!-- Current Role Status Badge -->
+                <div id="role-badge" class="px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="role-badge-text">Chế độ Phụ Huynh</span>
+                </div>
 
-    <!-- CẤU HÌNH GITHUB -->
-    <details class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
-      <summary class="font-bold text-slate-700 cursor-pointer flex items-center gap-2">
-        <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i> Cấu hình kết nối GitHub (BQT / GVCN)
-      </summary>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
-        <input type="text" id="gh-user" placeholder="User GitHub..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <input type="text" id="gh-repo" placeholder="Tên Repo..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <input type="password" id="gh-token" placeholder="GitHub Personal Access Token..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <button onclick="saveGithubConfig()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl px-4 py-2 transition-all">Lưu & Tải Dữ Liệu</button>
-      </div>
-    </details>
-
-    <!-- BẢNG DỮ LIỆU -->
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse text-sm">
-        <thead>
-          <tr class="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold">
-            <th class="p-3"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
-            <th class="p-3">STT</th>
-            <th class="p-3">Họ và Tên</th>
-            <th class="p-3">Lớp</th>
-            <th class="p-3">Mã HS</th>
-            <th class="p-3">Thời gian</th>
-            <th class="p-3">Trạng thái</th>
-          </tr>
-        </thead>
-        <tbody id="attendance-tbody" class="divide-y divide-slate-100">
-          <tr>
-            <td colspan="7" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-
-  <!-- POPUP XÁC THỰC MẬT KHẨU GVCN -->
-  <div id="password-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl border border-slate-100 space-y-4">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i data-lucide="lock" class="w-5 h-5 text-indigo-600"></i> Xác Thực GVCN
-        </h3>
-        <button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Lớp duyệt phép</label>
-          <input type="text" id="modal-class-input" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <!-- Mode Selector Button -->
+                <button id="toggle-role-btn" onclick="toggleRoleSwitch()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition shadow-xs">
+                    <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                    <span id="toggle-role-text">Đăng nhập GVCN</span>
+                </button>
+            </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu GVCN</label>
-          <input type="password" id="modal-pass-input" placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- PARENT LINK SHARE BAR (Visible in both, particularly useful for GVCN) -->
+        <div class="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-4 sm:p-5 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                    <span class="bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider">Cổng Tra Cứu</span>
+                    <h2 class="font-semibold text-base sm:text-lg">Liên kết chia sẻ cho Phụ huynh</h2>
+                </div>
+                <p class="text-slate-300 text-xs sm:text-sm">Gửi liên kết này qua Zalo/SĐT để phụ huynh tự tra cứu điểm danh (Tự động khóa các tính năng quản trị).</p>
+            </div>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <div class="relative flex-1 md:w-80">
+                    <input type="text" id="parent-share-url" readonly class="w-full bg-slate-800/80 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2.5 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono">
+                    <i data-lucide="link-2" class="w-4 h-4 text-slate-400 absolute right-2.5 top-3"></i>
+                </div>
+                <button onclick="copyParentLink()" class="inline-flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition shadow-md active:scale-95">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                    <span>Sao chép Link</span>
+                </button>
+            </div>
         </div>
-      </div>
 
-      <div class="flex gap-2 pt-2">
-        <button onclick="closePasswordModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold">Hủy</button>
-        <button id="btn-confirm-approval" onclick="confirmApproval()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1">
-          <i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận
-        </button>
-      </div>
+        <!-- TEACHER ONLY CONTROL PANEL -->
+        <div id="gvcn-panel" class="hidden glass-panel p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 gap-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
+                        <i data-lucide="settings-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-slate-900 text-sm">Bảng Điều Khiển Giáo Viên Chủ Nhiệm</h3>
+                        <p class="text-xs text-slate-500">Tải file danh sách điểm danh hoặc cập nhật lên hệ thống</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="saveDataToGithub()" id="github-save-btn" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-medium transition shadow-sm">
+                        <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+                        <span>Lưu Dữ Liệu Lên Cloud</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Management Tools Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Excel Upload Box -->
+                <div class="border-2 border-dashed border-slate-300 hover:border-indigo-400 rounded-xl p-4 bg-slate-50/50 flex flex-col items-center justify-center text-center transition cursor-pointer relative group" onclick="document.getElementById('excel-file-input').click()">
+                    <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)">
+                    <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-full mb-2 group-hover:scale-110 transition">
+                        <i data-lucide="file-spreadsheets" class="w-6 h-6"></i>
+                    </div>
+                    <p class="text-xs font-semibold text-slate-700">Bấm để tải file Excel dữ liệu điểm danh (<span class="font-mono">data.xlsx</span>)</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Tự động nhận diện Cột B (Tên), C (Lớp), E (Mã HS), F (Đi trễ), P (Vắng phép)</p>
+                </div>
+
+                <!-- GitHub Config Box -->
+                <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                            <i data-lucide="key-round" class="w-3.5 h-3.5 text-slate-400"></i>
+                            Cấu hình Token GitHub (Tùy chọn đồng bộ)
+                        </label>
+                        <span class="text-[10px] text-slate-400">Bảo mật LocalStorage</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="password" id="gh-token" placeholder="GitHub Personal Access Token" class="col-span-2 text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
+                        <input type="text" id="gh-repo" placeholder="User/Repository (vd: gvcn/diemdanh)" class="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
+                        <input type="text" id="gh-path" placeholder="Đường dẫn file (vd: data.json)" value="data.json" class="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <button onclick="saveGithubConfig()" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs py-1.5 rounded-lg font-medium transition">
+                        Lưu Cấu Hình Kết Nối
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS OVERVIEW CARDS -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <!-- Total Card -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500">Sĩ Số Học Sinh</p>
+                    <h3 id="stat-total" class="text-2xl font-bold text-slate-900 mt-1">0</h3>
+                </div>
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <!-- Late Card -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-amber-600">Đi Trễ</p>
+                    <h3 id="stat-late" class="text-2xl font-bold text-amber-600 mt-1">0</h3>
+                </div>
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                    <i data-lucide="clock" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <!-- Absent Excused Card -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-indigo-600">Vắng Có Phép</p>
+                    <h3 id="stat-excused" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
+                </div>
+                <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <i data-lucide="file-check-2" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <!-- Absent Unexcused Card -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-rose-600">Vắng Không Phép</p>
+                    <h3 id="stat-unexcused" class="text-2xl font-bold text-rose-600 mt-1">0</h3>
+                </div>
+                <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                    <i data-lucide="user-x" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTER & DATA TABLE SECTION -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <!-- Filter Bar -->
+            <div class="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <!-- Search Input -->
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                    <input type="text" id="search-input" oninput="applyFilters()" placeholder="Tìm kiếm theo Tên hoặc Mã học sinh..." class="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                </div>
+
+                <!-- Dropdown Filters -->
+                <div class="flex items-center gap-2">
+                    <!-- Class Filter -->
+                    <select id="class-filter" onchange="applyFilters()" class="bg-white border border-slate-300 text-slate-700 text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="ALL">Tất cả lớp</option>
+                    </select>
+
+                    <!-- Status Filter -->
+                    <select id="status-filter" onchange="applyFilters()" class="bg-white border border-slate-300 text-slate-700 text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="ALL">Tất cả trạng thái</option>
+                        <option value="DI_TRE">Đi Trễ</option>
+                        <option value="VANG_CO_PHEP">Vắng Có Phép</option>
+                        <option value="VANG_KHONG_PHEP">Vắng Không Phép</option>
+                        <option value="BINH_THUONG">Đúng Giờ / Bình Thường</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table Area -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100/80 text-slate-600 text-[11px] font-semibold uppercase tracking-wider border-b border-slate-200">
+                            <th class="py-3 px-4">STT</th>
+                            <th class="py-3 px-4">Mã HS</th>
+                            <th class="py-3 px-4">Họ và Tên</th>
+                            <th class="py-3 px-4">Lớp</th>
+                            <th class="py-3 px-4">Thời gian</th>
+                            <th class="py-3 px-4 text-center">Trạng Thái</th>
+                            <th class="py-3 px-4 text-center gvcn-only">Duyệt Có Phép</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-table-body" class="divide-y divide-slate-100 text-xs">
+                        <!-- Dynamic Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden p-8 text-center">
+                <div class="inline-flex p-3 bg-slate-100 text-slate-400 rounded-full mb-2">
+                    <i data-lucide="inbox" class="w-6 h-6"></i>
+                </div>
+                <p class="text-xs text-slate-500 font-medium">Không tìm thấy dữ liệu học sinh phù hợp.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- TEACHER AUTH MODAL -->
+    <div id="auth-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="text-center space-y-1">
+                <div class="mx-auto w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-2">
+                    <i data-lucide="lock" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900">Xác Thực Giáo Viên</h3>
+                <p class="text-xs text-slate-500">Vui lòng nhập mật khẩu để chuyển sang chế độ GVCN.</p>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <input type="password" id="modal-password" placeholder="Mật khẩu GVCN (Mặc định: 123456)" class="w-full text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <p id="modal-error" class="text-[11px] text-rose-500 mt-1 hidden">Mật khẩu không chính xác!</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="closeAuthModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs py-2.5 rounded-xl font-medium transition">
+                        Hủy
+                    </button>
+                    <button onclick="verifyTeacherPassword()" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2.5 rounded-xl font-semibold transition shadow-md">
+                        Đăng Nhập
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    const CLASS_PASSWORDS = {
-      "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
-      "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
-      "11A1": "123456", "11A2": "123456", "11A3": "123456", "11A4": "123456", "11A5": "123456",
-      "11A6": "123456", "11A7": "123456", "11A8": "123456", "11A9": "123456", "11A10": "123456", "11A11": "123456",
-      "12A1": "123456", "12A2": "123456", "12A3": "123456", "12A4": "123456", "12A5": "123456",
-      "12A6": "123456", "12A7": "123456", "12A8": "123456", "12A9": "123456", "12A10": "123456", "12A11": "123456"
-    };
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs">
+            <i id="toast-icon" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+            <span id="toast-message">Thông báo</span>
+        </div>
+    </div>
 
-    let allStudents = [];
-    let filteredStudents = [];
-    let rawWorkbook = null;
-    let currentSheetName = "";
-    let fileSha = "";
-    let pendingStudents = [];
+    <script>
+        // Default Mock Data in case file isn't uploaded yet
+        let studentData = [
+            { id: "HS001", name: "Nguyễn Văn An", studentClass: "10A1", late: "X", time: "07:15", excused: "" },
+            { id: "HS002", name: "Trần Thị Bích", studentClass: "10A1", late: "", time: "06:55", excused: "" },
+            { id: "HS003", name: "Lê Hoài Nam", studentClass: "10A1", late: "", time: "", excused: "P" },
+            { id: "HS004", name: "Phạm Minh Hoàng", studentClass: "10A2", late: "X", time: "07:20", excused: "" },
+            { id: "HS005", name: "Vũ Phương Thảo", studentClass: "10A2", late: "", time: "", excused: "" }
+        ];
 
-    function cleanInput(str) {
-      if (!str) return "";
-      let cleaned = str.trim().replace(/\/$/, "");
-      if (cleaned.includes("github.com/")) {
-        cleaned = cleaned.split("github.com/")[1];
-      }
-      return cleaned.split('/')[0];
-    }
+        let currentRole = "phuhuynh"; // Default view role
+        const TEACHER_PASS = "123456"; // Default password for GVCN
 
-    window.addEventListener("DOMContentLoaded", () => {
-      lucide.createIcons();
-      loadGithubConfig();
-      fetchAttendanceData();
-    });
-
-    function loadGithubConfig() {
-      document.getElementById("gh-user").value = localStorage.getItem("gh_user") || "phamdanai-glitch";
-      document.getElementById("gh-repo").value = localStorage.getItem("gh_repo") || "DiemDanh10";
-      document.getElementById("gh-token").value = localStorage.getItem("gh_token") || "";
-    }
-
-    function saveGithubConfig() {
-      const user = cleanInput(document.getElementById("gh-user").value);
-      const repo = cleanInput(document.getElementById("gh-repo").value);
-      const token = document.getElementById("gh-token").value.trim();
-
-      localStorage.setItem("gh_user", user);
-      localStorage.setItem("gh_repo", repo);
-      localStorage.setItem("gh_token", token);
-
-      alert("Đã lưu cấu hình GitHub!");
-      fetchAttendanceData();
-    }
-
-    async function fetchAttendanceData() {
-      let user = cleanInput(localStorage.getItem("gh_user") || "phamdanai-glitch");
-      let repo = cleanInput(localStorage.getItem("gh_repo") || "DiemDanh10");
-      const token = localStorage.getItem("gh_token");
-      const tbody = document.getElementById("attendance-tbody");
-
-      tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
-
-      try {
-        let arrayBuffer = null;
-
-        // Ưu tiên 1: Lấy qua Raw github
-        const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/data.xlsx?v=${Date.now()}`;
-        try {
-          const rawRes = await fetch(rawUrl);
-          if (rawRes.ok) {
-            arrayBuffer = await rawRes.arrayBuffer();
-          }
-        } catch (e) {
-          console.warn("Raw fetch failed, trying API...", e);
-        }
-
-        // Ưu tiên 2: GitHub API
-        if (!arrayBuffer) {
-          const headers = token ? { "Authorization": `token ${token}` } : {};
-          const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, { headers });
-          if (!response.ok) throw new Error("Không thể tải file data.xlsx!");
-
-          const data = await response.json();
-          fileSha = data.sha;
-          const binaryString = atob(data.content.replace(/\s/g, ''));
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          arrayBuffer = bytes.buffer;
-        }
-
-        rawWorkbook = XLSX.read(arrayBuffer, { type: 'array' });
-        currentSheetName = rawWorkbook.SheetNames.includes("data") ? "data" : rawWorkbook.SheetNames[0];
-        const worksheet = rawWorkbook.Sheets[currentSheetName];
-
-        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z2000');
-        allStudents = [];
-
-        for (let r = 4; r <= range.e.r; r++) {
-          const nameCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 1 })]; // Cột B: Họ và Tên
-          const lopCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 2 })];  // Cột C: Lớp
-          const maHsCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 4 })]; // Cột E: Mã HS
-          const timeCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 10 })];// Cột K: Thời gian
-          const phepCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 15 })];// Cột P: VẮNG CÓ PHÉP
-
-          if (!nameCell || !nameCell.v) continue;
-
-          let name = String(nameCell.v).trim();
-          if (name === "" || name.includes("HỌ VÀ TÊN") || name.includes("Tiêu đề")) continue;
-
-          let lop = lopCell && lopCell.v ? String(lopCell.v).trim().toUpperCase() : "---";
-          let maHs = maHsCell && maHsCell.v ? String(maHsCell.v).trim() : "---";
-          let timeVal = timeCell && timeCell.v ? String(timeCell.v).trim() : "---";
-          let phepVal = phepCell && phepCell.v ? String(phepCell.v).trim() : "";
-
-          let status = "VẮNG KHÔNG PHÉP";
-          if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p" || phepVal.includes("Có phép") || phepVal === "P") {
-            status = "VẮNG CÓ PHÉP";
-          }
-
-          allStudents.push({
-            rowIdx: r + 1, // Dòng Excel 1-indexed
-            name: name,
-            lop: lop,
-            maHs: maHs,
-            time: timeVal,
-            status: status,
-            selected: false
-          });
-        }
-
-        document.getElementById("total-students").innerText = allStudents.length;
-
-        const classes = [...new Set(allStudents.map(s => s.lop))].sort();
-        const classSelect = document.getElementById("class-filter");
-        classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
-          classes.map(c => `<option value="${c}">${c}</option>`).join('');
-
-        filterData();
-
-      } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
-      }
-    }
-
-    function filterData() {
-      const search = document.getElementById("search-input").value.toLowerCase().trim();
-      const selectedClass = document.getElementById("class-filter").value;
-      const selectedStatus = document.getElementById("status-filter").value;
-
-      filteredStudents = allStudents.filter(s => {
-        const matchSearch = !search || s.name.toLowerCase().includes(search) || s.maHs.toLowerCase().includes(search);
-        const matchClass = !selectedClass || s.lop === selectedClass;
-        const matchStatus = !selectedStatus || s.status === selectedStatus;
-        return matchSearch && matchClass && matchStatus;
-      });
-
-      renderTable();
-    }
-
-    function toggleSelectAll(master) {
-      filteredStudents.forEach(s => s.selected = master.checked);
-      renderTable();
-    }
-
-    function renderTable() {
-      const tbody = document.getElementById("attendance-tbody");
-      if (!filteredStudents || filteredStudents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = filteredStudents.map((s, idx) => `
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="p-3"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="toggleStudentSelect(${idx}, this.checked)"></td>
-          <td class="p-3 text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-3 font-semibold text-slate-800">${s.name}</td>
-          <td class="p-3"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
-          <td class="p-3 text-slate-500 font-mono text-xs">${s.maHs}</td>
-          <td class="p-3 text-slate-500 font-mono text-xs">${s.time}</td>
-          <td class="p-3">
-            <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${
-              s.status === 'VẮNG CÓ PHÉP' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-            }">
-              ${s.status}
-            </span>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function toggleStudentSelect(index, isChecked) {
-      if (filteredStudents[index]) {
-        filteredStudents[index].selected = isChecked;
-      }
-    }
-
-    function approveSelected() {
-      const user = cleanInput(localStorage.getItem("gh_user"));
-      const repo = cleanInput(localStorage.getItem("gh_repo"));
-      const token = localStorage.getItem("gh_token");
-
-      if (!user || !repo || !token) {
-        alert("Để lưu trực tiếp lên GitHub, bạn cần nhập GitHub Token vào mục Cấu hình!");
-        return;
-      }
-
-      pendingStudents = filteredStudents.filter(s => s.selected);
-      if (pendingStudents.length === 0) {
-        alert("Vui lòng tích chọn ít nhất 1 học sinh để duyệt có phép.");
-        return;
-      }
-
-      const selectedClasses = [...new Set(pendingStudents.map(s => s.lop))];
-      document.getElementById("modal-class-input").value = selectedClasses.length === 1 && selectedClasses[0] !== "---" ? selectedClasses[0] : "";
-      document.getElementById("modal-pass-input").value = "";
-
-      document.getElementById("password-modal").classList.remove("hidden");
-    }
-
-    function closePasswordModal() {
-      document.getElementById("password-modal").classList.add("hidden");
-    }
-
-    async function confirmApproval() {
-      const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
-      const inputPass = document.getElementById("modal-pass-input").value.trim();
-
-      if (!CLASS_PASSWORDS[targetClass] || inputPass !== CLASS_PASSWORDS[targetClass]) {
-        alert(`Mật khẩu GVCN Lớp ${targetClass} không chính xác!`);
-        return;
-      }
-
-      const confirmBtn = document.getElementById("btn-confirm-approval");
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = "Đang xử lý...";
-
-      const worksheet = rawWorkbook.Sheets[currentSheetName];
-      let count = 0;
-
-      pendingStudents.forEach(s => {
-        if (s.status === "VẮNG KHÔNG PHÉP") {
-          s.status = "VẮNG CÓ PHÉP";
-          s.selected = false;
-          
-          // Điền "P" vào Cột P (Cột 16, index 15)
-          const phepCellAddr = XLSX.utils.encode_cell({ r: s.rowIdx - 1, c: 15 });
-          worksheet[phepCellAddr] = { t: 's', v: 'P' };
-          count++;
-        }
-      });
-
-      if (count === 0) {
-        alert(`Các học sinh được chọn đã ở trạng thái Có phép.`);
-        closePasswordModal();
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-        lucide.createIcons();
-        return;
-      }
-
-      const user = cleanInput(localStorage.getItem("gh_user"));
-      const repo = cleanInput(localStorage.getItem("gh_repo"));
-      const token = localStorage.getItem("gh_token");
-
-      try {
-        const wbout = XLSX.write(rawWorkbook, { bookType: 'xlsx', type: 'base64' });
-
-        // Tải SHA mới nhất từ GitHub
-        const getShaRes = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
-          headers: { "Authorization": `token ${token}` }
-        });
-        if (getShaRes.ok) {
-          const getShaData = await getShaRes.json();
-          fileSha = getShaData.sha;
-        }
-
-        const bodyData = {
-          message: `GVCN Lớp ${targetClass} duyệt có phép cho ${count} học sinh`,
-          content: wbout,
-          sha: fileSha
+        // Core App Initialization
+        window.onload = function() {
+            lucide.createIcons();
+            checkRoleFromUrl();
+            setupShareLink();
+            populateClassFilterOptions();
+            renderTable();
+            updateStats();
         };
 
-        const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
-          method: "PUT",
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(bodyData)
-        });
+        /* 1. URL & ROLE MANAGEMENT */
+        function checkRoleFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const role = urlParams.get('role');
 
-        const resJson = await response.json();
-
-        if (response.ok) {
-          fileSha = resJson.content.sha;
-          alert(`Thành công! Đã duyệt có phép cho ${count} học sinh và lưu lên GitHub.`);
-          closePasswordModal();
-          filterData();
-        } else {
-          alert("Lỗi khi ghi đè file Excel: " + (resJson.message || "Token không đủ quyền ghi (contents: write)"));
+            if (role === 'gvcn') {
+                setRole('gvcn');
+            } else {
+                setRole('phuhuynh');
+            }
         }
-      } catch (err) {
-        alert("Lỗi kết nối GitHub API: " + err.message);
-      } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-        lucide.createIcons();
-      }
-    }
-  </script>
+
+        function setRole(role) {
+            currentRole = role;
+            const badgeText = document.getElementById('role-badge-text');
+            const badgeContainer = document.getElementById('role-badge');
+            const toggleText = document.getElementById('toggle-role-text');
+            const gvcnPanel = document.getElementById('gvcn-panel');
+            const gvcnElements = document.querySelectorAll('.gvcn-only');
+
+            if (role === 'gvcn') {
+                badgeText.innerText = "Chế độ Giáo Viên (GVCN)";
+                badgeContainer.className = "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200";
+                toggleText.innerText = "Thoát GVCN (Phụ huynh)";
+                gvcnPanel.classList.remove('hidden');
+                gvcnElements.forEach(el => el.classList.remove('hidden'));
+            } else {
+                badgeText.innerText = "Chế độ Phụ Huynh";
+                badgeContainer.className = "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200";
+                toggleText.innerText = "Đăng nhập GVCN";
+                gvcnPanel.classList.add('hidden');
+                gvcnElements.forEach(el => el.classList.add('hidden'));
+            }
+
+            renderTable(); // Re-render to update dynamic columns based on role
+        }
+
+        function toggleRoleSwitch() {
+            if (currentRole === 'gvcn') {
+                // Switch back to parent mode easily
+                window.history.pushState({}, '', window.location.pathname + '?role=phuhuynh');
+                setRole('phuhuynh');
+                showToast('Đã chuyển sang chế độ Xem Phụ Huynh');
+            } else {
+                // Open Auth Modal
+                document.getElementById('modal-password').value = '';
+                document.getElementById('modal-error').classList.add('hidden');
+                document.getElementById('auth-modal').classList.remove('hidden');
+            }
+        }
+
+        function verifyTeacherPassword() {
+            const input = document.getElementById('modal-password').value;
+            if (input === TEACHER_PASS) {
+                closeAuthModal();
+                window.history.pushState({}, '', window.location.pathname + '?role=gvcn');
+                setRole('gvcn');
+                showToast('Xác thực GVCN thành công!');
+            } else {
+                document.getElementById('modal-error').classList.remove('hidden');
+            }
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        function setupShareLink() {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const parentUrl = baseUrl + "?role=phuhuynh";
+            document.getElementById('parent-share-url').value = parentUrl;
+        }
+
+        function copyParentLink() {
+            const input = document.getElementById('parent-share-url');
+            input.select();
+            document.execCommand('copy');
+            showToast('Đã sao chép liên kết cho Phụ huynh!');
+        }
+
+        /* 2. EXCEL DATA PROCESSING (SheetJS) */
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Convert worksheet to JSON rows array
+                    const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    parsedParsedData(rawRows);
+                    showToast('Cập nhật dữ liệu từ Excel thành công!');
+                } catch (err) {
+                    console.error(err);
+                    showToast('Lỗi đọc file Excel. Kiểm tra lại định dạng!');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parsedParsedData(rows) {
+            // Mapping exact requested columns:
+            // Col B (Index 1): Tên
+            // Col C (Index 2): Lớp
+            // Col E (Index 4): Mã HS
+            // Col F (Index 5): Đi trễ
+            // Col K (Index 10): Thời gian
+            // Col P (Index 15): Vắng có phép
+
+            let parsedList = [];
+
+            // Skip header if present (start checking row index >= 1)
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+
+                const name = row[1] ? String(row[1]).trim() : '';
+                const studentClass = row[2] ? String(row[2]).trim() : '';
+                const id = row[4] ? String(row[4]).trim() : '';
+
+                if (!name && !id) continue; // Skip completely empty student lines
+
+                const late = row[5] ? String(row[5]).trim() : '';
+                const time = row[10] ? String(row[10]).trim() : '';
+                const excused = row[15] ? String(row[15]).trim() : '';
+
+                parsedList.push({ id, name, studentClass, late, time, excused });
+            }
+
+            if (parsedList.length > 0) {
+                studentData = parsedList;
+                populateClassFilterOptions();
+                applyFilters();
+            }
+        }
+
+        /* 3. COMPUTED STATUS & TABLE RENDERING */
+        function calculateStatus(item) {
+            const isLate = item.late && item.late.trim() !== '';
+            const isExcused = item.excused && (
+                item.excused.trim().toUpperCase() === 'P' || 
+                item.excused.trim().toUpperCase() === 'X' || 
+                item.excused.trim().toLowerCase().includes('phép')
+            );
+
+            if (isLate) {
+                return { label: "ĐI TRỄ", key: "DI_TRE", badge: "bg-amber-100 text-amber-800 border-amber-200" };
+            }
+            if (isExcused) {
+                return { label: "VẮNG CÓ PHÉP", key: "VANG_CO_PHEP", badge: "bg-indigo-100 text-indigo-800 border-indigo-200" };
+            }
+            // Check if student arrived/has timestamp
+            if (item.time && item.time.trim() !== '') {
+                return { label: "ĐÚNG GIỜ", key: "BINH_THUONG", badge: "bg-emerald-100 text-emerald-800 border-emerald-200" };
+            }
+            // Otherwise default unexcused absent
+            return { label: "VẮNG KHÔNG PHÉP", key: "VANG_KHONG_PHEP", badge: "bg-rose-100 text-rose-800 border-rose-200" };
+        }
+
+        function populateClassFilterOptions() {
+            const classFilter = document.getElementById('class-filter');
+            const classes = [...new Set(studentData.map(d => d.studentClass).filter(Boolean))];
+            
+            classFilter.innerHTML = '<option value="ALL">Tất cả lớp</option>';
+            classes.forEach(cls => {
+                const opt = document.createElement('option');
+                opt.value = cls;
+                opt.innerText = `Lớp ${cls}`;
+                classFilter.appendChild(opt);
+            });
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const classVal = document.getElementById('class-filter').value;
+            const statusVal = document.getElementById('status-filter').value;
+
+            const filtered = studentData.filter(item => {
+                const matchSearch = item.name.toLowerCase().includes(search) || item.id.toLowerCase().includes(search);
+                const matchClass = (classVal === 'ALL') || (item.studentClass === classVal);
+                
+                const statusObj = calculateStatus(item);
+                const matchStatus = (statusVal === 'ALL') || (statusObj.key === statusVal);
+
+                return matchSearch && matchClass && matchStatus;
+            });
+
+            renderTable(filtered);
+            updateStats(filtered);
+        }
+
+        function renderTable(dataToRender = studentData) {
+            const tbody = document.getElementById('student-table-body');
+            const emptyState = document.getElementById('empty-state');
+            tbody.innerHTML = '';
+
+            if (dataToRender.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            dataToRender.forEach((item, index) => {
+                const statusObj = calculateStatus(item);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition border-b border-slate-100";
+
+                const isExcusedChecked = (statusObj.key === "VANG_CO_PHEP");
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-mono text-slate-400">${index + 1}</td>
+                    <td class="py-3 px-4 font-mono font-medium text-slate-700">${item.id || 'N/A'}</td>
+                    <td class="py-3 px-4 font-semibold text-slate-900">${item.name}</td>
+                    <td class="py-3 px-4 text-slate-600">${item.studentClass || '-'}</td>
+                    <td class="py-3 px-4 font-mono text-slate-500">${item.time || '--:--'}</td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusObj.badge}">
+                            ${statusObj.label}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-center gvcn-only ${currentRole === 'gvcn' ? '' : 'hidden'}">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" ${isExcusedChecked ? 'checked' : ''} onchange="toggleExcusedStatus('${item.id}', this.checked)" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                        </label>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        function toggleExcusedStatus(studentId, isChecked) {
+            const student = studentData.find(s => s.id === studentId);
+            if (student) {
+                student.excused = isChecked ? 'P' : '';
+                applyFilters();
+                showToast(`Đã cập nhật phép cho học sinh ${student.name}`);
+            }
+        }
+
+        function updateStats(data = studentData) {
+            let total = data.length;
+            let late = 0;
+            let excused = 0;
+            let unexcused = 0;
+
+            data.forEach(item => {
+                const st = calculateStatus(item);
+                if (st.key === 'DI_TRE') late++;
+                else if (st.key === 'VANG_CO_PHEP') excused++;
+                else if (st.key === 'VANG_KHONG_PHEP') unexcused++;
+            });
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-late').innerText = late;
+            document.getElementById('stat-excused').innerText = excused;
+            document.getElementById('stat-unexcused').innerText = unexcused;
+        }
+
+        /* 4. GITHUB API INTEGRATION (SAVE/SYNC) */
+        function saveGithubConfig() {
+            const token = document.getElementById('gh-token').value;
+            const repo = document.getElementById('gh-repo').value;
+            const path = document.getElementById('gh-path').value;
+
+            localStorage.setItem('gh_token', token);
+            localStorage.setItem('gh_repo', repo);
+            localStorage.setItem('gh_path', path);
+
+            showToast('Đã lưu cấu hình GitHub!');
+        }
+
+        async function saveDataToGithub() {
+            const token = localStorage.getItem('gh_token') || document.getElementById('gh-token').value;
+            const repo = localStorage.getItem('gh_repo') || document.getElementById('gh-repo').value;
+            const path = localStorage.getItem('gh_path') || document.getElementById('gh-path').value || 'data.json';
+
+            if (!token || !repo) {
+                showToast('Vui lòng nhập Token và Repo GitHub trước!');
+                return;
+            }
+
+            const btn = document.getElementById('github-save-btn');
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Đang lưu...</span>`;
+            lucide.createIcons();
+
+            try {
+                // Get SHA if existing file
+                const getUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+                let sha = "";
+                
+                const getRes = await fetch(getUrl, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+
+                if (getRes.ok) {
+                    const getJson = await getRes.json();
+                    sha = getJson.sha;
+                }
+
+                const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(studentData, null, 2))));
+
+                const putRes = await fetch(getUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: "Cập nhật dữ liệu điểm danh từ GVCN",
+                        content: contentEncoded,
+                        sha: sha || undefined
+                    })
+                });
+
+                if (putRes.ok) {
+                    showToast('Đồng bộ dữ liệu lên GitHub thành công!');
+                } else {
+                    throw new Error('Lỗi từ API GitHub');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Không thể lưu lên GitHub. Kiểm tra lại thông số!');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Lưu Dữ Liệu Lên Cloud</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        /* 5. TOAST NOTIFICATION HELPER */
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
