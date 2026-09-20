@@ -182,57 +182,89 @@
           return;
         }
 
-        // TỰ ĐỘNG TÌM HÀNG TIÊU ĐỀ VÀ VỊ TRÍ CÁC CỘT
-        let headerRowIdx = -1;
+        // DÙNG THUẬT TOÁN QUÉT VÀ NHẬN DIỆN LINH HOẠT
         colIndices = { name: -1, lop: -1, coPhep: -1, khongPhep: -1 };
+        let headerRowIdx = -1;
 
-        for (let r = 0; r < Math.min(rawExcelJson.length, 10); r++) {
+        for (let r = 0; r < Math.min(rawExcelJson.length, 15); r++) {
           const row = rawExcelJson[r];
           if (!row) continue;
           
           row.forEach((cell, cIdx) => {
             const str = String(cell || "").toLowerCase().trim();
-            if (str.includes("họ và tên") || str.includes("họ tên") || str.includes("tên học sinh")) colIndices.name = cIdx;
-            if (str === "lớp" || str.includes("tên lớp")) colIndices.lop = cIdx;
-            if (str.includes("có phép") || str.includes("vắng có phép")) colIndices.coPhep = cIdx;
-            if (str.includes("không phép") || str.includes("vắng không phép")) colIndices.khongPhep = cIdx;
+            if (str.includes("họ") || str.includes("tên") || str.includes("học sinh")) {
+              if (colIndices.name === -1) colIndices.name = cIdx;
+            }
+            if (str.includes("lớp") || str.includes("lop")) {
+              if (colIndices.lop === -1) colIndices.lop = cIdx;
+            }
+            if (str.includes("có phép") || str.includes("p")) {
+              if (colIndices.coPhep === -1) colIndices.coPhep = cIdx;
+            }
+            if (str.includes("không phép") || str.includes("kp")) {
+              if (colIndices.khongPhep === -1) colIndices.khongPhep = cIdx;
+            }
           });
 
-          if (colIndices.name !== -1 || colIndices.lop !== -1) {
+          if (colIndices.name !== -1) {
             headerRowIdx = r;
             break;
           }
         }
 
-        // Trường hợp không tìm thấy tiêu đề theo chữ, gán cột mặc định (0: STT/Tên, 1: Tên, 2: Lớp)
+        // Nếu không tự nhận diện được tiêu đề, dùng chỉ số mặc định
         if (colIndices.name === -1) colIndices.name = 1;
         if (colIndices.lop === -1) colIndices.lop = 2;
         if (colIndices.coPhep === -1) colIndices.coPhep = 15;
         if (colIndices.khongPhep === -1) colIndices.khongPhep = 16;
 
         students = [];
-        const startRow = headerRowIdx !== -1 ? headerRowIdx + 1 : 1;
+        const startRow = headerRowIdx !== -1 ? headerRowIdx + 1 : 0;
 
         for (let i = startRow; i < rawExcelJson.length; i++) {
           const row = rawExcelJson[i];
           if (!row || row.length === 0) continue;
 
-          const name = row[colIndices.name] || "";
-          const lop = row[colIndices.lop] || "";
-          
+          let name = row[colIndices.name];
+          let lop = row[colIndices.lop];
+
+          // Dự phòng nếu cột tên lệch sang cột lân cận
+          if (!name || String(name).trim() === "" || String(name).toLowerCase().includes("họ và tên")) {
+            for (let c = 0; c < Math.min(row.length, 5); c++) {
+              const val = String(row[c] || "").trim();
+              if (val.length > 2 && !/^\d+$/.test(val) && !val.toUpperCase().startsWith("10A") && !val.toUpperCase().startsWith("11A") && !val.toUpperCase().startsWith("12A")) {
+                if (!val.toLowerCase().includes("họ") && !val.toLowerCase().includes("tên") && !val.toLowerCase().includes("stt")) {
+                  name = val;
+                  break;
+                }
+              }
+            }
+          }
+
           if (!name || String(name).trim() === "") continue;
 
-          const coPhepVal = row[colIndices.coPhep] ? String(row[colIndices.coPhep]).trim() : "";
+          // Tìm tên lớp nếu không đọc được từ cột mặc định
+          if (!lop || String(lop).trim() === "") {
+            for (let c = 0; c < Math.min(row.length, 6); c++) {
+              const val = String(row[c] || "").trim().toUpperCase();
+              if (/^(10|11|12)A\d+$/.test(val)) {
+                lop = val;
+                break;
+              }
+            }
+          }
+
+          const coPhepVal = row[colIndices.coPhep] ? String(row[colIndices.coPhep]).trim().toLowerCase() : "";
           
           let status = "VẮNG KHÔNG PHÉP";
-          if (coPhepVal && coPhepVal.toLowerCase() !== "false" && coPhepVal !== "0") {
+          if (coPhepVal && coPhepVal !== "false" && coPhepVal !== "0" && coPhepVal !== "") {
             status = "VẮNG CÓ PHÉP";
           }
 
           students.push({
             id: i,
             name: String(name).trim(),
-            lop: String(lop).trim().toUpperCase(),
+            lop: String(lop || "CHƯA RÕ").trim().toUpperCase(),
             status: status,
             selected: false
           });
@@ -371,7 +403,7 @@
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       if (!students || students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh. Vui lòng kiểm tra tiêu đề các cột trong file Excel (Họ và tên, Lớp).</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh. Vui lòng kiểm tra lại dữ liệu file Excel.</td></tr>`;
         return;
       }
 
