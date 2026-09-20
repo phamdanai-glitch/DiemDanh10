@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRƯỜNG THPT VỊ THANH - Tra Cứu Điểm Danh Học Sinh</title>
+  <title>TRƯỜNG THPT VỊ THANH - Quản Lý & Duyệt Điểm Danh</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,6 +18,7 @@
     .badge-on-time { background-color: #dcfce7; color: #166534; }
     .badge-late { background-color: #fef3c7; color: #92400e; }
     .badge-absent { background-color: #fee2e2; color: #991b1b; }
+    .badge-p { background-color: #dbeafe; color: #1e40af; }
   </style>
 </head>
 <body class="min-h-screen pb-12">
@@ -29,12 +30,11 @@
         <img src="logo.jpg" alt="Logo THPT Vị Thanh" class="h-12 w-12 object-contain shrink-0" onerror="this.onerror=null; this.src='https://via.placeholder.com/48?text=THPT';">
         <div>
           <h1 class="text-lg font-bold text-slate-900 tracking-tight">TRƯỜNG THPT VỊ THANH</h1>
-          <p class="text-xs text-slate-500">Trang tra cứu điểm danh dành cho Phụ huynh & Giáo viên</p>
+          <p class="text-xs text-slate-500">Trang tra cứu & Duyệt phép học sinh theo Lớp</p>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- Hiển thị thời gian cập nhật -->
         <div id="update-time-box" class="hidden sm:flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-medium">
           <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-600"></i>
           <span id="update-time-text">Chưa rõ thời gian</span>
@@ -50,57 +50,65 @@
 
   <main class="max-w-5xl mx-auto px-4 pt-8 space-y-6">
 
-    <!-- KHU VỰC THỐNG KÊ (DỰA TRÊN DỮ LIỆU ĐANG LỌC) -->
+    <!-- THỐNG KÊ -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs font-medium text-emerald-600 flex items-center gap-1">
-          <i data-lucide="check-circle" class="w-4 h-4"></i> Có Mặt
-        </span>
+        <span class="text-xs font-medium text-emerald-600 flex items-center gap-1"><i data-lucide="check-circle" class="w-4 h-4"></i> Có Mặt</span>
         <span id="stat-present" class="text-2xl font-bold text-slate-800 mt-2">0</span>
       </div>
-
       <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs font-medium text-amber-600 flex items-center gap-1">
-          <i data-lucide="clock" class="w-4 h-4"></i> Trễ Giờ
-        </span>
+        <span class="text-xs font-medium text-amber-600 flex items-center gap-1"><i data-lucide="clock" class="w-4 h-4"></i> Trễ Giờ</span>
         <span id="stat-late" class="text-2xl font-bold text-slate-800 mt-2">0</span>
       </div>
-
       <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs font-medium text-blue-600 flex items-center gap-1">
-          <i data-lucide="file-text" class="w-4 h-4"></i> Vắng Có Phép
-        </span>
+        <span class="text-xs font-medium text-blue-600 flex items-center gap-1"><i data-lucide="file-text" class="w-4 h-4"></i> Vắng Có Phép</span>
         <span id="stat-p" class="text-2xl font-bold text-slate-800 mt-2">0</span>
       </div>
-
       <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs font-medium text-rose-600 flex items-center gap-1">
-          <i data-lucide="alert-circle" class="w-4 h-4"></i> Vắng Không Phép
-        </span>
+        <span class="text-xs font-medium text-rose-600 flex items-center gap-1"><i data-lucide="alert-circle" class="w-4 h-4"></i> Vắng Không Phép</span>
         <span id="stat-kp" class="text-2xl font-bold text-slate-800 mt-2">0</span>
       </div>
     </div>
 
-    <!-- KHU VỰC TÌM KIẾM VÀ BỘ LỌC -->
+    <!-- TÌM KIẾM & TÁC VỤ -->
     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-      <div class="text-center max-w-md mx-auto space-y-1">
-        <h2 class="text-xl font-bold text-slate-800">Tra Cứu Trạng Thái Điểm Danh</h2>
-        <p class="text-xs text-slate-500" id="sub-title-time">Nhập tên hoặc lọc theo Lớp/Trạng thái để kiểm tra thông tin</p>
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Tra Cứu & Duyệt Điểm Danh</h2>
+          <p class="text-xs text-slate-500" id="sub-title-time">GVCN chọn học sinh thuộc lớp mình để duyệt có phép</p>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <button onclick="approveSelected()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>GVCN Duyệt Có Phép</span>
+          </button>
+        </div>
       </div>
+
+      <!-- Cấu hình GitHub API (Lưu 1 lần trên máy Admin/GVCN) -->
+      <details class="text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <summary class="font-semibold text-slate-600 cursor-pointer flex items-center gap-1">
+          <i data-lucide="settings" class="w-3.5 h-3.5"></i> Cấu hình kết nối GitHub (Dành cho BQT)
+        </summary>
+        <div class="flex flex-col sm:flex-row gap-2 items-center mt-3 pt-2 border-t border-slate-200">
+          <input type="text" id="gh-user" placeholder="User GitHub" class="px-2 py-1 border rounded bg-white w-full sm:w-32">
+          <input type="text" id="gh-repo" placeholder="Tên Repo" class="px-2 py-1 border rounded bg-white w-full sm:w-36">
+          <input type="password" id="gh-token" placeholder="GitHub Token..." class="px-2 py-1 border rounded bg-white flex-1 w-full">
+          <button onclick="saveGithubConfig()" class="bg-slate-700 text-white px-3 py-1 rounded font-medium shrink-0">Lưu Token</button>
+        </div>
+      </details>
 
       <div class="flex flex-col sm:flex-row gap-3 pt-2">
         <div class="relative flex-1">
           <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-          <input type="text" id="search-input" placeholder="Nhập Họ và Tên học sinh..." 
-                 class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium">
+          <input type="text" id="search-input" placeholder="Nhập Họ và Tên học sinh..." class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium">
         </div>
 
-        <!-- Lọc Lớp -->
         <select id="lop-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
           <option value="ALL">Tất cả Lớp</option>
         </select>
 
-        <!-- Lọc Trạng Thái -->
         <select id="status-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
           <option value="ALL">Tất cả Trạng Thái</option>
           <option value="ĐÚNG GIỜ">Có mặt (Đúng giờ)</option>
@@ -115,14 +123,17 @@
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div id="loading-spinner" class="py-12 text-center text-slate-400 text-sm flex flex-col items-center justify-center gap-2">
         <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-indigo-600"></i>
-        <span id="status-text">Đang tự động nạp dữ liệu từ data.xlsx...</span>
+        <span id="status-text">Đang tải dữ liệu điểm danh...</span>
       </div>
 
       <div class="overflow-x-auto">
         <table id="data-table" class="w-full text-left text-sm hidden">
           <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
             <tr>
-              <th class="py-3.5 px-4 w-16 text-center">STT</th>
+              <th class="py-3.5 px-4 w-12 text-center">
+                <input type="checkbox" id="check-all" onclick="toggleSelectAll(this)" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300">
+              </th>
+              <th class="py-3.5 px-3 w-14 text-center">STT</th>
               <th class="py-3.5 px-4">HỌ VÀ TÊN</th>
               <th class="py-3.5 px-4 text-center">KHỐI</th>
               <th class="py-3.5 px-4 text-center">LỚP</th>
@@ -148,12 +159,32 @@
   </main>
 
   <script>
+    // -------------------------------------------------------------
+    // DANH SÁCH 32 MẬT KHẨU MẶC ĐỊNH CHO 32 LỚP (BẠN CÓ THỂ SỬA TẠI ĐÂY)
+    // -------------------------------------------------------------
+    const CLASS_PASSWORDS = {
+      // Khối 10
+      "10A1": "vt10a1", "10A2": "vt10a2", "10A3": "vt10a3", "10A4": "vt10a4", "10A5": "vt10a5",
+      "10A6": "vt10a6", "10A7": "vt10a7", "10A8": "vt10a8", "10A9": "vt10a9", "10A10": "vt10a10",
+      
+      // Khối 11
+      "11A1": "vt11a1", "11A2": "vt11a2", "11A3": "vt11a3", "11A4": "vt11a4", "11A5": "vt11a5",
+      "11A6": "vt11a6", "11A7": "vt11a7", "11A8": "vt11a8", "11A9": "vt11a9", "11A10": "vt11a10", "11A11": "vt11a11",
+
+      // Khối 12
+      "12A1": "vt12a1", "12A2": "vt12a2", "12A3": "vt12a3", "12A4": "vt12a4", "12A5": "vt12a5",
+      "12A6": "vt12a6", "12A7": "vt12a7", "12A8": "vt12a8", "12A9": "vt12a9", "12A10": "vt12a10", "12A11": "vt12a11"
+    };
+
     let students = [];
+    let rawExcelJson = [];
+    let fileSha = "";
     let currentPage = 1;
     const pageSize = 50;
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
+      loadGithubConfig();
       autoFetchData();
 
       document.getElementById("search-input").addEventListener("input", () => { currentPage = 1; renderTable(); });
@@ -161,7 +192,19 @@
       document.getElementById("status-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
     });
 
-    // TỰ ĐỘNG TẢI DỮ LIỆU TỪ FILE DATA.XLSX
+    function saveGithubConfig() {
+      localStorage.setItem("gh_user", document.getElementById("gh-user").value.trim());
+      localStorage.setItem("gh_repo", document.getElementById("gh-repo").value.trim());
+      localStorage.setItem("gh_token", document.getElementById("gh-token").value.trim());
+      alert("Đã lưu cấu hình GitHub!");
+    }
+
+    function loadGithubConfig() {
+      if (localStorage.getItem("gh_user")) document.getElementById("gh-user").value = localStorage.getItem("gh_user");
+      if (localStorage.getItem("gh_repo")) document.getElementById("gh-repo").value = localStorage.getItem("gh_repo");
+      if (localStorage.getItem("gh_token")) document.getElementById("gh-token").value = localStorage.getItem("gh_token");
+    }
+
     function autoFetchData() {
       const spinner = document.getElementById("loading-spinner");
       const statusText = document.getElementById("status-text");
@@ -174,25 +217,34 @@
       fetch(url)
         .then(res => {
           if (!res.ok) throw new Error("Không tìm thấy file data.xlsx");
-
           const lastModifiedHeader = res.headers.get("Last-Modified");
-          if (lastModifiedHeader) {
-            displayUpdateTime(new Date(lastModifiedHeader));
-          } else {
-            displayUpdateTime(new Date());
-          }
-
+          if (lastModifiedHeader) displayUpdateTime(new Date(lastModifiedHeader));
+          else displayUpdateTime(new Date());
           return res.arrayBuffer();
         })
-        .then(buffer => {
-          processExcelBuffer(buffer);
-        })
+        .then(buffer => processExcelBuffer(buffer))
         .catch(err => {
           statusText.innerHTML = `<span class="text-rose-500 font-medium">Chưa có dữ liệu (Không tìm thấy file 'data.xlsx' trên server).</span>`;
         });
+
+      fetchGithubFileSha();
     }
 
-    // HIỂN THỊ THỜI GIAN CẬP NHẬT LÊN GIAO DIỆN
+    function fetchGithubFileSha() {
+      const user = localStorage.getItem("gh_user");
+      const repo = localStorage.getItem("gh_repo");
+      const token = localStorage.getItem("gh_token");
+
+      if (!user || !repo || !token) return;
+
+      fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
+        headers: { "Authorization": `token ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => { if (data.sha) fileSha = data.sha; })
+      .catch(err => console.log("Lỗi SHA:", err));
+    }
+
     function displayUpdateTime(dateObj) {
       const hours = String(dateObj.getHours()).padStart(2, '0');
       const minutes = String(dateObj.getMinutes()).padStart(2, '0');
@@ -200,22 +252,18 @@
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
       const year = dateObj.getFullYear();
 
-      const timeString = `Cập nhật: ${hours}:${minutes} - ${day}/${month}/${year}`;
-
-      document.getElementById("update-time-text").innerText = timeString;
+      document.getElementById("update-time-text").innerText = `Cập nhật: ${hours}:${minutes} - ${day}/${month}/${year}`;
       document.getElementById("update-time-box").classList.remove("hidden");
       document.getElementById("sub-title-time").innerText = `Dữ liệu điểm danh ngày ${day}/${month}/${year}`;
     }
 
-    // XỬ LÝ DỮ LIỆU EXCEL
     function processExcelBuffer(buffer) {
       try {
         const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
-        
         let sheetName = workbook.SheetNames.find(s => s.toLowerCase() === 'data') || workbook.SheetNames[0];
-        const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "" });
+        rawExcelJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "" });
 
-        parseExcelData(json);
+        parseExcelData(rawExcelJson);
 
         document.getElementById("loading-spinner").classList.add("hidden");
         document.getElementById("data-table").classList.remove("hidden");
@@ -228,12 +276,12 @@
     function parseExcelData(json) {
       if (!json || json.length < 5) return;
 
-      const colName = 1;  // Cột 2: Họ và tên
-      const colLop = 2;   // Cột 3: Lớp
-      const colTime = 10; // Cột 11: Giờ điểm danh
-      const colTre = 11;  // Cột 12: Vô trễ
-      const colP = 15;    // Cột 16: Phép
-      const colKP = 16;   // Cột 17: Không phép
+      const colName = 1;  // Cột 2
+      const colLop = 2;   // Cột 3
+      const colTime = 10; // Cột 11
+      const colTre = 11;  // Cột 12
+      const colP = 15;    // Cột 16
+      const colKP = 16;   // Cột 17
 
       students = [];
 
@@ -242,7 +290,7 @@
         if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
 
         let nameVal = String(row[colName]).trim();
-        let lopVal = String(row[colLop] || '').trim();
+        let lopVal = String(row[colLop] || '').trim().toUpperCase();
         
         let khoiVal = "10";
         const matchKhoi = lopVal.match(/\d+/);
@@ -256,21 +304,19 @@
         let valP = row[colP] ? String(row[colP]).trim() : "";
         let valKP = row[colKP] ? String(row[colKP]).trim() : "";
 
-        if (valP.length > 0) {
-          statusVal = "VẮNG CÓ PHÉP";
-        } else if (valKP.length > 0) {
-          statusVal = "VẮNG KHÔNG PHÉP";
-        } else if (valTre.includes("TRỄ") || valTre.includes("MUỘN")) {
-          statusVal = "TRỄ GIỜ";
-        }
+        if (valP.length > 0) statusVal = "VẮNG CÓ PHÉP";
+        else if (valKP.length > 0) statusVal = "VẮNG KHÔNG PHÉP";
+        else if (valTre.includes("TRỄ") || valTre.includes("MUỘN")) statusVal = "TRỄ GIỜ";
 
         students.push({
+          id: i,
           stt: students.length + 1,
           name: nameVal,
           khoi: khoiVal,
           lop: lopVal || "Chưa chia",
           time: timeVal,
-          status: statusVal
+          status: statusVal,
+          selected: false
         });
       }
 
@@ -282,7 +328,6 @@
       const lopSelect = document.getElementById("lop-filter");
       lopSelect.innerHTML = `<option value="ALL">Tất cả Lớp</option>`;
       const classes = new Set();
-
       students.forEach(s => { if (s.lop) classes.add(s.lop); });
       Array.from(classes).sort().forEach(l => {
         const opt = document.createElement("option");
@@ -299,21 +344,17 @@
       const statusFilter = document.getElementById("status-filter").value;
 
       tbody.innerHTML = "";
+      document.getElementById("check-all").checked = false;
 
-      // Lọc theo tên và lớp trước để phục vụ cho việc thống kê số liệu
       const baseFiltered = students.filter(s => {
         const matchName = String(s.name || '').toLowerCase().includes(search);
         const matchLop = lop === "ALL" || String(s.lop) === lop;
         return matchName && matchLop;
       });
 
-      // Cập nhật thẻ thống kê theo tập dữ liệu lớp/tên đang lọc
       updateStatistics(baseFiltered);
 
-      // Tiếp tục lọc theo Trạng thái để hiển thị danh sách
-      const finalFiltered = baseFiltered.filter(s => {
-        return statusFilter === "ALL" || s.status === statusFilter;
-      });
+      const finalFiltered = baseFiltered.filter(s => statusFilter === "ALL" || s.status === statusFilter);
 
       const totalPages = Math.ceil(finalFiltered.length / pageSize) || 1;
       if (currentPage > totalPages) currentPage = totalPages;
@@ -322,19 +363,22 @@
       const pageData = finalFiltered.slice(start, start + pageSize);
 
       if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Không tìm thấy học sinh phù hợp</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Không tìm thấy học sinh phù hợp</td></tr>`;
       } else {
         pageData.forEach((s, idx) => {
           const tr = document.createElement("tr");
           tr.className = "hover:bg-slate-50 transition-colors";
 
           let badgeClass = "badge-on-time";
-          const st = String(s.status || '').toUpperCase();
-          if (st.includes("TRỄ")) badgeClass = "badge-late";
-          else if (st.includes("VẮNG")) badgeClass = "badge-absent";
+          if (s.status === "TRỄ GIỜ") badgeClass = "badge-late";
+          else if (s.status === "VẮNG KHÔNG PHÉP") badgeClass = "badge-absent";
+          else if (s.status === "VẮNG CÓ PHÉP") badgeClass = "badge-p";
 
           tr.innerHTML = `
-            <td class="py-3.5 px-4 text-center text-slate-400 font-medium">${start + idx + 1}</td>
+            <td class="py-3.5 px-4 text-center">
+              <input type="checkbox" data-id="${s.id}" ${s.selected ? "checked" : ""} onchange="toggleSelectStudent(${s.id}, this.checked)" class="student-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300">
+            </td>
+            <td class="py-3.5 px-3 text-center text-slate-400 font-medium">${start + idx + 1}</td>
             <td class="py-3.5 px-4 font-semibold text-slate-900">${s.name}</td>
             <td class="py-3.5 px-4 text-center text-slate-500">Khối ${s.khoi}</td>
             <td class="py-3.5 px-4 text-center font-bold text-indigo-600">${s.lop}</td>
@@ -355,13 +399,130 @@
       document.getElementById("btn-next").disabled = currentPage === totalPages;
     }
 
-    // TÍNH TOÁN VÀ CẬP NHẬT CÁC THẺ THỐNG KÊ
-    function updateStatistics(data) {
-      let presentCount = 0;
-      let lateCount = 0;
-      let pCount = 0;
-      let kpCount = 0;
+    function toggleSelectStudent(id, isChecked) {
+      const st = students.find(s => s.id === id);
+      if (st) st.selected = isChecked;
+    }
 
+    function toggleSelectAll(master) {
+      const checkboxes = document.querySelectorAll('.student-checkbox');
+      checkboxes.forEach(cb => {
+        cb.checked = master.checked;
+        const id = parseInt(cb.getAttribute('data-id'));
+        toggleSelectStudent(id, master.checked);
+      });
+    }
+
+    // --- BỘ XỬ LÝ DUYỆT CÓ PHÉP THEO TỪNG LỚP ---
+    async function approveSelected() {
+      const user = localStorage.getItem("gh_user");
+      const repo = localStorage.getItem("gh_repo");
+      const token = localStorage.getItem("gh_token");
+
+      if (!user || !repo || !token) {
+        alert("Vui lòng mở mục 'Cấu hình kết nối GitHub' và nhập đầy đủ thông tin trước!");
+        return;
+      }
+
+      const selectedStudents = students.filter(s => s.selected);
+      if (selectedStudents.length === 0) {
+        alert("Vui lòng tích chọn ít nhất 1 học sinh để duyệt có phép.");
+        return;
+      }
+
+      // Kiểm tra danh sách lớp của các học sinh được chọn
+      const selectedClasses = [...new Set(selectedStudents.map(s => s.lop.toUpperCase()))];
+
+      // Bước 1: Yêu cầu nhập Tên Lớp cần duyệt
+      let defaultClassPrompt = selectedClasses.length === 1 ? selectedClasses[0] : "";
+      const inputClass = prompt(`Nhập TÊN LỚP bạn làm GVCN để duyệt phép (Ví dụ: 10A1, 11A2...):\n(Các lớp đang có học sinh được chọn: ${selectedClasses.join(", ")})`, defaultClassPrompt);
+
+      if (!inputClass) return;
+      const targetClass = inputClass.trim().toUpperCase();
+
+      // Kiểm tra xem Lớp có trong hệ thống mật khẩu không
+      if (!CLASS_PASSWORDS[targetClass]) {
+        alert(`Lớp '${targetClass}' không tồn tại trong hệ thống! Vui lòng nhập đúng định dạng (Ví dụ: 10A1).`);
+        return;
+      }
+
+      // Bước 2: Yêu cầu nhập Mật khẩu riêng của Lớp đó
+      const inputPass = prompt(`Nhập MẬT KHẨU GVCN Lớp ${targetClass}:`);
+      if (!inputPass) return;
+
+      if (inputPass.trim() !== CLASS_PASSWORDS[targetClass]) {
+        alert(`Mật khẩu GVCN Lớp ${targetClass} KHÔNG CHÍNH XÁC! Quá trình duyệt bị hủy.`);
+        return;
+      }
+
+      // Bước 3: Kiểm tra an toàn - Đảm bảo GVCN chỉ duyệt học sinh thuộc Lớp mình
+      const otherClassStudents = selectedStudents.filter(s => s.lop.toUpperCase() !== targetClass);
+      if (otherClassStudents.length > 0) {
+        alert(`CẢNH BÁO: Bạn đang chọn ${otherClassStudents.length} học sinh thuộc lớp khác! Bạn chỉ có quyền duyệt cho Lớp ${targetClass}.\nVui lòng bỏ chọn học sinh lớp khác và thử lại.`);
+        return;
+      }
+
+      // Tiến hành cập nhật dữ liệu
+      const colP = 15;   // Cột 16: Vắng phép
+      const colKP = 16;  // Cột 17: Vắng không phép
+
+      let count = 0;
+      selectedStudents.forEach(s => {
+        if (s.status === "VẮNG KHÔNG PHÉP" || s.status === "TRỄ GIỜ") {
+          s.status = "VẮNG CÓ PHÉP";
+          s.selected = false;
+          
+          rawExcelJson[s.id][colP] = "Có phép";
+          rawExcelJson[s.id][colKP] = ""; // Xóa không phép
+          count++;
+        }
+      });
+
+      if (count === 0) {
+        alert(`Tất cả học sinh được chọn của lớp ${targetClass} đã ở trạng thái Vắng có phép!`);
+        return;
+      }
+
+      // Đẩy file lên GitHub API
+      try {
+        const ws = XLSX.utils.aoa_to_sheet(rawExcelJson);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "data");
+
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+        const bodyData = {
+          message: `GVCN Lớp ${targetClass} duyệt có phép cho ${count} học sinh`,
+          content: wbout
+        };
+
+        if (fileSha) bodyData.sha = fileSha;
+
+        const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(bodyData)
+        });
+
+        const resJson = await response.json();
+
+        if (response.ok) {
+          fileSha = resJson.content.sha;
+          alert(`XÁC NHẬN THÀNH CÔNG!\nGVCN Lớp ${targetClass} đã duyệt nghỉ có phép cho ${count} học sinh và lưu trực tiếp lên GitHub.`);
+          renderTable();
+        } else {
+          alert("Lỗi khi đẩy dữ liệu lên GitHub: " + (resJson.message || "Kiểm tra lại Token/Repo"));
+        }
+      } catch (err) {
+        alert("Lỗi kết nối GitHub API: " + err.message);
+      }
+    }
+
+    function updateStatistics(data) {
+      let presentCount = 0, lateCount = 0, pCount = 0, kpCount = 0;
       data.forEach(s => {
         if (s.status === "ĐÚNG GIỜ") presentCount++;
         else if (s.status === "TRỄ GIỜ") lateCount++;
