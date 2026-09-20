@@ -29,8 +29,8 @@
         <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i> Cấu hình kết nối GitHub (Dành cho BQT)
       </summary>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
-        <input type="text" id="gh-user" placeholder="User GitHub..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <input type="text" id="gh-repo" placeholder="Tên Repo..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <input type="text" id="gh-user" placeholder="User GitHub (ví dụ: phamdanai-glitch)" class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <input type="text" id="gh-repo" placeholder="Tên Repo (ví dụ: DiemDanh10)" class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         <input type="password" id="gh-token" placeholder="GitHub Token..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-1">
         <button onclick="saveGithubConfig()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl px-4 py-2 transition-all">Lưu & Tải Dữ Liệu</button>
       </div>
@@ -90,7 +90,6 @@
 
   <!-- SCRIPT XỬ LÝ -->
   <script>
-    // 1. DANH SÁCH 32 LỚP VÀ MẬT KHẨU TƯƠNG ỨNG
     const CLASS_PASSWORDS = {
       "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
       "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
@@ -105,30 +104,50 @@
     let fileSha = "";
     let pendingStudents = [];
 
+    // Hàm hỗ trợ lọc chuẩn Username & Repo từ chuỗi người dùng nhập
+    function cleanInput(str) {
+      if (!str) return "";
+      let cleaned = str.trim().replace(/\/$/, ""); // Xóa dấu / ở cuối
+      if (cleaned.includes("github.com/")) {
+        cleaned = cleaned.split("github.com/")[1];
+      }
+      return cleaned.split('/')[0];
+    }
+
     window.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       loadGithubConfig();
-      fetchAttendanceData(); // Tải dữ liệu ngay khi mở trang
+      fetchAttendanceData();
     });
 
     function loadGithubConfig() {
-      document.getElementById("gh-user").value = localStorage.getItem("gh_user") || "";
-      document.getElementById("gh-repo").value = localStorage.getItem("gh_repo") || "";
+      document.getElementById("gh-user").value = localStorage.getItem("gh_user") || "phamdanai-glitch";
+      document.getElementById("gh-repo").value = localStorage.getItem("gh_repo") || "DiemDanh10";
       document.getElementById("gh-token").value = localStorage.getItem("gh_token") || "";
     }
 
     function saveGithubConfig() {
-      localStorage.setItem("gh_user", document.getElementById("gh-user").value.trim());
-      localStorage.setItem("gh_repo", document.getElementById("gh-repo").value.trim());
-      localStorage.setItem("gh_token", document.getElementById("gh-token").value.trim());
+      const rawUser = document.getElementById("gh-user").value;
+      const rawRepo = document.getElementById("gh-repo").value;
+      const token = document.getElementById("gh-token").value.trim();
+
+      const user = cleanInput(rawUser);
+      const repo = cleanInput(rawRepo);
+
+      document.getElementById("gh-user").value = user;
+      document.getElementById("gh-repo").value = repo;
+
+      localStorage.setItem("gh_user", user);
+      localStorage.setItem("gh_repo", repo);
+      localStorage.setItem("gh_token", token);
+
       alert("Đã lưu cấu hình GitHub thành công!");
       fetchAttendanceData();
     }
 
-    // ĐỌC DỮ LIỆU TỪ FILE DATA.XLSX TRÊN GITHUB API
     async function fetchAttendanceData() {
-      const user = localStorage.getItem("gh_user");
-      const repo = localStorage.getItem("gh_repo");
+      let user = cleanInput(localStorage.getItem("gh_user") || "phamdanai-glitch");
+      let repo = cleanInput(localStorage.getItem("gh_repo") || "DiemDanh10");
       const token = localStorage.getItem("gh_token");
       const tbody = document.getElementById("attendance-tbody");
 
@@ -150,7 +169,6 @@
         const data = await response.json();
         fileSha = data.sha;
 
-        // Giải mã nội dung Base64 của file Excel
         const binaryString = atob(data.content.replace(/\s/g, ''));
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -163,18 +181,16 @@
 
         rawExcelJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        // Chuyển đổi hàng trong Excel thành đối tượng Học sinh (Bỏ qua hàng Tiêu đề)
         students = [];
         for (let i = 1; i < rawExcelJson.length; i++) {
           const row = rawExcelJson[i];
           if (!row || row.length === 0) continue;
 
-          const name = row[1] || row[0] || ""; // Cột Họ Tên
-          const lop = row[2] || row[1] || "";  // Cột Lớp
+          const name = row[1] || row[0] || "";
+          const lop = row[2] || row[1] || "";
           
           if (!name) continue;
 
-          // Kiểm tra cột phép / không phép
           const coPhep = row[15] ? String(row[15]).trim() : "";
           const khongPhep = row[16] ? String(row[16]).trim() : "";
 
@@ -197,10 +213,9 @@
       }
     }
 
-    // HIỂN THỊ MODAL NHẬP MẬT KHẨU
     function approveSelected() {
-      const user = localStorage.getItem("gh_user");
-      const repo = localStorage.getItem("gh_repo");
+      const user = cleanInput(localStorage.getItem("gh_user"));
+      const repo = cleanInput(localStorage.getItem("gh_repo"));
       const token = localStorage.getItem("gh_token");
 
       if (!user || !repo || !token) {
@@ -227,7 +242,6 @@
       document.getElementById("password-modal").classList.add("hidden");
     }
 
-    // XÁC NHẬN MẬT KHẨU & ĐẨY DỮ LIỆU LÊN GITHUB
     async function confirmApproval() {
       const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
       const inputPass = document.getElementById("modal-pass-input").value.trim();
@@ -255,8 +269,8 @@
 
       closePasswordModal();
 
-      const colP = 15;  // Cột 16 trong Excel (Vắng phép)
-      const colKP = 16; // Cột 17 trong Excel (Vắng không phép)
+      const colP = 15;
+      const colKP = 16;
 
       let count = 0;
       pendingStudents.forEach(s => {
@@ -277,8 +291,8 @@
         return;
       }
 
-      const user = localStorage.getItem("gh_user");
-      const repo = localStorage.getItem("gh_repo");
+      const user = cleanInput(localStorage.getItem("gh_user"));
+      const repo = cleanInput(localStorage.getItem("gh_repo"));
       const token = localStorage.getItem("gh_token");
 
       try {
