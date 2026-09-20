@@ -15,12 +15,22 @@
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
       <div>
-        <h1 class="text-2xl font-bold text-slate-800">Tra Cứu & Duyệt Điểm Danh</h1>
+        <h1 class="text-2xl font-bold text-slate-800" id="header-title">Tra Cứu & Duyệt Điểm Danh</h1>
         <p class="text-xs text-slate-400 mt-1">Trường THPT Vị Thanh — Tổng số học sinh: <span id="total-students" class="font-bold text-indigo-600">0</span></p>
       </div>
-      <button onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
-        <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
-      </button>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- NÚT LINK PHỤ HUYNH -->
+        <button onclick="copyParentLink()" title="Sao chép đường link dành riêng cho phụ huynh tra cứu" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
+          <i data-lucide="share-2" class="w-4 h-4 text-indigo-600"></i>
+          <span>Link Cho Phụ Huynh</span>
+        </button>
+
+        <!-- NÚT GVCN DUYỆT CÓ PHÉP (Chỉ hiện ở mode GVCN) -->
+        <button id="btn-approve" onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
+        </button>
+      </div>
     </div>
 
     <!-- BỘ LỌC TÌM KIẾM & LỚP -->
@@ -31,13 +41,14 @@
       </select>
       <select id="status-filter" onchange="filterData()" class="px-4 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
         <option value="">-- Tất cả trạng thái --</option>
+        <option value="ĐI TRỄ">ĐI TRỄ</option>
         <option value="VẮNG KHÔNG PHÉP">VẮNG KHÔNG PHÉP</option>
         <option value="VẮNG CÓ PHÉP">VẮNG CÓ PHÉP</option>
       </select>
     </div>
 
-    <!-- CẤU HÌNH GITHUB -->
-    <details class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+    <!-- CẤU HÌNH GITHUB (Chỉ hiện ở mode GVCN) -->
+    <details id="github-config-box" class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
       <summary class="font-bold text-slate-700 cursor-pointer flex items-center gap-2">
         <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i> Cấu hình kết nối GitHub (BQT / GVCN)
       </summary>
@@ -54,7 +65,7 @@
       <table class="w-full text-left border-collapse text-sm">
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold">
-            <th class="p-3"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
+            <th class="p-3 col-checkbox"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
             <th class="p-3">STT</th>
             <th class="p-3">Họ và Tên</th>
             <th class="p-3">Lớp</th>
@@ -119,6 +130,7 @@
     let currentSheetName = "";
     let fileSha = "";
     let pendingStudents = [];
+    let isParentMode = false;
 
     function cleanInput(str) {
       if (!str) return "";
@@ -130,10 +142,43 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+      // Kiểm tra xem có tham số ?mode=phuhuynh trên URL không
+      const urlParams = new URLSearchParams(window.location.search);
+      isParentMode = urlParams.get('mode') === 'phuhuynh';
+
+      applyModeUI();
       lucide.createIcons();
       loadGithubConfig();
       fetchAttendanceData();
     });
+
+    function applyModeUI() {
+      if (isParentMode) {
+        document.getElementById("header-title").innerText = "Tra Cứu Điểm Danh (Dành Cho Phụ Huynh)";
+        document.getElementById("btn-approve").classList.add("hidden");
+        document.getElementById("github-config-box").classList.add("hidden");
+        
+        // Ẩn cột Checkbox trong bảng
+        const checkboxCols = document.querySelectorAll(".col-checkbox");
+        checkboxCols.forEach(col => col.classList.add("hidden"));
+      } else {
+        document.getElementById("header-title").innerText = "Tra Cứu & Duyệt Điểm Danh";
+        document.getElementById("btn-approve").classList.remove("hidden");
+        document.getElementById("github-config-box").classList.remove("hidden");
+
+        const checkboxCols = document.querySelectorAll(".col-checkbox");
+        checkboxCols.forEach(col => col.classList.remove("hidden"));
+      }
+    }
+
+    function copyParentLink() {
+      const parentUrl = window.location.origin + window.location.pathname + "?mode=phuhuynh";
+      navigator.clipboard.writeText(parentUrl).then(() => {
+        alert("Đã sao chép link dành cho Phụ huynh vào bộ nhớ tạm:\n" + parentUrl);
+      }).catch(() => {
+        prompt("Sao chép đường link dưới đây để gửi cho Phụ huynh:", parentUrl);
+      });
+    }
 
     function loadGithubConfig() {
       document.getElementById("gh-user").value = localStorage.getItem("gh_user") || "phamdanai-glitch";
@@ -160,7 +205,8 @@
       const token = localStorage.getItem("gh_token");
       const tbody = document.getElementById("attendance-tbody");
 
-      tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
+      const colSpan = isParentMode ? 6 : 7;
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
 
       try {
         let arrayBuffer = null;
@@ -203,6 +249,7 @@
           const nameCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 1 })]; // Cột B: Họ và Tên
           const lopCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 2 })];  // Cột C: Lớp
           const maHsCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 4 })]; // Cột E: Mã HS
+          const treCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 5 })];  // Cột F: Trễ
           const timeCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 10 })];// Cột K: Thời gian
           const phepCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 15 })];// Cột P: VẮNG CÓ PHÉP
 
@@ -214,10 +261,14 @@
           let lop = lopCell && lopCell.v ? String(lopCell.v).trim().toUpperCase() : "---";
           let maHs = maHsCell && maHsCell.v ? String(maHsCell.v).trim() : "---";
           let timeVal = timeCell && timeCell.v ? String(timeCell.v).trim() : "---";
+          let treVal = treCell && treCell.v ? String(treCell.v).trim() : "";
           let phepVal = phepCell && phepCell.v ? String(phepCell.v).trim() : "";
 
+          // Phân loại trạng thái điểm danh
           let status = "VẮNG KHÔNG PHÉP";
-          if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p" || phepVal.includes("Có phép") || phepVal === "P") {
+          if (treVal !== "") {
+            status = "ĐI TRỄ";
+          } else if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p" || phepVal.includes("Có phép") || phepVal === "P") {
             status = "VẮNG CÓ PHÉP";
           }
 
@@ -242,7 +293,7 @@
         filterData();
 
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
       }
     }
 
@@ -268,28 +319,39 @@
 
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
+      const colSpan = isParentMode ? 6 : 7;
+
       if (!filteredStudents || filteredStudents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = filteredStudents.map((s, idx) => `
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="p-3"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="toggleStudentSelect(${idx}, this.checked)"></td>
-          <td class="p-3 text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-3 font-semibold text-slate-800">${s.name}</td>
-          <td class="p-3"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
-          <td class="p-3 text-slate-500 font-mono text-xs">${s.maHs}</td>
-          <td class="p-3 text-slate-500 font-mono text-xs">${s.time}</td>
-          <td class="p-3">
-            <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${
-              s.status === 'VẮNG CÓ PHÉP' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-            }">
-              ${s.status}
-            </span>
-          </td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = filteredStudents.map((s, idx) => {
+        let badgeStyle = "bg-rose-100 text-rose-700"; // Vắng không phép
+        if (s.status === "ĐI TRỄ") {
+          badgeStyle = "bg-amber-100 text-amber-800";
+        } else if (s.status === "VẮNG CÓ PHÉP") {
+          badgeStyle = "bg-emerald-100 text-emerald-700";
+        }
+
+        const checkboxTd = isParentMode ? '' : `<td class="p-3 col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="toggleStudentSelect(${idx}, this.checked)"></td>`;
+
+        return `
+          <tr class="hover:bg-slate-50 transition-colors">
+            ${checkboxTd}
+            <td class="p-3 text-slate-400 font-medium">${idx + 1}</td>
+            <td class="p-3 font-semibold text-slate-800">${s.name}</td>
+            <td class="p-3"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
+            <td class="p-3 text-slate-500 font-mono text-xs">${s.maHs}</td>
+            <td class="p-3 text-slate-500 font-mono text-xs">${s.time}</td>
+            <td class="p-3">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${badgeStyle}">
+                ${s.status}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function toggleStudentSelect(index, isChecked) {
