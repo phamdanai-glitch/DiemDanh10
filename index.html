@@ -133,13 +133,10 @@
         .then(res => {
           if (!res.ok) throw new Error("Không tìm thấy file data.xlsx");
 
-          // Lấy thông tin thời gian cập nhật file từ header 'Last-Modified'
           const lastModifiedHeader = res.headers.get("Last-Modified");
           if (lastModifiedHeader) {
-            const modDate = new Date(lastModifiedHeader);
-            displayUpdateTime(modDate);
+            displayUpdateTime(new Date(lastModifiedHeader));
           } else {
-            // Nếu không có header thì dùng thời gian hiện tại
             displayUpdateTime(new Date());
           }
 
@@ -172,7 +169,9 @@
     function processExcelBuffer(buffer) {
       try {
         const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
+        
+        // Lấy sheet 'data' hoặc sheet đầu tiên nếu không tìm thấy 'data'
+        let sheetName = workbook.SheetNames.find(s => s.toLowerCase() === 'data') || workbook.SheetNames[0];
         const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "" });
 
         parseExcelData(json);
@@ -186,47 +185,77 @@
     }
 
     function parseExcelData(json) {
-      if (!json || json.length < 2) return;
+      if (!json || json.length < 5) return;
 
-      let headerIdx = 0;
+      // Tìm hàng tiêu đề chứa cột 'HỌ VÀ TÊN'
+      let headerIdx = 2; // Mặc định hàng 3 trong file
       for (let i = 0; i < Math.min(json.length, 10); i++) {
         const rowStr = json[i].join(" ").toUpperCase();
-        if (rowStr.includes("HỌ") || rowStr.includes("TÊN") || rowStr.includes("NAME")) {
+        if (rowStr.includes("HỌ VÀ TÊN") || rowStr.includes("HỌ TÊN")) {
           headerIdx = i;
           break;
         }
       }
 
-      const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
-      let colName = headers.findIndex(h => h.includes("HỌ") || h.includes("TÊN") || h.includes("NAME"));
-      let colKhoi = headers.findIndex(h => h.includes("KHỐI") || h.includes("GRADE"));
-      let colLop = headers.findIndex(h => h.includes("LỚP") || h.includes("CLASS"));
-      let colTime = headers.findIndex(h => h.includes("THỜI GIAN") || h.includes("GIỜ") || h.includes("TIME"));
-      let colStatus = headers.findIndex(h => h.includes("TRẠNG THÁI") || h.includes("GHI CHÚ") || h.includes("STATUS"));
+      // Đọc tiêu đề dòng 1 & dòng 2 (nếu gộp)
+      const rowA = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
+      const rowB = json[headerIdx + 1] ? json[headerIdx + 1].map(h => String(h || '').trim().toUpperCase()) : [];
 
+      // Xác định chỉ số các cột
+      let colName = rowA.findIndex(h => h.includes("HỌ VÀ TÊN") || h.includes("HỌ TÊN"));
+      let colLop = rowA.findIndex(h => h.includes("LỚP"));
+      let colTime = rowB.findIndex(h => h.includes("THỜI GIAN") || h.includes("CHECK IN") || h.includes("GIỜ"));
+      let colTre = rowB.findIndex(h => h.includes("VÔ TRỄ") || h.includes("TRỄ"));
+      let colP = rowB.findIndex(h => h === "P" || h.includes("PHÉP"));
+      let colKP = rowB.findIndex(h => h === "K" || h.includes("KHÔNG PHÉP"));
+
+      // Gán vị trí chuẩn theo mẫu data.xlsx nếu không tự động khớp
       if (colName === -1) colName = 1;
+      if (colLop === -1) colLop = 2;
+      if (colTime === -1) colTime = 10;
+      if (colTre === -1) colTre = 11;
+      if (colP === -1) colP = 15;
+      if (colKP === -1) colKP = 16;
+
       students = [];
 
-      for (let i = headerIdx + 1; i < json.length; i++) {
+      for (let i = headerIdx + 2; i < json.length; i++) {
         const row = json[i];
         if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
 
         let nameVal = String(row[colName]).trim();
-        let lopVal = colLop !== -1 && row[colLop] ? String(row[colLop]).trim() : "";
-        let khoiVal = colKhoi !== -1 && row[colKhoi] ? String(row[colKhoi]).replace(/[^0-9]/g, '') : "";
+        let lopVal = String(row[colLop] || '').trim();
+        
+        // Trích xuất Khối từ Tên Lớp (VD: 10A1 -> Khối 10)
+        let khoiVal = "10";
+        const matchKhoi = lopVal.match(/\d+/);
+        if (matchKhoi) khoiVal = matchKhoi[0];
 
-        if (!khoiVal && lopVal) {
-          const match = lopVal.match(/\d+/);
-          if (match) khoiVal = match[0];
+        // Lấy thời gian Check-in
+        let timeVal = row[colTime] ? String(row[colTime]).trim() : "";
+        if (!timeVal || timeVal === "undefined") timeVal = "--:--";
+
+        // Xác định Trạng thái Điểm danh
+        let statusVal = "ĐÚNG GIỜ";
+        let valTre = row[colTre] ? String(row[colTre]).trim().toUpperCase() : "";
+        let valP = row[colP] ? String(row[colP]).trim() : "";
+        let valKP = row[colKP] ? String(row[colKP]).trim() : "";
+
+        if (valP.length > 0) {
+          statusVal = "VẮNG CÓ PHÉP";
+        } else if (valKP.length > 0) {
+          statusVal = "VẮNG KHÔNG PHÉP";
+        } else if (valTre.includes("TRỄ") || valTre.includes("MUỘN")) {
+          statusVal = "TRỄ GIỜ";
         }
 
         students.push({
           stt: students.length + 1,
           name: nameVal,
-          khoi: khoiVal || "10",
+          khoi: khoiVal,
           lop: lopVal || "Chưa chia",
-          time: colTime !== -1 && row[colTime] ? String(row[colTime]).trim() : "--:--",
-          status: colStatus !== -1 && row[colStatus] ? String(row[colStatus]).trim() : "ĐÚNG GIỜ"
+          time: timeVal,
+          status: statusVal
         });
       }
 
@@ -276,7 +305,7 @@
 
           let badgeClass = "badge-on-time";
           const st = String(s.status || '').toUpperCase();
-          if (st.includes("TRỄ") || st.includes("MUỘN")) badgeClass = "badge-late";
+          if (st.includes("TRỄ")) badgeClass = "badge-late";
           else if (st.includes("VẮNG")) badgeClass = "badge-absent";
 
           tr.innerHTML = `
