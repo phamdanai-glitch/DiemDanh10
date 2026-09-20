@@ -34,6 +34,9 @@
         <input type="password" id="gh-token" placeholder="GitHub Token..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-1">
         <button onclick="saveGithubConfig()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl px-4 py-2 transition-all">Lưu & Tải Dữ Liệu</button>
       </div>
+      
+      <!-- KHU VỰC DEBUG/SOI FILE EXCEL -->
+      <div id="debug-info" class="mt-3 p-3 bg-slate-200 rounded-lg text-slate-700 text-[11px] font-mono overflow-x-auto hidden"></div>
     </details>
 
     <!-- KHU VỰC HIỂN THỊ DỮ LIỆU / BẢNG -->
@@ -101,9 +104,10 @@
 
     let students = [];
     let rawExcelJson = null;
+    let currentSheetName = "";
     let fileSha = "";
     let pendingStudents = [];
-    let colIndices = { name: -1, lop: -1, coPhep: -1, khongPhep: -1 };
+    let colIndices = { name: 1, lop: 2, coPhep: 15, khongPhep: 16 };
 
     function cleanInput(str) {
       if (!str) return "";
@@ -147,6 +151,7 @@
       let repo = cleanInput(localStorage.getItem("gh_repo") || "DiemDanh10");
       const token = localStorage.getItem("gh_token");
       const tbody = document.getElementById("attendance-tbody");
+      const debugDiv = document.getElementById("debug-info");
 
       if (!user || !repo) {
         tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-amber-600 font-semibold">Vui lòng nhập "User GitHub" và "Tên Repo" trong mục Cấu hình rồi bấm "Lưu & Tải Dữ Liệu".</td></tr>`;
@@ -173,48 +178,58 @@
         }
 
         const workbook = XLSX.read(bytes.buffer, { type: 'array' });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-
+        
+        // Chọn Sheet đầu tiên có dữ liệu
+        currentSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[currentSheetName];
         rawExcelJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // Hiện debug info
+        debugDiv.classList.remove("hidden");
+        let debugText = `Sheets found: [${workbook.SheetNames.join(", ")}]\nReading Sheet: "${currentSheetName}" (Rows: ${rawExcelJson.length})\nFirst 3 rows:\n`;
+        rawExcelJson.slice(0, 3).forEach((r, idx) => {
+          debugText += `Row ${idx}: ${JSON.stringify(r)}\n`;
+        });
+        debugDiv.innerText = debugText;
 
         if (!rawExcelJson || rawExcelJson.length === 0) {
           tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">File Excel trống.</td></tr>`;
           return;
         }
 
-        // DÙNG THUẬT TOÁN QUÉT VÀ NHẬN DIỆN LINH HOẠT
+        // TỰ ĐỘNG TÌM CỘT TÊN VÀ CỘT LỚP
         colIndices = { name: -1, lop: -1, coPhep: -1, khongPhep: -1 };
         let headerRowIdx = -1;
 
         for (let r = 0; r < Math.min(rawExcelJson.length, 15); r++) {
           const row = rawExcelJson[r];
           if (!row) continue;
-          
+
           row.forEach((cell, cIdx) => {
-            const str = String(cell || "").toLowerCase().trim();
-            if (str.includes("họ") || str.includes("tên") || str.includes("học sinh")) {
+            const val = String(cell || "").toLowerCase().trim();
+            if (val.includes("tên") || val.includes("họ") || val.includes("học sinh")) {
               if (colIndices.name === -1) colIndices.name = cIdx;
             }
-            if (str.includes("lớp") || str.includes("lop")) {
+            if (val.includes("lớp") || val.includes("class")) {
               if (colIndices.lop === -1) colIndices.lop = cIdx;
             }
-            if (str.includes("có phép") || str.includes("p")) {
+            if (val.includes("có phép") || val.includes("phep")) {
               if (colIndices.coPhep === -1) colIndices.coPhep = cIdx;
             }
-            if (str.includes("không phép") || str.includes("kp")) {
+            if (val.includes("không phép") || val.includes("khong phep")) {
               if (colIndices.khongPhep === -1) colIndices.khongPhep = cIdx;
             }
           });
 
-          if (colIndices.name !== -1) {
+          if (colIndices.name !== -1 || colIndices.lop !== -1) {
             headerRowIdx = r;
             break;
           }
         }
 
-        // Nếu không tự nhận diện được tiêu đề, dùng chỉ số mặc định
-        if (colIndices.name === -1) colIndices.name = 1;
-        if (colIndices.lop === -1) colIndices.lop = 2;
+        // Fallback mặc định nếu không tìm thấy chuỗi tiêu đề
+        if (colIndices.name === -1) colIndices.name = 1; // Cột B
+        if (colIndices.lop === -1) colIndices.lop = 2;  // Cột C
         if (colIndices.coPhep === -1) colIndices.coPhep = 15;
         if (colIndices.khongPhep === -1) colIndices.khongPhep = 16;
 
@@ -225,46 +240,27 @@
           const row = rawExcelJson[i];
           if (!row || row.length === 0) continue;
 
-          let name = row[colIndices.name];
-          let lop = row[colIndices.lop];
+          // Thử lấy Họ Tên từ cột phát hiện hoặc cột 0/1/2
+          let name = row[colIndices.name] || row[1] || row[0] || "";
+          let lop = row[colIndices.lop] || row[2] || row[1] || "";
 
-          // Dự phòng nếu cột tên lệch sang cột lân cận
-          if (!name || String(name).trim() === "" || String(name).toLowerCase().includes("họ và tên")) {
-            for (let c = 0; c < Math.min(row.length, 5); c++) {
-              const val = String(row[c] || "").trim();
-              if (val.length > 2 && !/^\d+$/.test(val) && !val.toUpperCase().startsWith("10A") && !val.toUpperCase().startsWith("11A") && !val.toUpperCase().startsWith("12A")) {
-                if (!val.toLowerCase().includes("họ") && !val.toLowerCase().includes("tên") && !val.toLowerCase().includes("stt")) {
-                  name = val;
-                  break;
-                }
-              }
-            }
-          }
+          name = String(name).trim();
+          lop = String(lop).trim().toUpperCase();
 
-          if (!name || String(name).trim() === "") continue;
+          // Bỏ qua nếu dòng này không chứa tên học sinh
+          if (!name || name.toLowerCase().includes("họ và tên") || name.toLowerCase().includes("stt")) continue;
 
-          // Tìm tên lớp nếu không đọc được từ cột mặc định
-          if (!lop || String(lop).trim() === "") {
-            for (let c = 0; c < Math.min(row.length, 6); c++) {
-              const val = String(row[c] || "").trim().toUpperCase();
-              if (/^(10|11|12)A\d+$/.test(val)) {
-                lop = val;
-                break;
-              }
-            }
-          }
-
-          const coPhepVal = row[colIndices.coPhep] ? String(row[colIndices.coPhep]).trim().toLowerCase() : "";
+          const coPhepVal = row[colIndices.coPhep] ? String(row[colIndices.coPhep]).trim() : "";
           
           let status = "VẮNG KHÔNG PHÉP";
-          if (coPhepVal && coPhepVal !== "false" && coPhepVal !== "0" && coPhepVal !== "") {
+          if (coPhepVal && coPhepVal.toLowerCase() !== "false" && coPhepVal !== "0") {
             status = "VẮNG CÓ PHÉP";
           }
 
           students.push({
             id: i,
-            name: String(name).trim(),
-            lop: String(lop || "CHƯA RÕ").trim().toUpperCase(),
+            name: name,
+            lop: lop || "---",
             status: status,
             selected: false
           });
@@ -295,7 +291,7 @@
 
       const selectedClasses = [...new Set(pendingStudents.map(s => s.lop))];
       const classInput = document.getElementById("modal-class-input");
-      classInput.value = selectedClasses.length === 1 ? selectedClasses[0] : "";
+      classInput.value = selectedClasses.length === 1 && selectedClasses[0] !== "---" ? selectedClasses[0] : "";
       document.getElementById("modal-pass-input").value = "";
 
       document.getElementById("password-modal").classList.remove("hidden");
@@ -325,7 +321,7 @@
         return;
       }
 
-      const otherClassStudents = pendingStudents.filter(s => s.lop !== targetClass);
+      const otherClassStudents = pendingStudents.filter(s => s.lop !== "---" && s.lop !== targetClass);
       if (otherClassStudents.length > 0) {
         alert(`CẢNH BÁO: Bạn chọn học sinh thuộc lớp khác! GVCN lớp ${targetClass} chỉ được duyệt cho học sinh Lớp ${targetClass}.`);
         return;
@@ -361,7 +357,7 @@
       try {
         const ws = XLSX.utils.aoa_to_sheet(rawExcelJson);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "data");
+        XLSX.utils.book_append_sheet(wb, ws, currentSheetName || "Sheet1");
 
         const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
 
@@ -403,7 +399,7 @@
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       if (!students || students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh. Vui lòng kiểm tra lại dữ liệu file Excel.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Không tìm thấy danh sách học sinh. Vui lòng kiểm tra lại khung soi dữ liệu ở mục Cấu hình bên trên.</td></tr>`;
         return;
       }
 
