@@ -3,487 +3,222 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRƯỜNG THPT VỊ THANH - Quản Lý & Duyệt Điểm Danh</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+  <title>Tra Cứu & Duyệt Điểm Danh</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-    .badge-on-time { background-color: #dcfce7; color: #166534; }
-    .badge-late { background-color: #fef3c7; color: #92400e; }
-    .badge-absent { background-color: #fee2e2; color: #991b1b; }
-    .badge-p { background-color: #dbeafe; color: #1e40af; }
-  </style>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
-<body class="min-h-screen pb-12">
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-6">
 
-  <!-- Header -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <img src="logo.jpg" alt="Logo THPT Vị Thanh" class="h-12 w-12 object-contain shrink-0" onerror="this.onerror=null; this.src='https://via.placeholder.com/48?text=THPT';">
+  <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-6 border border-slate-100 space-y-6">
+    
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">Tra Cứu & Duyệt Điểm Danh</h1>
+        <p class="text-xs text-slate-400 mt-1">Dữ liệu điểm danh ngày <span id="current-date">20/09/2026</span></p>
+      </div>
+      <button onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all">
+        <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
+      </button>
+    </div>
+
+    <!-- CẤU HÌNH GITHUB (MẶC ĐỊNH MỞ MỞ CHO BQT) -->
+    <details class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+      <summary class="font-bold text-slate-700 cursor-pointer flex items-center gap-2">
+        <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i> Cấu hình kết nối GitHub (Dành cho BQT)
+      </summary>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+        <input type="text" id="gh-user" placeholder="User GitHub..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <input type="text" id="gh-repo" placeholder="Tên Repo..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <input type="password" id="gh-token" placeholder="GitHub Token..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-1">
+        <button onclick="saveGithubConfig()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl px-4 py-2 transition-all">Lưu Token</button>
+      </div>
+    </details>
+
+    <!-- KHU VỰC HIỂN THỊ DỮ LIỆU / BẢNG -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold">
+            <th class="p-3"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
+            <th class="p-3">STT</th>
+            <th class="p-3">Họ và Tên</th>
+            <th class="p-3">Lớp</th>
+            <th class="p-3">Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody id="attendance-tbody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="5" class="p-6 text-center text-slate-400">Đang tải dữ liệu điểm danh từ GitHub...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- POPUP XÁC THỰC MẬT KHẨU GVCN -->
+  <div id="password-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="lock" class="w-5 h-5 text-indigo-600"></i> Xác Thực GVCN
+        </h3>
+        <button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3">
         <div>
-          <h1 class="text-lg font-bold text-slate-900 tracking-tight">TRƯỜNG THPT VỊ THANH</h1>
-          <p class="text-xs text-slate-500">Trang tra cứu & Duyệt phép học sinh theo Lớp</p>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Lớp duyệt phép</label>
+          <input type="text" id="modal-class-input" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu GVCN</label>
+          <input type="password" id="modal-pass-input" placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <div id="update-time-box" class="hidden sm:flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-medium">
-          <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-600"></i>
-          <span id="update-time-text">Chưa rõ thời gian</span>
-        </div>
-
-        <button onclick="autoFetchData()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          <span>Cập nhật</span>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closePasswordModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold">Hủy</button>
+        <button onclick="confirmApproval()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận
         </button>
       </div>
     </div>
-  </header>
+  </div>
 
-  <main class="max-w-5xl mx-auto px-4 pt-8 space-y-6">
-
-    <!-- THỐNG KÊ -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs font-medium text-emerald-600 flex items-center gap-1"><i data-lucide="check-circle" class="w-4 h-4"></i> Có Mặt</span>
-        <span id="stat-present" class="text-2xl font-bold text-slate-800 mt-2">0</span>
-      </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs font-medium text-amber-600 flex items-center gap-1"><i data-lucide="clock" class="w-4 h-4"></i> Trễ Giờ</span>
-        <span id="stat-late" class="text-2xl font-bold text-slate-800 mt-2">0</span>
-      </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs font-medium text-blue-600 flex items-center gap-1"><i data-lucide="file-text" class="w-4 h-4"></i> Vắng Có Phép</span>
-        <span id="stat-p" class="text-2xl font-bold text-slate-800 mt-2">0</span>
-      </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs font-medium text-rose-600 flex items-center gap-1"><i data-lucide="alert-circle" class="w-4 h-4"></i> Vắng Không Phép</span>
-        <span id="stat-kp" class="text-2xl font-bold text-slate-800 mt-2">0</span>
-      </div>
-    </div>
-
-    <!-- TÌM KIẾM & TÁC VỤ -->
-    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 class="text-xl font-bold text-slate-800">Tra Cứu & Duyệt Điểm Danh</h2>
-          <p class="text-xs text-slate-500" id="sub-title-time">GVCN chọn học sinh thuộc lớp mình để duyệt có phép</p>
-        </div>
-
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <button onclick="approveSelected()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm">
-            <i data-lucide="shield-check" class="w-4 h-4"></i>
-            <span>GVCN Duyệt Có Phép</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Cấu hình GitHub API (Lưu 1 lần trên máy Admin/GVCN) -->
-      <details class="text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
-        <summary class="font-semibold text-slate-600 cursor-pointer flex items-center gap-1">
-          <i data-lucide="settings" class="w-3.5 h-3.5"></i> Cấu hình kết nối GitHub (Dành cho BQT)
-        </summary>
-        <div class="flex flex-col sm:flex-row gap-2 items-center mt-3 pt-2 border-t border-slate-200">
-          <input type="text" id="gh-user" placeholder="User GitHub" class="px-2 py-1 border rounded bg-white w-full sm:w-32">
-          <input type="text" id="gh-repo" placeholder="Tên Repo" class="px-2 py-1 border rounded bg-white w-full sm:w-36">
-          <input type="password" id="gh-token" placeholder="GitHub Token..." class="px-2 py-1 border rounded bg-white flex-1 w-full">
-          <button onclick="saveGithubConfig()" class="bg-slate-700 text-white px-3 py-1 rounded font-medium shrink-0">Lưu Token</button>
-        </div>
-      </details>
-
-      <div class="flex flex-col sm:flex-row gap-3 pt-2">
-        <div class="relative flex-1">
-          <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-          <input type="text" id="search-input" placeholder="Nhập Họ và Tên học sinh..." class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium">
-        </div>
-
-        <select id="lop-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
-          <option value="ALL">Tất cả Lớp</option>
-        </select>
-
-        <select id="status-filter" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
-          <option value="ALL">Tất cả Trạng Thái</option>
-          <option value="ĐÚNG GIỜ">Có mặt (Đúng giờ)</option>
-          <option value="TRỄ GIỜ">Trễ giờ</option>
-          <option value="VẮNG CÓ PHÉP">Vắng có phép</option>
-          <option value="VẮNG KHÔNG PHÉP">Vắng không phép</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- BẢNG HỌC SINH -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div id="loading-spinner" class="py-12 text-center text-slate-400 text-sm flex flex-col items-center justify-center gap-2">
-        <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-indigo-600"></i>
-        <span id="status-text">Đang tải dữ liệu điểm danh...</span>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table id="data-table" class="w-full text-left text-sm hidden">
-          <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
-            <tr>
-              <th class="py-3.5 px-4 w-12 text-center">
-                <input type="checkbox" id="check-all" onclick="toggleSelectAll(this)" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300">
-              </th>
-              <th class="py-3.5 px-3 w-14 text-center">STT</th>
-              <th class="py-3.5 px-4">HỌ VÀ TÊN</th>
-              <th class="py-3.5 px-4 text-center">KHỐI</th>
-              <th class="py-3.5 px-4 text-center">LỚP</th>
-              <th class="py-3.5 px-4 text-center">GIỜ ĐIỂM DANH</th>
-              <th class="py-3.5 px-4 text-center">TRẠNG THÁI</th>
-            </tr>
-          </thead>
-          <tbody id="student-table-body" class="divide-y divide-slate-100 text-slate-700">
-          </tbody>
-        </table>
-      </div>
-
-      <div id="pagination-bar" class="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 text-sm hidden">
-        <span id="pagination-info" class="text-xs text-slate-500">Hiển thị 0 học sinh</span>
-        <div class="flex items-center gap-2">
-          <button id="btn-prev" onclick="changePage(-1)" class="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-100 text-xs font-semibold">Trước</button>
-          <span id="page-num" class="text-xs font-semibold text-slate-700 px-2">Trang 1 / 1</span>
-          <button id="btn-next" onclick="changePage(1)" class="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-100 text-xs font-semibold">Sau</button>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
+  <!-- SCRIPT XỬ LÝ -->
   <script>
-    // -------------------------------------------------------------
-    // DANH SÁCH 32 MẬT KHẨU MẶC ĐỊNH CHO 32 LỚP (BẠN CÓ THỂ SỬA TẠI ĐÂY)
-    // -------------------------------------------------------------
+    // 1. DANH SÁCH 32 LỚP VÀ MẬT KHẨU TƯƠNG ỨNG (BẠN CÓ THỂ THAY ĐỔI MẬT KHẨU TẠI ĐÂY)
     const CLASS_PASSWORDS = {
-      // Khối 10
-      "10A1": "vt10a1", "10A2": "vt10a2", "10A3": "vt10a3", "10A4": "vt10a4", "10A5": "vt10a5",
-      "10A6": "vt10a6", "10A7": "vt10a7", "10A8": "vt10a8", "10A9": "vt10a9", "10A10": "vt10a10",
-      
-      // Khối 11
-      "11A1": "vt11a1", "11A2": "vt11a2", "11A3": "vt11a3", "11A4": "vt11a4", "11A5": "vt11a5",
-      "11A6": "vt11a6", "11A7": "vt11a7", "11A8": "vt11a8", "11A9": "vt11a9", "11A10": "vt11a10", "11A11": "vt11a11",
+      // Khối 10 (11 Lớp)
+      "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
+      "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
 
-      // Khối 12
-      "12A1": "vt12a1", "12A2": "vt12a2", "12A3": "vt12a3", "12A4": "vt12a4", "12A5": "vt12a5",
-      "12A6": "vt12a6", "12A7": "vt12a7", "12A8": "vt12a8", "12A9": "vt12a9", "12A10": "vt12a10", "12A11": "vt12a11"
+      // Khối 11 (11 Lớp)
+      "11A1": "123456", "11A2": "123456", "11A3": "123456", "11A4": "123456", "11A5": "123456",
+      "11A6": "123456", "11A7": "123456", "11A8": "123456", "11A9": "123456", "11A10": "123456", "11A11": "123456",
+
+      // Khối 12 (10 Lớp)
+      "12A1": "123456", "12A2": "123456", "12A3": "123456", "12A4": "123456", "12A5": "123456",
+      "12A6": "123456", "12A7": "123456", "12A8": "123456", "12A9": "123456", "12A10": "123456"
     };
 
+    // TOKEN BẠN CUNG CẤP (TỰ ĐỘNG LƯU TOKEN NẾU TRÌNH DUYỆT CHƯA CÓ)
+   
     let students = [];
-    let rawExcelJson = [];
+    let rawExcelJson = null;
     let fileSha = "";
-    let currentPage = 1;
-    const pageSize = 50;
+    let pendingStudents = [];
 
-    document.addEventListener("DOMContentLoaded", () => {
+    // TẢI VÀ KHỞI TẠO CẤU HÌNH GITHUB
+    window.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       loadGithubConfig();
-      autoFetchData();
-
-      document.getElementById("search-input").addEventListener("input", () => { currentPage = 1; renderTable(); });
-      document.getElementById("lop-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
-      document.getElementById("status-filter").addEventListener("change", () => { currentPage = 1; renderTable(); });
     });
+
+    function loadGithubConfig() {
+      if (!localStorage.getItem("gh_token")) {
+        localStorage.setItem("gh_token", DEFAULT_TOKEN);
+      }
+
+      document.getElementById("gh-user").value = localStorage.getItem("gh_user") || "";
+      document.getElementById("gh-repo").value = localStorage.getItem("gh_repo") || "";
+      document.getElementById("gh-token").value = localStorage.getItem("gh_token") || "";
+    }
 
     function saveGithubConfig() {
       localStorage.setItem("gh_user", document.getElementById("gh-user").value.trim());
       localStorage.setItem("gh_repo", document.getElementById("gh-repo").value.trim());
       localStorage.setItem("gh_token", document.getElementById("gh-token").value.trim());
-      alert("Đã lưu cấu hình GitHub!");
+      alert("Đã lưu cấu hình GitHub thành công!");
     }
 
-    function loadGithubConfig() {
-      if (localStorage.getItem("gh_user")) document.getElementById("gh-user").value = localStorage.getItem("gh_user");
-      if (localStorage.getItem("gh_repo")) document.getElementById("gh-repo").value = localStorage.getItem("gh_repo");
-      if (localStorage.getItem("gh_token")) document.getElementById("gh-token").value = localStorage.getItem("gh_token");
-    }
-
-    function autoFetchData() {
-      const spinner = document.getElementById("loading-spinner");
-      const statusText = document.getElementById("status-text");
-
-      spinner.classList.remove("hidden");
-      statusText.innerText = "Đang tự động nạp dữ liệu từ data.xlsx...";
-
-      const url = "data.xlsx?v=" + new Date().getTime();
-
-      fetch(url)
-        .then(res => {
-          if (!res.ok) throw new Error("Không tìm thấy file data.xlsx");
-          const lastModifiedHeader = res.headers.get("Last-Modified");
-          if (lastModifiedHeader) displayUpdateTime(new Date(lastModifiedHeader));
-          else displayUpdateTime(new Date());
-          return res.arrayBuffer();
-        })
-        .then(buffer => processExcelBuffer(buffer))
-        .catch(err => {
-          statusText.innerHTML = `<span class="text-rose-500 font-medium">Chưa có dữ liệu (Không tìm thấy file 'data.xlsx' trên server).</span>`;
-        });
-
-      fetchGithubFileSha();
-    }
-
-    function fetchGithubFileSha() {
-      const user = localStorage.getItem("gh_user");
-      const repo = localStorage.getItem("gh_repo");
-      const token = localStorage.getItem("gh_token");
-
-      if (!user || !repo || !token) return;
-
-      fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
-        headers: { "Authorization": `token ${token}` }
-      })
-      .then(res => res.json())
-      .then(data => { if (data.sha) fileSha = data.sha; })
-      .catch(err => console.log("Lỗi SHA:", err));
-    }
-
-    function displayUpdateTime(dateObj) {
-      const hours = String(dateObj.getHours()).padStart(2, '0');
-      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const year = dateObj.getFullYear();
-
-      document.getElementById("update-time-text").innerText = `Cập nhật: ${hours}:${minutes} - ${day}/${month}/${year}`;
-      document.getElementById("update-time-box").classList.remove("hidden");
-      document.getElementById("sub-title-time").innerText = `Dữ liệu điểm danh ngày ${day}/${month}/${year}`;
-    }
-
-    function processExcelBuffer(buffer) {
-      try {
-        const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
-        let sheetName = workbook.SheetNames.find(s => s.toLowerCase() === 'data') || workbook.SheetNames[0];
-        rawExcelJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "" });
-
-        parseExcelData(rawExcelJson);
-
-        document.getElementById("loading-spinner").classList.add("hidden");
-        document.getElementById("data-table").classList.remove("hidden");
-        document.getElementById("pagination-bar").classList.remove("hidden");
-      } catch (err) {
-        alert("Lỗi khi đọc file Excel: " + err.message);
-      }
-    }
-
-    function parseExcelData(json) {
-      if (!json || json.length < 5) return;
-
-      const colName = 1;  // Cột 2
-      const colLop = 2;   // Cột 3
-      const colTime = 10; // Cột 11
-      const colTre = 11;  // Cột 12
-      const colP = 15;    // Cột 16
-      const colKP = 16;   // Cột 17
-
-      students = [];
-
-      for (let i = 4; i < json.length; i++) {
-        const row = json[i];
-        if (!row || !row[colName] || String(row[colName]).trim() === "") continue;
-
-        let nameVal = String(row[colName]).trim();
-        let lopVal = String(row[colLop] || '').trim().toUpperCase();
-        
-        let khoiVal = "10";
-        const matchKhoi = lopVal.match(/\d+/);
-        if (matchKhoi) khoiVal = matchKhoi[0];
-
-        let timeVal = row[colTime] ? String(row[colTime]).trim() : "";
-        if (!timeVal || timeVal === "undefined") timeVal = "--:--";
-
-        let statusVal = "ĐÚNG GIỜ";
-        let valTre = row[colTre] ? String(row[colTre]).trim().toUpperCase() : "";
-        let valP = row[colP] ? String(row[colP]).trim() : "";
-        let valKP = row[colKP] ? String(row[colKP]).trim() : "";
-
-        if (valP.length > 0) statusVal = "VẮNG CÓ PHÉP";
-        else if (valKP.length > 0) statusVal = "VẮNG KHÔNG PHÉP";
-        else if (valTre.includes("TRỄ") || valTre.includes("MUỘN")) statusVal = "TRỄ GIỜ";
-
-        students.push({
-          id: i,
-          stt: students.length + 1,
-          name: nameVal,
-          khoi: khoiVal,
-          lop: lopVal || "Chưa chia",
-          time: timeVal,
-          status: statusVal,
-          selected: false
-        });
-      }
-
-      populateLopDropdown();
-      renderTable();
-    }
-
-    function populateLopDropdown() {
-      const lopSelect = document.getElementById("lop-filter");
-      lopSelect.innerHTML = `<option value="ALL">Tất cả Lớp</option>`;
-      const classes = new Set();
-      students.forEach(s => { if (s.lop) classes.add(s.lop); });
-      Array.from(classes).sort().forEach(l => {
-        const opt = document.createElement("option");
-        opt.value = l;
-        opt.innerText = `Lớp ${l}`;
-        lopSelect.appendChild(opt);
-      });
-    }
-
-    function renderTable() {
-      const tbody = document.getElementById("student-table-body");
-      const search = document.getElementById("search-input").value.toLowerCase().trim();
-      const lop = document.getElementById("lop-filter").value;
-      const statusFilter = document.getElementById("status-filter").value;
-
-      tbody.innerHTML = "";
-      document.getElementById("check-all").checked = false;
-
-      const baseFiltered = students.filter(s => {
-        const matchName = String(s.name || '').toLowerCase().includes(search);
-        const matchLop = lop === "ALL" || String(s.lop) === lop;
-        return matchName && matchLop;
-      });
-
-      updateStatistics(baseFiltered);
-
-      const finalFiltered = baseFiltered.filter(s => statusFilter === "ALL" || s.status === statusFilter);
-
-      const totalPages = Math.ceil(finalFiltered.length / pageSize) || 1;
-      if (currentPage > totalPages) currentPage = totalPages;
-
-      const start = (currentPage - 1) * pageSize;
-      const pageData = finalFiltered.slice(start, start + pageSize);
-
-      if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Không tìm thấy học sinh phù hợp</td></tr>`;
-      } else {
-        pageData.forEach((s, idx) => {
-          const tr = document.createElement("tr");
-          tr.className = "hover:bg-slate-50 transition-colors";
-
-          let badgeClass = "badge-on-time";
-          if (s.status === "TRỄ GIỜ") badgeClass = "badge-late";
-          else if (s.status === "VẮNG KHÔNG PHÉP") badgeClass = "badge-absent";
-          else if (s.status === "VẮNG CÓ PHÉP") badgeClass = "badge-p";
-
-          tr.innerHTML = `
-            <td class="py-3.5 px-4 text-center">
-              <input type="checkbox" data-id="${s.id}" ${s.selected ? "checked" : ""} onchange="toggleSelectStudent(${s.id}, this.checked)" class="student-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300">
-            </td>
-            <td class="py-3.5 px-3 text-center text-slate-400 font-medium">${start + idx + 1}</td>
-            <td class="py-3.5 px-4 font-semibold text-slate-900">${s.name}</td>
-            <td class="py-3.5 px-4 text-center text-slate-500">Khối ${s.khoi}</td>
-            <td class="py-3.5 px-4 text-center font-bold text-indigo-600">${s.lop}</td>
-            <td class="py-3.5 px-4 text-center font-mono text-slate-600">${s.time}</td>
-            <td class="py-3.5 px-4 text-center">
-              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">
-                ${s.status}
-              </span>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      document.getElementById("pagination-info").innerText = `Hiển thị ${finalFiltered.length > 0 ? start + 1 : 0} - ${Math.min(start + pageSize, finalFiltered.length)} trên ${finalFiltered.length} học sinh`;
-      document.getElementById("page-num").innerText = `Trang ${currentPage} / ${totalPages}`;
-      document.getElementById("btn-prev").disabled = currentPage === 1;
-      document.getElementById("btn-next").disabled = currentPage === totalPages;
-    }
-
-    function toggleSelectStudent(id, isChecked) {
-      const st = students.find(s => s.id === id);
-      if (st) st.selected = isChecked;
-    }
-
-    function toggleSelectAll(master) {
-      const checkboxes = document.querySelectorAll('.student-checkbox');
-      checkboxes.forEach(cb => {
-        cb.checked = master.checked;
-        const id = parseInt(cb.getAttribute('data-id'));
-        toggleSelectStudent(id, master.checked);
-      });
-    }
-
-    // --- BỘ XỬ LÝ DUYỆT CÓ PHÉP THEO TỪNG LỚP ---
-    async function approveSelected() {
+    // HIỂN THỊ MODAL NHẬP MẬT KHẨU
+    function approveSelected() {
       const user = localStorage.getItem("gh_user");
       const repo = localStorage.getItem("gh_repo");
       const token = localStorage.getItem("gh_token");
 
       if (!user || !repo || !token) {
-        alert("Vui lòng mở mục 'Cấu hình kết nối GitHub' và nhập đầy đủ thông tin trước!");
+        alert("Vui lòng mở 'Cấu hình kết nối GitHub' và nhập User GitHub + Tên Repo trước!");
         return;
       }
 
-      const selectedStudents = students.filter(s => s.selected);
-      if (selectedStudents.length === 0) {
+      pendingStudents = students.filter(s => s.selected);
+      if (pendingStudents.length === 0) {
         alert("Vui lòng tích chọn ít nhất 1 học sinh để duyệt có phép.");
         return;
       }
 
-      // Kiểm tra danh sách lớp của các học sinh được chọn
-      const selectedClasses = [...new Set(selectedStudents.map(s => s.lop.toUpperCase()))];
+      const selectedClasses = [...new Set(pendingStudents.map(s => s.lop.toUpperCase()))];
+      const classInput = document.getElementById("modal-class-input");
+      classInput.value = selectedClasses.length === 1 ? selectedClasses[0] : "";
+      document.getElementById("modal-pass-input").value = "";
 
-      // Bước 1: Yêu cầu nhập Tên Lớp cần duyệt
-      let defaultClassPrompt = selectedClasses.length === 1 ? selectedClasses[0] : "";
-      const inputClass = prompt(`Nhập TÊN LỚP bạn làm GVCN để duyệt phép (Ví dụ: 10A1, 11A2...):\n(Các lớp đang có học sinh được chọn: ${selectedClasses.join(", ")})`, defaultClassPrompt);
+      document.getElementById("password-modal").classList.remove("hidden");
+      document.getElementById("modal-pass-input").focus();
+    }
 
-      if (!inputClass) return;
-      const targetClass = inputClass.trim().toUpperCase();
+    function closePasswordModal() {
+      document.getElementById("password-modal").classList.add("hidden");
+    }
 
-      // Kiểm tra xem Lớp có trong hệ thống mật khẩu không
+    // XÁC NHẬN MẬT KHẨU & ĐẨY DỮ LIỆU LÊN GITHUB
+    async function confirmApproval() {
+      const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
+      const inputPass = document.getElementById("modal-pass-input").value.trim();
+
+      if (!targetClass) {
+        alert("Vui lòng nhập Tên Lớp!");
+        return;
+      }
+
       if (!CLASS_PASSWORDS[targetClass]) {
-        alert(`Lớp '${targetClass}' không tồn tại trong hệ thống! Vui lòng nhập đúng định dạng (Ví dụ: 10A1).`);
+        alert(`Lớp '${targetClass}' không tồn tại trong danh sách 32 lớp của trường!`);
         return;
       }
 
-      // Bước 2: Yêu cầu nhập Mật khẩu riêng của Lớp đó
-      const inputPass = prompt(`Nhập MẬT KHẨU GVCN Lớp ${targetClass}:`);
-      if (!inputPass) return;
-
-      if (inputPass.trim() !== CLASS_PASSWORDS[targetClass]) {
-        alert(`Mật khẩu GVCN Lớp ${targetClass} KHÔNG CHÍNH XÁC! Quá trình duyệt bị hủy.`);
+      if (inputPass !== CLASS_PASSWORDS[targetClass]) {
+        alert(`Mật khẩu GVCN Lớp ${targetClass} KHÔNG CHÍNH XÁC!`);
         return;
       }
 
-      // Bước 3: Kiểm tra an toàn - Đảm bảo GVCN chỉ duyệt học sinh thuộc Lớp mình
-      const otherClassStudents = selectedStudents.filter(s => s.lop.toUpperCase() !== targetClass);
+      const otherClassStudents = pendingStudents.filter(s => s.lop.toUpperCase() !== targetClass);
       if (otherClassStudents.length > 0) {
-        alert(`CẢNH BÁO: Bạn đang chọn ${otherClassStudents.length} học sinh thuộc lớp khác! Bạn chỉ có quyền duyệt cho Lớp ${targetClass}.\nVui lòng bỏ chọn học sinh lớp khác và thử lại.`);
+        alert(`CẢNH BÁO: Bạn chọn học sinh thuộc lớp khác! Quyền GVCN lớp ${targetClass} chỉ được duyệt cho học sinh Lớp ${targetClass}.`);
         return;
       }
 
-      // Tiến hành cập nhật dữ liệu
-      const colP = 15;   // Cột 16: Vắng phép
-      const colKP = 16;  // Cột 17: Vắng không phép
+      closePasswordModal();
+
+      const colP = 15;  // Cột P (Cột 16 trong Excel)
+      const colKP = 16; // Cột Q (Cột 17 trong Excel)
 
       let count = 0;
-      selectedStudents.forEach(s => {
+      pendingStudents.forEach(s => {
         if (s.status === "VẮNG KHÔNG PHÉP" || s.status === "TRỄ GIỜ") {
           s.status = "VẮNG CÓ PHÉP";
           s.selected = false;
           
-          rawExcelJson[s.id][colP] = "Có phép";
-          rawExcelJson[s.id][colKP] = ""; // Xóa không phép
+          if (rawExcelJson && rawExcelJson[s.id]) {
+            rawExcelJson[s.id][colP] = "Có phép";
+            rawExcelJson[s.id][colKP] = "";
+          }
           count++;
         }
       });
 
       if (count === 0) {
-        alert(`Tất cả học sinh được chọn của lớp ${targetClass} đã ở trạng thái Vắng có phép!`);
+        alert(`Các học sinh chọn thuộc lớp ${targetClass} đã được duyệt có phép trước đó!`);
         return;
       }
 
-      // Đẩy file lên GitHub API
+      const user = localStorage.getItem("gh_user");
+      const repo = localStorage.getItem("gh_repo");
+      const token = localStorage.getItem("gh_token");
+
       try {
         const ws = XLSX.utils.aoa_to_sheet(rawExcelJson);
         const wb = XLSX.utils.book_new();
@@ -511,32 +246,45 @@
 
         if (response.ok) {
           fileSha = resJson.content.sha;
-          alert(`XÁC NHẬN THÀNH CÔNG!\nGVCN Lớp ${targetClass} đã duyệt nghỉ có phép cho ${count} học sinh và lưu trực tiếp lên GitHub.`);
+          alert(`THÀNH CÔNG!\nGVCN Lớp ${targetClass} đã duyệt phép cho ${count} học sinh và lưu trực tiếp lên GitHub.`);
           renderTable();
         } else {
-          alert("Lỗi khi đẩy dữ liệu lên GitHub: " + (resJson.message || "Kiểm tra lại Token/Repo"));
+          alert("Lỗi khi gửi lên GitHub: " + (resJson.message || "Kiểm tra lại Token/Repo"));
         }
       } catch (err) {
         alert("Lỗi kết nối GitHub API: " + err.message);
       }
     }
 
-    function updateStatistics(data) {
-      let presentCount = 0, lateCount = 0, pCount = 0, kpCount = 0;
-      data.forEach(s => {
-        if (s.status === "ĐÚNG GIỜ") presentCount++;
-        else if (s.status === "TRỄ GIỜ") lateCount++;
-        else if (s.status === "VẮNG CÓ PHÉP") pCount++;
-        else if (s.status === "VẮNG KHÔNG PHÉP") kpCount++;
-      });
-
-      document.getElementById("stat-present").innerText = presentCount;
-      document.getElementById("stat-late").innerText = lateCount;
-      document.getElementById("stat-p").innerText = pCount;
-      document.getElementById("stat-kp").innerText = kpCount;
+    function toggleSelectAll(master) {
+      students.forEach(s => s.selected = master.checked);
+      renderTable();
     }
 
-    function changePage(delta) { currentPage += delta; renderTable(); }
+    function renderTable() {
+      const tbody = document.getElementById("attendance-tbody");
+      if (!students || students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Không có dữ liệu điểm danh.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = students.map((s, idx) => `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="p-3"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="students[${idx}].selected = this.checked"></td>
+          <td class="p-3 text-slate-400 font-medium">${idx + 1}</td>
+          <td class="p-3 font-semibold text-slate-800">${s.name}</td>
+          <td class="p-3"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
+          <td class="p-3">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${
+              s.status === 'VẮNG CÓ PHÉP' ? 'bg-emerald-100 text-emerald-700' :
+              s.status === 'VẮNG KHÔNG PHÉP' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+            }">
+              ${s.status}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
   </script>
 </body>
 </html>
