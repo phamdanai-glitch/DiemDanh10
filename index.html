@@ -113,10 +113,10 @@
 
     <!-- BỘ LỌC TÌM KIẾM & LỚP -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <!-- Ô TÌM KIẾM TÊN/MÃ HS - MẶC ĐỊNH TRỐNG -->
+      <!-- Ô TRỐNG - NHÃN: "Nhập họ tên..." -->
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-        <input type="text" id="search-input" value="" autocomplete="off" oninput="filterData()" placeholder="Tìm theo tên hoặc mã HS..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
+        <input type="text" id="search-input" value="" autocomplete="off" oninput="filterData()" placeholder="Nhập họ tên..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
       </div>
       
       <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
@@ -211,7 +211,7 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
-      // ĐẢM BẢO Ô TÌM KIẾM LUÔN TRỐNG KHI TẢI TRANG
+      // Ép ô nhập tên luôn trống khi tải trang
       const searchInput = document.getElementById("search-input");
       if (searchInput) {
         searchInput.value = "";
