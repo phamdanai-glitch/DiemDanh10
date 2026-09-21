@@ -52,24 +52,10 @@
           <span>Link Phụ Huynh</span>
         </button>
 
-        /* CHỨC NĂNG ADMIN BẤM NÚT "GHI SANG LỊCH SỬ" */
-function adminRecordToLichSu() {
-  // 1. Nhập mật khẩu Admin
-  const adminPass = prompt("Nhập mật khẩu Admin để ghi sang Lịch Sử:");
-  
-  if (adminPass === null) return; // Người dùng bấm Hủy
-  
-  if (adminPass.trim() === "") {
-    alert("Vui lòng nhập mật khẩu Admin!");
-    return;
-  }
-
-  // 2. Link Exec trực tiếp của bạn + tham số xác thực admin
-  const directUrl = `https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec?role=admin&pass=${encodeURIComponent(adminPass.trim())}`;
-
-  // 3. Mở thẳng link trên tab mới (y hệt thao tác dán link bấm Enter)
-  window.open(directUrl, '_blank');
-}
+        <!-- NÚT GHI NHẬN SANG LICHSU DÀNH RIÊNG CHO ADMIN -->
+        <button id="btn-admin-record-log" onclick="adminRecordToLichSu()" class="hidden bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all cursor-pointer">
+          <i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử
+        </button>
 
         <!-- NÚT RESET MẬT KHẨU DÀNH RIÊNG CHO ADMIN -->
         <button id="btn-admin-reset" onclick="adminResetPassword()" class="hidden bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
@@ -249,11 +235,7 @@ function adminRecordToLichSu() {
 
   <script>
     const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
-    
-    // Đã cập nhật đúng URL Web App đang chạy của bạn
     const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
-    
-    // Mật khẩu Admin
     const ADMIN_PASSWORD = "admin123";
 
     const DEFAULT_PASSWORDS = {
@@ -276,7 +258,6 @@ function adminRecordToLichSu() {
       localStorage.setItem("CLASS_PASSWORDS", JSON.stringify(storedPasses));
     }
 
-    /* QUẢN LÝ TÍCH LŨY DÙNG LOCALSTORAGE */
     function getAccumulatedData() {
       return JSON.parse(localStorage.getItem("ACCUMULATED_ATTENDANCE") || "{}");
     }
@@ -649,7 +630,6 @@ function adminRecordToLichSu() {
       }).catch(err => console.log("Lỗi cập nhật nền:", err));
     }
 
-    /* ĐỔI MẬT KHẨU GVCN */
     function openChangePasswordModal() {
       const selectedClass = document.getElementById("class-filter").value;
       document.getElementById("change-pass-class").value = selectedClass || "";
@@ -688,7 +668,6 @@ function adminRecordToLichSu() {
       closeChangePasswordModal();
     }
 
-    /* RESET MẬT KHẨU CHO ADMIN */
     function adminResetPassword() {
       const pass = prompt("Nhập mật khẩu Admin để reset mật khẩu tất cả các lớp:");
       if (pass === ADMIN_PASSWORD) {
@@ -699,25 +678,20 @@ function adminRecordToLichSu() {
       }
     }
 
-   <!-- Các nút bấm trong HTML chỉ viết như thế này -->
-<button id="btn-admin-record-log" onclick="adminRecordToLichSu()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2">
-  <i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử
-</button>
+    /* MỐC 1: CHỨC NĂNG ADMIN BẤM NÚT "GHI SANG LỊCH SỬ" (DÙNG WINDOW.OPEN) */
+    function adminRecordToLichSu() {
+      const adminPass = prompt("Nhập mật khẩu Admin để ghi sang Lịch Sử:");
+      
+      if (adminPass === null) return;
+      
+      if (adminPass.trim() === "") {
+        alert("Vui lòng nhập mật khẩu Admin!");
+        return;
+      }
 
-<!-- Code JavaScript phải nằm trọn trong thẻ <script> này -->
-<script>
-  function adminRecordToLichSu() {
-    const adminPass = prompt("Nhập mật khẩu Admin để ghi sang Lịch Sử:");
-    if (adminPass === null) return;
-    if (adminPass.trim() === "") {
-      alert("Vui lòng nhập mật khẩu Admin!");
-      return;
+      const directUrl = `${CONFIG_APPS_SCRIPT_URL}?role=admin&pass=${encodeURIComponent(adminPass.trim())}`;
+      window.open(directUrl, '_blank');
     }
-    const directUrl = `https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec?role=admin&pass=${encodeURIComponent(adminPass.trim())}`;
-    window.open(directUrl, '_blank');
-  }
-
-  </script
   </script>
 </body>
 </html>
