@@ -8,63 +8,46 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- SheetJS để parse CSV / Excel -->
+  <!-- SheetJS -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body {
       font-family: 'Inter', sans-serif;
-    }
-    /* Tùy chỉnh thanh cuộn đẹp mắt */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
     }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 p-3 sm:p-5 md:p-6">
 
-  <!-- MAIN CONTAINER -->
   <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-slate-100 space-y-6">
     
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
       <div class="flex items-center gap-4">
-        <!-- LOGO BẢNG TRƯỜNG -->
-        <div class="p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xs flex-shrink-0">
-          <img src="logo.jpg" alt="Logo Trường THPT Vị Thanh" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=THPT+VT';" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-contain">
+        <!-- LOGO TRƯỜNG -->
+        <div class="p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm flex-shrink-0">
+          <img src="logo.jpg" alt="Logo Trường THPT Vị Thanh" onerror="this.src='https://placehold.co/100x100/4f46e5/ffffff?text=THPT+VT'" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-contain">
         </div>
         
         <div>
-          <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800 leading-tight" id="header-title">Tra Cứu & Duyệt Điểm Danh</h1>
+          <h1 class="text-xl sm:text-2xl font-bold text-slate-800 leading-tight" id="header-title">Tra Cứu & Duyệt Điểm Danh</h1>
           <p class="text-xs sm:text-sm text-slate-500 mt-1">
             Trường THPT Vị Thanh — Tổng HS trong file: <span id="total-students" class="font-bold text-indigo-600">0</span>
           </p>
           <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
             <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Nguồn Drive: <span id="drive-id-display" class="font-mono text-slate-600 font-semibold">1DX7xZgc...</span>
+            Nguồn Drive: <span id="drive-id-display" class="font-mono text-slate-600 font-semibold">1MgC4X9...</span>
             | Cập nhật: <span id="last-updated-time" class="font-semibold text-emerald-600">Chưa tải</span>
           </p>
         </div>
       </div>
 
-      <!-- THANH NÚT ĐIỀU KHIỂN -->
       <div class="flex flex-wrap items-center gap-2.5">
-        <button onclick="fetchAttendanceData()" title="Tải lại dữ liệu từ Google Sheet" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 p-2.5 rounded-xl border border-slate-200 transition-all cursor-pointer">
+        <button onclick="fetchAttendanceData()" title="Tải lại dữ liệu mới nhất" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 p-2.5 rounded-xl border border-slate-200 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4"></i>
         </button>
 
-        <button onclick="copyParentLink()" title="Sao chép đường link tra cứu riêng cho Phụ huynh" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
+        <button onclick="copyParentLink()" title="Sao chép đường link cho Phụ huynh tra cứu" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
           <i data-lucide="share-2" class="w-4 h-4 text-indigo-600"></i>
           <span>Link Phụ Huynh</span>
         </button>
@@ -75,7 +58,7 @@
       </div>
     </div>
 
-    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC (Chỉ hiển thị cho GVCN) -->
+    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC -->
     <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
         <div>
@@ -128,18 +111,18 @@
       </div>
     </div>
 
-    <!-- BỘ LỌC TÌM KIẾM & PHÂN LỌC -->
+    <!-- BỘ LỌC TÌM KIẾM & LỚP -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
         <input type="text" id="search-input" oninput="filterData()" placeholder="Tìm theo tên hoặc mã HS..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
       </div>
       
-      <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all cursor-pointer">
+      <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
         <option value="">-- Tất cả các lớp --</option>
       </select>
 
-      <select id="status-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all cursor-pointer">
+      <select id="status-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
         <option value="">-- Tất cả trạng thái --</option>
         <option value="ĐI TRỄ">ĐI TRỄ</option>
         <option value="VẮNG KHÔNG PHÉP">VẮNG KHÔNG PHÉP</option>
@@ -155,7 +138,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 pt-3 border-t border-slate-200">
         <div>
           <label class="block text-slate-600 font-medium mb-1">Google Sheet / File ID trên Drive:</label>
-          <input type="text" id="drive-file-id" placeholder="1DX7xZgc3f7q7fFX_9SgdmpQfToAO0iVC" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
+          <input type="text" id="drive-file-id" placeholder="ID file Google Sheet..." class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
         </div>
         <div>
           <label class="block text-slate-600 font-medium mb-1">Google Apps Script Web App URL (Để lưu phép):</label>
@@ -169,7 +152,7 @@
       </div>
     </details>
 
-    <!-- BẢNG DỮ LIỆU ĐIỂM DANH -->
+    <!-- BẢNG DỮ LIỆU -->
     <div class="overflow-x-auto rounded-xl border border-slate-200">
       <table class="w-full text-left border-collapse text-sm">
         <thead>
@@ -185,7 +168,7 @@
         </thead>
         <tbody id="attendance-tbody" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="7" class="p-8 text-center text-slate-400">Đang kết nối Google Drive & tải dữ liệu CSV...</td>
+            <td colspan="7" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ Google Drive...</td>
           </tr>
         </tbody>
       </table>
@@ -224,10 +207,10 @@
   </div>
 
   <script>
-    // Google Drive File ID mặc định
-    const DEFAULT_DRIVE_FILE_ID = "1DX7xZgc3f7q7fFX_9SgdmpQfToAO0iVC";
+    // ID Google Sheet MỚI của bạn
+    const DEFAULT_DRIVE_FILE_ID = "1MgC4X9-pg3YE92XCfKrCDfLN-1IZrSlVFvX1LvPKID4";
 
-    // Danh sách mật khẩu mẫu từng lớp cho Giáo viên Chủ nhiệm
+    // Danh sách mật khẩu mẫu cho các lớp
     const CLASS_PASSWORDS = {
       "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
       "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
@@ -242,7 +225,6 @@
     let pendingStudents = [];
     let isParentMode = false;
 
-    // Cập nhật thời gian
     function updateTimestamp() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -250,14 +232,12 @@
       document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
     }
 
-    // Trích xuất Drive ID nếu người dùng dán toàn bộ đường link
     function extractDriveId(input) {
       if (!input) return DEFAULT_DRIVE_FILE_ID;
       const match = input.match(/\/d\/([a-zA-Z0-9_-]+)/);
       return match ? match[1] : input.trim();
     }
 
-    // Khởi tạo ứng dụng
     window.addEventListener("DOMContentLoaded", () => {
       const urlParams = new URLSearchParams(window.location.search);
       const modeParam = urlParams.get('mode');
@@ -269,7 +249,6 @@
       fetchAttendanceData();
     });
 
-    // Ẩn/hiện giao diện theo chế độ Phụ huynh / Giáo viên
     function applyModeUI() {
       const statsContainer = document.getElementById("stats-container");
       const headerTitle = document.getElementById("header-title");
@@ -292,7 +271,6 @@
       }
     }
 
-    // Copy link phụ huynh
     function copyParentLink() {
       const baseUrl = window.location.origin + window.location.pathname;
       const parentUrl = baseUrl + "?mode=phuhuynh";
@@ -304,7 +282,6 @@
       });
     }
 
-    // Đọc cấu hình từ LocalStorage
     function loadDriveConfig() {
       const driveId = localStorage.getItem("drive_file_id") || DEFAULT_DRIVE_FILE_ID;
       const scriptUrl = localStorage.getItem("apps_script_url") || "";
@@ -314,7 +291,6 @@
       document.getElementById("drive-id-display").innerText = driveId.substring(0, 8) + "...";
     }
 
-    // Lưu cấu hình Drive ID
     function saveDriveConfig() {
       const driveId = extractDriveId(document.getElementById("drive-file-id").value);
       const scriptUrl = document.getElementById("apps-script-url").value.trim();
@@ -323,25 +299,24 @@
       localStorage.setItem("apps_script_url", scriptUrl);
 
       document.getElementById("drive-id-display").innerText = driveId.substring(0, 8) + "...";
-      alert("Đã lưu cấu hình Google Drive!");
+      alert("Đã lưu cấu hình Google Sheet & Web App!");
       fetchAttendanceData();
     }
 
-    // TẢI DỮ LIỆU ĐIỂM DANH QUA CHẾ ĐỘ GOOGLE SHEET CSV API (Sửa dứt điểm lỗi CORS)
     async function fetchAttendanceData() {
       const driveId = extractDriveId(localStorage.getItem("drive_file_id") || DEFAULT_DRIVE_FILE_ID);
       const tbody = document.getElementById("attendance-tbody");
       const colSpan = isParentMode ? 6 : 7;
 
-      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ Google Drive CSV API...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ Google Drive...</td></tr>`;
 
-      // Đường dẫn Google Sheets CSV công khai hoàn toàn chống chặn CORS
+      // Sử dụng Google Sheets CSV export URL để tránh tuyệt đối lỗi CORS
       const csvUrl = `https://docs.google.com/spreadsheets/d/${driveId}/gviz/tq?tqx=out:csv&sheet=data`;
 
       try {
         const response = await fetch(csvUrl);
         if (!response.ok) {
-          throw new Error("Không thể tải dữ liệu. Bạn hãy đảm bảo Google Sheet đã chọn Bất kỳ ai có đường liên kết (Anyone with link can view).");
+          throw new Error("Không thể tải dữ liệu. Hãy đảm bảo Google Sheet đã được Chia sẻ ở chế độ 'Bất kỳ ai có đường liên kết'.");
         }
 
         const csvText = await response.text();
@@ -349,31 +324,23 @@
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
 
-        // Chuyển CSV sang mảng dòng/cột
         const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         allStudents = [];
 
-        // Duyệt từ dòng thứ 5 (chỉ số index = 4)
+        // Duyệt dữ liệu từ dòng index 4 (dòng 5)
         for (let r = 4; r < rows.length; r++) {
           const row = rows[r];
           if (!row || !row[1]) continue;
 
-          // Cột B (index 1): Họ và Tên
           let name = String(row[1]).trim();
-          if (name === "" || name.includes("HỌ VÀ TÊN") || name.includes("Tiêu đề")) continue;
+          if (name === "" || name.includes("HỌ VÀ TÊN")) continue;
 
-          // Cột C (index 2): Lớp
           let lop = row[2] ? String(row[2]).trim().toUpperCase() : "---";
-          // Cột E (index 4): Mã HS
           let maHs = row[4] ? String(row[4]).trim() : "---";
-          // Cột F (index 5): Đi trễ
-          let treVal = row[5] ? String(row[5]).trim() : "";
-          // Cột K (index 10): Thời gian
           let timeVal = row[10] ? String(row[10]).trim() : "---";
-          // Cột P (index 15): Vắng có phép
+          let treVal = row[5] ? String(row[5]).trim() : "";
           let phepVal = row[15] ? String(row[15]).trim() : "";
 
-          // Xử lý trạng thái điểm danh
           let status = "VẮNG KHÔNG PHÉP";
           if (treVal !== "") {
             status = "ĐI TRỄ";
@@ -395,7 +362,6 @@
         document.getElementById("total-students").innerText = allStudents.length;
         updateTimestamp();
 
-        // Nạp danh sách Lớp vào dropdown
         const classes = [...new Set(allStudents.map(s => s.lop))].sort();
         const classSelect = document.getElementById("class-filter");
         classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
@@ -408,7 +374,6 @@
       }
     }
 
-    // Lọc dữ liệu theo Từ khóa, Lớp, Trạng thái
     function filterData() {
       const search = document.getElementById("search-input").value.toLowerCase().trim();
       const selectedClass = document.getElementById("class-filter").value;
@@ -425,7 +390,6 @@
       renderTable();
     }
 
-    // Cập nhật thẻ thống kê
     function updateStats() {
       if (isParentMode) return;
 
@@ -450,14 +414,12 @@
       document.getElementById("stat-selected").innerText = selectedCount;
     }
 
-    // Chọn tất cả các ô checkbox đang hiển thị
     function toggleSelectAll(master) {
       filteredStudents.forEach(s => s.selected = master.checked);
       updateStats();
       renderTable();
     }
 
-    // Chọn từng ô checkbox
     function toggleStudentSelect(index, isChecked) {
       if (filteredStudents[index]) {
         filteredStudents[index].selected = isChecked;
@@ -470,7 +432,6 @@
       }
     }
 
-    // Vẽ bảng HTML
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       const colSpan = isParentMode ? 6 : 7;
@@ -511,7 +472,6 @@
       }).join('');
     }
 
-    // Mở popup duyệt có phép
     function approveSelected() {
       pendingStudents = filteredStudents.filter(s => s.selected);
       if (pendingStudents.length === 0) {
@@ -530,7 +490,6 @@
       document.getElementById("password-modal").classList.add("hidden");
     }
 
-    // Xác nhận mật khẩu và chuyển trạng thái Có Phép
     async function confirmApproval() {
       const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
       const inputPass = document.getElementById("modal-pass-input").value.trim();
@@ -551,7 +510,7 @@
         if (s.status === "VẮNG KHÔNG PHÉP") {
           s.status = "VẮNG CÓ PHÉP";
           s.selected = false;
-          approvedList.push({ name: s.name, maHs: s.maHs, lop: s.lop });
+          approvedList.push({ name: s.name, maHs: s.maHs, lop: s.lop, rowIdx: s.rowIdx });
         }
       });
 
@@ -564,26 +523,23 @@
         return;
       }
 
-      // Nếu đã cấu hình Apps Script Web App URL -> Gửi dữ liệu cập nhật về Sheet
+      // Gửi request cập nhật tới Google Apps Script Web App
       if (scriptUrl) {
         try {
           await fetch(scriptUrl, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              targetClass: targetClass,
-              students: approvedList
-            })
+            body: JSON.stringify(approvedList)
           });
 
           updateTimestamp();
-          alert(`Đã cập nhật trạng thái "VẮNG CÓ PHÉP" cho ${approvedList.length} học sinh và gửi dữ liệu về Google Apps Script!`);
+          alert(`Đã cập nhật "VẮNG CÓ PHÉP" cho ${approvedList.length} học sinh lên Google Sheet!`);
         } catch (err) {
           alert("Lỗi kết nối tới Google Apps Script: " + err.message);
         }
       } else {
-        alert(`Đã duyệt có phép cho ${approvedList.length} học sinh trên giao diện!\n\n(Lưu ý: Để ghi nhận về file Google Sheet, bạn hãy nhập 'Google Apps Script Web App URL' trong ô Cấu hình).`);
+        alert(`Đã duyệt có phép cho ${approvedList.length} học sinh trên giao diện!\n\n(Lưu ý: Để dữ liệu tự lưu trực tiếp về Google Sheet, bạn cần tạo và dán link 'Google Apps Script Web App URL' trong mục Cấu hình).`);
       }
 
       closePasswordModal();
