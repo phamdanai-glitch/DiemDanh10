@@ -156,12 +156,11 @@
             <th class="p-3.5">Mã HS</th>
             <th class="p-3.5">Thời gian</th>
             <th class="p-3.5">Trạng thái hiện tại</th>
-            <th class="p-3.5 text-center">Tích Lũy (Trễ | Không Phép | Có Phép)</th>
           </tr>
         </thead>
         <tbody id="attendance-tbody" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="8" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td>
+            <td colspan="7" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td>
           </tr>
         </tbody>
       </table>
@@ -258,31 +257,6 @@
       localStorage.setItem("CLASS_PASSWORDS", JSON.stringify(storedPasses));
     }
 
-    function getAccumulatedData() {
-      return JSON.parse(localStorage.getItem("ACCUMULATED_ATTENDANCE") || "{}");
-    }
-
-    function saveAccumulatedData(data) {
-      localStorage.setItem("ACCUMULATED_ATTENDANCE", JSON.stringify(data));
-    }
-
-    function updateStudentAccumulation(studentKey, oldStatus, newStatus) {
-      let accum = getAccumulatedData();
-      if (!accum[studentKey]) {
-        accum[studentKey] = { late: 0, unexcused: 0, excused: 0 };
-      }
-
-      if (oldStatus === "ĐI TRỄ") accum[studentKey].late = Math.max(0, accum[studentKey].late - 1);
-      else if (oldStatus === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused = Math.max(0, accum[studentKey].unexcused - 1);
-      else if (oldStatus === "VẮNG CÓ PHÉP") accum[studentKey].excused = Math.max(0, accum[studentKey].excused - 1);
-
-      if (newStatus === "ĐI TRỄ") accum[studentKey].late++;
-      else if (newStatus === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused++;
-      else if (newStatus === "VẮNG CÓ PHÉP") accum[studentKey].excused++;
-
-      saveAccumulatedData(accum);
-    }
-
     let allStudents = [];
     let filteredStudents = [];
     let pendingStudents = [];
@@ -372,7 +346,7 @@
 
     async function fetchAttendanceData() {
       const tbody = document.getElementById("attendance-tbody");
-      const colSpan = isParentMode ? 7 : 8;
+      const colSpan = isParentMode ? 6 : 7;
 
       tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
 
@@ -391,7 +365,6 @@
 
         const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         allStudents = [];
-        const accum = getAccumulatedData();
 
         for (let r = 4; r < rows.length; r++) {
           const row = rows[r];
@@ -416,13 +389,6 @@
           }
 
           let studentKey = maHs !== "---" ? maHs : `${name}_${lop}`;
-          
-          if (!accum[studentKey]) {
-            accum[studentKey] = { late: 0, unexcused: 0, excused: 0 };
-            if (status === "ĐI TRỄ") accum[studentKey].late = 1;
-            else if (status === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused = 1;
-            else if (status === "VẮNG CÓ PHÉP") accum[studentKey].excused = 1;
-          }
 
           allStudents.push({
             rowIdx: r + 1,
@@ -436,7 +402,6 @@
           });
         }
 
-        saveAccumulatedData(accum);
         document.getElementById("total-students").innerText = allStudents.length;
         updateTimestamp();
 
@@ -516,8 +481,7 @@
 
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
-      const colSpan = isParentMode ? 7 : 8;
-      const accum = getAccumulatedData();
+      const colSpan = isParentMode ? 6 : 7;
 
       if (!filteredStudents || filteredStudents.length === 0) {
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
@@ -531,8 +495,6 @@
         } else if (s.status === "VẮNG CÓ PHÉP") {
           badgeStyle = "bg-emerald-100 text-emerald-700 border-emerald-200";
         }
-
-        const studentAccum = accum[s.key] || { late: 0, unexcused: 0, excused: 0 };
 
         const checkboxTd = isParentMode ? '' : `
           <td class="p-3.5 col-checkbox text-center">
@@ -552,13 +514,6 @@
                 ${s.status}
               </span>
             </td>
-            <td class="p-3.5 text-center">
-              <span class="inline-flex items-center gap-1.5 text-xs font-bold font-mono">
-                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800" title="Tổng trễ">${studentAccum.late} Trễ</span>
-                <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800" title="Tổng vắng KP">${studentAccum.unexcused} KP</span>
-                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800" title="Tổng vắng CP">${studentAccum.excused} CP</span>
-              </span>
-            </td>
           </tr>
         `;
       }).join('');
@@ -571,7 +526,6 @@
         return;
       }
 
-      // Điền tên lớp vào riêng ô nhập của Popup xác thực (không đụng vào ô tìm kiếm chính)
       const selectedClasses = [...new Set(pendingStudents.map(s => s.lop))];
       const targetClassInput = document.getElementById("modal-class-input");
       if (targetClassInput) {
@@ -602,7 +556,6 @@
 
       pendingStudents.forEach(s => {
         if (s.status === "VẮNG KHÔNG PHÉP") {
-          updateStudentAccumulation(s.key, "VẮNG KHÔNG PHÉP", "VẮNG CÓ PHÉP");
           s.status = "VẮNG CÓ PHÉP";
           s.selected = false;
           rowIndices.push(s.rowIdx);
@@ -620,7 +573,6 @@
 
       closePasswordModal();
 
-      // Cập nhật lại hiển thị đúng theo bộ lọc hiện tại của GVCN
       filterData();
       updateTimestamp();
 
@@ -684,7 +636,6 @@
       }
     }
 
-    /* MỐC 1: CHỨC NĂNG ADMIN BẤM NÚT "GHI SANG LỊCH SỬ" (DÙNG WINDOW.OPEN) */
     function adminRecordToLichSu() {
       const adminPass = prompt("Nhập mật khẩu Admin để ghi sang Lịch Sử:");
       
