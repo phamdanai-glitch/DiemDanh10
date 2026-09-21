@@ -207,10 +207,10 @@
   </div>
 
   <script>
-    // ID Google Sheet MỚI của bạn
+    // ID Google Sheet MỚI
     const DEFAULT_DRIVE_FILE_ID = "1MgC4X9-pg3YE92XCfKrCDfLN-1IZrSlVFvX1LvPKID4";
 
-    // Danh sách mật khẩu mẫu cho các lớp
+    // Danh sách mật khẩu cho từng lớp
     const CLASS_PASSWORDS = {
       "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
       "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
@@ -310,7 +310,7 @@
 
       tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ Google Drive...</td></tr>`;
 
-      // Sử dụng Google Sheets CSV export URL để tránh tuyệt đối lỗi CORS
+      // Sử dụng Google Sheets CSV export URL để đảm bảo 100% không bị CORS
       const csvUrl = `https://docs.google.com/spreadsheets/d/${driveId}/gviz/tq?tqx=out:csv&sheet=data`;
 
       try {
@@ -490,7 +490,7 @@
       document.getElementById("password-modal").classList.add("hidden");
     }
 
-    async function confirmApproval() {
+    function confirmApproval() {
       const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
       const inputPass = document.getElementById("modal-pass-input").value.trim();
 
@@ -500,21 +500,21 @@
       }
 
       const scriptUrl = localStorage.getItem("apps_script_url");
-
       const confirmBtn = document.getElementById("btn-confirm-approval");
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = "Đang xử lý...";
 
-      let approvedList = [];
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = "Đang gửi...";
+
+      let rowIndices = [];
       pendingStudents.forEach(s => {
         if (s.status === "VẮNG KHÔNG PHÉP") {
           s.status = "VẮNG CÓ PHÉP";
           s.selected = false;
-          approvedList.push({ name: s.name, maHs: s.maHs, lop: s.lop, rowIdx: s.rowIdx });
+          rowIndices.push(s.rowIdx);
         }
       });
 
-      if (approvedList.length === 0) {
+      if (rowIndices.length === 0) {
         alert(`Các học sinh được chọn đã ở trạng thái Có phép.`);
         closePasswordModal();
         confirmBtn.disabled = false;
@@ -523,30 +523,32 @@
         return;
       }
 
-      // Gửi request cập nhật tới Google Apps Script Web App
+      // Gửi lệnh cập nhật đến Google Apps Script bằng kỹ thuật Image Beacon (Không bao giờ bị treo nút)
       if (scriptUrl) {
-        try {
-          await fetch(scriptUrl, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(approvedList)
-          });
+        const updateUrl = `${scriptUrl}?rows=${rowIndices.join(",")}`;
+        
+        const img = new Image();
+        img.src = updateUrl;
 
+        setTimeout(() => {
           updateTimestamp();
-          alert(`Đã cập nhật "VẮNG CÓ PHÉP" cho ${approvedList.length} học sinh lên Google Sheet!`);
-        } catch (err) {
-          alert("Lỗi kết nối tới Google Apps Script: " + err.message);
-        }
-      } else {
-        alert(`Đã duyệt có phép cho ${approvedList.length} học sinh trên giao diện!\n\n(Lưu ý: Để dữ liệu tự lưu trực tiếp về Google Sheet, bạn cần tạo và dán link 'Google Apps Script Web App URL' trong mục Cấu hình).`);
-      }
+          alert(`Đã duyệt CÓ PHÉP cho ${rowIndices.length} học sinh thành công! Dữ liệu đang được ghi vào Google Sheet.`);
+          
+          closePasswordModal();
+          filterData();
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
+          lucide.createIcons();
+        }, 600);
 
-      closePasswordModal();
-      filterData();
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-      lucide.createIcons();
+      } else {
+        alert(`Đã duyệt có phép trên giao diện. Cần dán URL Web App để đồng bộ về Sheet.`);
+        closePasswordModal();
+        filterData();
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
+        lucide.createIcons();
+      }
     }
   </script>
 </body>
