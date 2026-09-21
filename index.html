@@ -3,199 +3,720 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Điểm Danh & Phê Duyệt NGHỈ</title>
+  <title>Tra Cứu & Duyệt Điểm Danh - Trường THPT Vị Thanh</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f8f9fa;
-      color: #333;
-    }
-    .header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background-color: #007bff;
-      color: white;
-      padding: 15px 20px;
-      border-radius: 6px;
-      margin-bottom: 20px;
-    }
-    .user-info {
-      font-size: 14px;
-    }
-    .action-toolbar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    button {
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: bold;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-submit {
-      background-color: #28a745;
-      color: white;
-    }
-    .btn-submit:hover {
-      background-color: #218838;
-    }
-    .btn-submit:disabled {
-      background-color: #6c757d;
-      cursor: not-allowed;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    th, td {
-      border: 1px solid #dee2e6;
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background-color: #e9ecef;
-    }
-    .text-left {
-      text-align: left;
+      font-family: 'Inter', sans-serif;
     }
   </style>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-3 sm:p-5 md:p-6">
 
-  <div class="header-bar">
-    <h2>Hệ Thống Quản Lý Điểm Danh - THPT Vị Thanh</h2>
-    <div class="user-info">
-      Người dùng: <strong id="lblUsername">admin</strong> (<span id="lblRole">Admin</span>)
+  <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-slate-100 space-y-6">
+    
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <div class="flex items-center gap-4">
+        <!-- LOGO TRƯỜNG -->
+        <div class="p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm flex-shrink-0">
+          <img src="logo.jpg" alt="Logo Trường THPT Vị Thanh" onerror="this.src='https://placehold.co/100x100/4f46e5/ffffff?text=THPT+VT'" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-contain">
+        </div>
+        
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold text-slate-800 leading-tight" id="header-title">Tra Cứu & Duyệt Điểm Danh</h1>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">
+            Trường THPT Vị Thanh — Tổng HS trong file: <span id="total-students" class="font-bold text-indigo-600">0</span>
+          </p>
+          <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Trạng thái: <span class="font-semibold text-slate-600">Đã kết nối dữ liệu</span>
+            | Cập nhật: <span id="last-updated-time" class="font-semibold text-emerald-600">Chưa tải</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="fetchAttendanceData()" title="Tải lại dữ liệu mới nhất" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 p-2.5 rounded-xl border border-slate-200 transition-all cursor-pointer">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+
+        <button onclick="copyParentLink()" title="Sao chép đường link cho Phụ huynh tra cứu" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
+          <i data-lucide="share-2" class="w-4 h-4 text-indigo-600"></i>
+          <span>Link Phụ Huynh</span>
+        </button>
+
+        <!-- NÚT GHI NHẬN SANG LICHSU DÀNH RIÊNG CHO ADMIN -->
+        <button id="btn-admin-record-log" onclick="adminRecordToLichSu()" class="hidden bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all cursor-pointer">
+          <i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử
+        </button>
+
+        <!-- NÚT RESET MẬT KHẨU DÀNH RIÊNG CHO ADMIN -->
+        <button id="btn-admin-reset" onclick="adminResetPassword()" class="hidden bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-600"></i> Admin Reset
+        </button>
+
+        <button id="btn-change-pass" onclick="openChangePasswordModal()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="key-round" class="w-4 h-4 text-slate-600"></i> Đổi Mật Khẩu
+        </button>
+
+        <button id="btn-approve" onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
+        </button>
+      </div>
+    </div>
+
+    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC -->
+    <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Đang Hiển Thị</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-indigo-900 mt-0.5" id="stat-filtered-total">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
+          <i data-lucide="users" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-amber-50/70 border border-amber-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-amber-600 uppercase tracking-wider">Đi Trễ</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-amber-900 mt-0.5" id="stat-late">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+          <i data-lucide="clock" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-rose-50/70 border border-rose-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-rose-600 uppercase tracking-wider">Không Phép</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-rose-900 mt-0.5" id="stat-unexcused">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600">
+          <i data-lucide="user-x" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Có Phép</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-emerald-900 mt-0.5" id="stat-excused">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+          <i data-lucide="user-check" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="col-span-2 sm:col-span-1 bg-slate-100/80 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Đã Chọn</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-slate-800 mt-0.5" id="stat-selected">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-slate-300/40 flex items-center justify-center text-slate-700">
+          <i data-lucide="check-square" class="w-5 h-5"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- BỘ LỌC TÌM KIẾM & LỚP -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="search-input" value="" autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterData()" placeholder="Nhập họ tên..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
+      </div>
+      
+      <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
+        <option value="">-- Tất cả các lớp --</option>
+      </select>
+
+      <select id="status-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
+        <option value="">-- Tất cả trạng thái --</option>
+        <option value="ĐI TRỄ">ĐI TRỄ</option>
+        <option value="VẮNG KHÔNG PHÉP">VẮNG KHÔNG PHÉP</option>
+        <option value="VẮNG CÓ PHÉP">VẮNG CÓ PHÉP</option>
+      </select>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU -->
+    <div class="overflow-x-auto rounded-xl border border-slate-200">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold select-none">
+            <th class="p-3.5 col-checkbox w-10 text-center"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"></th>
+            <th class="p-3.5 w-12 text-center">STT</th>
+            <th class="p-3.5">Họ và Tên</th>
+            <th class="p-3.5">Lớp</th>
+            <th class="p-3.5">Mã HS</th>
+            <th class="p-3.5">Thời gian</th>
+            <th class="p-3.5">Trạng thái hiện tại</th>
+            <th class="p-3.5 text-center">Tích Lũy (Trễ | Không Phép | Có Phép)</th>
+          </tr>
+        </thead>
+        <tbody id="attendance-tbody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="8" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- POPUP XÁC THỰC MẬT KHẨU GVCN -->
+  <div id="password-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="lock" class="w-5 h-5 text-indigo-600"></i> Xác Thực GVCN
+        </h3>
+        <button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Lớp duyệt phép</label>
+          <input type="text" id="modal-class-input" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu GVCN</label>
+          <input type="password" id="modal-pass-input" placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="closePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
+        <button id="btn-confirm-approval" onclick="confirmApproval()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-emerald-600/20">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận
+        </button>
+      </div>
     </div>
   </div>
 
-  <div class="action-toolbar">
-    <!-- Nút Ghi Nhận Ngày Nghỉ (Chỉ Admin mới thấy) -->
-    <button id="btnGhiNhanNghi" class="btn-submit" style="display: none;" onclick="ghiNhanNgayNghi()">
-      📝 Ghi nhận ngày nghỉ
-    </button>
+  <!-- POPUP ĐỔI MẬT KHẨU GVCN -->
+  <div id="change-pass-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="key-round" class="w-5 h-5 text-indigo-600"></i> Đổi Mật Khẩu GVCN
+        </h3>
+        <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Chọn Lớp</label>
+          <input type="text" id="change-pass-class" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu hiện tại</label>
+          <input type="password" id="change-pass-old" placeholder="Mật khẩu hiện tại..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu mới</label>
+          <input type="password" id="change-pass-new" placeholder="Nhập mật khẩu mới..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeChangePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
+        <button onclick="saveNewPassword()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-indigo-600/20">
+          <i data-lucide="save" class="w-4 h-4"></i> Lưu Mật Khẩu
+        </button>
+      </div>
+    </div>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
-        <th>STT</th>
-        <th>Mã Học Sinh</th>
-        <th class="text-left">Họ và Tên</th>
-        <th>Trạng Thái Xin Nghỉ</th>
-      </tr>
-    </thead>
-    <tbody id="studentTableBody">
-      <!-- Dữ liệu mẫu tương ứng với dòng từ 5 trở đi bên sheet DATA -->
-      <tr data-row="5">
-        <td><input type="checkbox" class="chkStudent" value="5"></td>
-        <td>1</td>
-        <td>20234379</td>
-        <td class="text-left">Nguyễn Văn A</td>
-        <td>Có đơn xin nghỉ</td>
-      </tr>
-      <tr data-row="6">
-        <td><input type="checkbox" class="chkStudent" value="6"></td>
-        <td>2</td>
-        <td>20234380</td>
-        <td class="text-left">Trần Thị B</td>
-        <td>Có đơn xin nghỉ</td>
-      </tr>
-      <tr data-row="7">
-        <td><input type="checkbox" class="chkStudent" value="7"></td>
-        <td>3</td>
-        <td>20234381</td>
-        <td class="text-left">Lê Văn C</td>
-        <td>Có đơn xin nghỉ</td>
-      </tr>
-    </tbody>
-  </table>
-
   <script>
-    // 1. Cấu hình Tài khoản Người dùng & Quyền hạn (Thay đổi thực tế từ Login/Session)
-    var currentUser = {
-      username: "admin", // Tên đăng nhập
-      role: "admin"      // Quyền: 'admin' hoặc 'user'
+    const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
+    const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJBCng3RukL3O-ES5qSvkFRata4MajCeoO-70VzssenaXLIcSzO1cGu9QmVlvccjGR/exec";
+    
+    // Mật khẩu Admin
+    const ADMIN_PASSWORD = "admin123";
+
+    const DEFAULT_PASSWORDS = {
+      "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
+      "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
+      "11A1": "123456", "11A2": "123456", "11A3": "123456", "11A4": "123456", "11A5": "123456",
+      "11A6": "123456", "11A7": "123456", "11A8": "123456", "11A9": "123456", "11A10": "123456", "11A11": "123456",
+      "12A1": "123456", "12A2": "123456", "12A3": "123456", "12A4": "123456", "12A5": "123456",
+      "12A6": "123456", "12A7": "123456", "12A8": "123456", "12A9": "123456", "12A10": "123456", "12A11": "123456"
     };
 
-    // 2. Link Web App từ Apps Script
-    var WEB_APP_URL = "https://script.google.com/macros/s/MÃ_WEB_APP_CỦA_BẠN/exec";
+    function getClassPassword(className) {
+      const storedPasses = JSON.parse(localStorage.getItem("CLASS_PASSWORDS") || "{}");
+      return storedPasses[className] || DEFAULT_PASSWORDS[className] || "123456";
+    }
 
-    // 3. Khởi tạo khi tải trang
-    document.addEventListener("DOMContentLoaded", function() {
-      // Cập nhật thông tin giao diện
-      document.getElementById("lblUsername").innerText = currentUser.username;
-      document.getElementById("lblRole").innerText = currentUser.role === "admin" ? "Quản trị viên (Admin)" : "Giáo viên";
+    function setClassPassword(className, newPass) {
+      const storedPasses = JSON.parse(localStorage.getItem("CLASS_PASSWORDS") || "{}");
+      storedPasses[className] = newPass;
+      localStorage.setItem("CLASS_PASSWORDS", JSON.stringify(storedPasses));
+    }
 
-      // PHÂN QUYỀN: Chỉ hiển thị Nút "Ghi nhận ngày nghỉ" nếu là Admin
-      if (currentUser && currentUser.role === "admin") {
-        document.getElementById("btnGhiNhanNghi").style.display = "inline-block";
+    /* QUẢN LÝ TÍCH LŨY DÙNG LOCALSTORAGE */
+    function getAccumulatedData() {
+      return JSON.parse(localStorage.getItem("ACCUMULATED_ATTENDANCE") || "{}");
+    }
+
+    function saveAccumulatedData(data) {
+      localStorage.setItem("ACCUMULATED_ATTENDANCE", JSON.stringify(data));
+    }
+
+    function updateStudentAccumulation(studentKey, oldStatus, newStatus) {
+      let accum = getAccumulatedData();
+      if (!accum[studentKey]) {
+        accum[studentKey] = { late: 0, unexcused: 0, excused: 0 };
       }
+
+      if (oldStatus === "ĐI TRỄ") accum[studentKey].late = Math.max(0, accum[studentKey].late - 1);
+      else if (oldStatus === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused = Math.max(0, accum[studentKey].unexcused - 1);
+      else if (oldStatus === "VẮNG CÓ PHÉP") accum[studentKey].excused = Math.max(0, accum[studentKey].excused - 1);
+
+      if (newStatus === "ĐI TRỄ") accum[studentKey].late++;
+      else if (newStatus === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused++;
+      else if (newStatus === "VẮNG CÓ PHÉP") accum[studentKey].excused++;
+
+      saveAccumulatedData(accum);
+    }
+
+    let allStudents = [];
+    let filteredStudents = [];
+    let pendingStudents = [];
+    let isParentMode = false;
+    let isAdminMode = false;
+
+    function formatExcelTime(val) {
+      if (!val || val === "---") return "---";
+      let num = parseFloat(val);
+      if (!isNaN(num) && num >= 0 && num <= 1) {
+        let totalSeconds = Math.round(num * 86400);
+        let hours = Math.floor(totalSeconds / 3600);
+        let minutes = Math.floor((totalSeconds % 3600) / 60);
+        let seconds = totalSeconds % 60;
+        return [hours, minutes, seconds].map(v => String(v).padStart(2, '0')).join(':');
+      }
+      return val;
+    }
+
+    function updateTimestamp() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString('vi-VN');
+      document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
+    }
+
+    window.addEventListener("pageshow", () => {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) searchInput.value = "";
     });
 
-    // 4. Chọn/Bỏ chọn tất cả checkbox
-    function toggleSelectAll(master) {
-      var checkboxes = document.querySelectorAll('.chkStudent');
-      checkboxes.forEach(function(chk) {
-        chk.checked = master.checked;
+    window.addEventListener("DOMContentLoaded", () => {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) searchInput.value = "";
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const modeParam = urlParams.get('mode');
+      isParentMode = (modeParam === 'phuhuynh' || modeParam === 'parent');
+      isAdminMode = (modeParam === 'admin');
+
+      applyModeUI();
+      lucide.createIcons();
+      fetchAttendanceData();
+    });
+
+    function applyModeUI() {
+      const statsContainer = document.getElementById("stats-container");
+      const headerTitle = document.getElementById("header-title");
+      const btnApprove = document.getElementById("btn-approve");
+      const btnChangePass = document.getElementById("btn-change-pass");
+      const btnAdminReset = document.getElementById("btn-admin-reset");
+      const btnAdminRecordLog = document.getElementById("btn-admin-record-log");
+      const checkboxCols = document.querySelectorAll(".col-checkbox");
+
+      if (isParentMode) {
+        headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
+        btnApprove.classList.add("hidden");
+        if (btnChangePass) btnChangePass.classList.add("hidden");
+        if (btnAdminReset) btnAdminReset.classList.add("hidden");
+        if (btnAdminRecordLog) btnAdminRecordLog.classList.add("hidden");
+        statsContainer.classList.add("hidden");
+        checkboxCols.forEach(col => col.classList.add("hidden"));
+      } else {
+        headerTitle.innerText = "Tra Cứu & Duyệt Điểm Danh";
+        btnApprove.classList.remove("hidden");
+        if (btnChangePass) btnChangePass.classList.remove("hidden");
+        statsContainer.classList.remove("hidden");
+        checkboxCols.forEach(col => col.classList.remove("hidden"));
+
+        if (isAdminMode) {
+          if (btnAdminReset) btnAdminReset.classList.remove("hidden");
+          if (btnAdminRecordLog) btnAdminRecordLog.classList.remove("hidden");
+        }
+      }
+    }
+
+    function copyParentLink() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const parentUrl = baseUrl + "?mode=phuhuynh";
+      
+      navigator.clipboard.writeText(parentUrl).then(() => {
+        alert("Đã sao chép link tra cứu Phụ huynh:\n" + parentUrl);
+      }).catch(() => {
+        prompt("Sao chép link gửi Phụ huynh dưới đây:", parentUrl);
       });
     }
 
-    // 5. Hàm xử lý khi Admin bấm nút "Ghi nhận ngày nghỉ"
-    function ghiNhanNgayNghi() {
-      // Lấy danh sách dòng được tích chọn
-      var selectedCheckboxes = document.querySelectorAll('.chkStudent:checked');
-      var selectedRows = [];
-      selectedCheckboxes.forEach(function(chk) {
-        selectedRows.push(chk.value);
+    async function fetchAttendanceData() {
+      const tbody = document.getElementById("attendance-tbody");
+      const colSpan = isParentMode ? 7 : 8;
+
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
+
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${CONFIG_DRIVE_FILE_ID}/gviz/tq?tqx=out:csv&sheet=data`;
+
+      try {
+        const response = await fetch(csvUrl);
+        if (!response.ok) {
+          throw new Error("Không thể tải dữ liệu từ Google Sheet.");
+        }
+
+        const csvText = await response.text();
+        const workbook = XLSX.read(csvText, { type: 'string' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        allStudents = [];
+        const accum = getAccumulatedData();
+
+        for (let r = 4; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row || !row[1]) continue;
+
+          let name = String(row[1]).trim();
+          if (name === "" || name.includes("HỌ VÀ TÊN")) continue;
+
+          let lop = row[2] ? String(row[2]).trim().toUpperCase() : "---";
+          let maHs = row[4] ? String(row[4]).trim() : "---";
+          let rawTime = row[10] ? String(row[10]).trim() : "---";
+          let timeVal = formatExcelTime(rawTime);
+          
+          let treVal = row[5] ? String(row[5]).trim() : "";
+          let phepVal = row[15] ? String(row[15]).trim() : "";
+
+          let status = "VẮNG KHÔNG PHÉP";
+          if (treVal !== "") {
+            status = "ĐI TRỄ";
+          } else if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p" || phepVal.includes("Có phép") || phepVal === "P") {
+            status = "VẮNG CÓ PHÉP";
+          }
+
+          let studentKey = maHs !== "---" ? maHs : `${name}_${lop}`;
+          
+          if (!accum[studentKey]) {
+            accum[studentKey] = { late: 0, unexcused: 0, excused: 0 };
+            if (status === "ĐI TRỄ") accum[studentKey].late = 1;
+            else if (status === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused = 1;
+            else if (status === "VẮNG CÓ PHÉP") accum[studentKey].excused = 1;
+          }
+
+          allStudents.push({
+            rowIdx: r + 1,
+            key: studentKey,
+            name: name,
+            lop: lop,
+            maHs: maHs,
+            time: timeVal,
+            status: status,
+            selected: false
+          });
+        }
+
+        saveAccumulatedData(accum);
+        document.getElementById("total-students").innerText = allStudents.length;
+        updateTimestamp();
+
+        const classes = [...new Set(allStudents.map(s => s.lop))].sort();
+        const classSelect = document.getElementById("class-filter");
+        classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
+          classes.map(c => `<option value="${c}">${c}</option>`).join('');
+
+        const searchInput = document.getElementById("search-input");
+        if (searchInput) searchInput.value = "";
+
+        filterData();
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+      }
+    }
+
+    function filterData() {
+      const searchInput = document.getElementById("search-input");
+      const search = searchInput ? searchInput.value.toLowerCase().trim() : "";
+      const selectedClass = document.getElementById("class-filter").value;
+      const selectedStatus = document.getElementById("status-filter").value;
+
+      filteredStudents = allStudents.filter(s => {
+        const matchSearch = !search || s.name.toLowerCase().includes(search) || s.maHs.toLowerCase().includes(search);
+        const matchClass = !selectedClass || s.lop === selectedClass;
+        const matchStatus = !selectedStatus || s.status === selectedStatus;
+        return matchSearch && matchClass && matchStatus;
       });
 
-      if (selectedRows.length === 0) {
-        alert("Vui lòng chọn ít nhất một học sinh để ghi nhận ngày nghỉ!");
+      updateStats();
+      renderTable();
+    }
+
+    function updateStats() {
+      if (isParentMode) return;
+
+      const filteredTotal = filteredStudents.length;
+      let lateCount = 0;
+      let unexcusedCount = 0;
+      let excusedCount = 0;
+      let selectedCount = 0;
+
+      filteredStudents.forEach(s => {
+        if (s.status === "ĐI TRỄ") lateCount++;
+        else if (s.status === "VẮNG KHÔNG PHÉP") unexcusedCount++;
+        else if (s.status === "VẮNG CÓ PHÉP") excusedCount++;
+
+        if (s.selected) selectedCount++;
+      });
+
+      document.getElementById("stat-filtered-total").innerText = filteredTotal;
+      document.getElementById("stat-late").innerText = lateCount;
+      document.getElementById("stat-unexcused").innerText = unexcusedCount;
+      document.getElementById("stat-excused").innerText = excusedCount;
+      document.getElementById("stat-selected").innerText = selectedCount;
+    }
+
+    function toggleSelectAll(master) {
+      filteredStudents.forEach(s => s.selected = master.checked);
+      updateStats();
+      renderTable();
+    }
+
+    function toggleStudentSelect(index, isChecked) {
+      if (filteredStudents[index]) {
+        filteredStudents[index].selected = isChecked;
+        
+        const allSelected = filteredStudents.length > 0 && filteredStudents.every(s => s.selected);
+        const masterCheckbox = document.getElementById("select-all");
+        if (masterCheckbox) masterCheckbox.checked = allSelected;
+
+        updateStats();
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("attendance-tbody");
+      const colSpan = isParentMode ? 7 : 8;
+      const accum = getAccumulatedData();
+
+      if (!filteredStudents || filteredStudents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
         return;
       }
 
-      if (!confirm("Xác nhận duyệt và ghi nhận ngày nghỉ cho " + selectedRows.length + " học sinh đã chọn?")) {
+      tbody.innerHTML = filteredStudents.map((s, idx) => {
+        let badgeStyle = "bg-rose-100 text-rose-700 border-rose-200";
+        if (s.status === "ĐI TRỄ") {
+          badgeStyle = "bg-amber-100 text-amber-800 border-amber-200";
+        } else if (s.status === "VẮNG CÓ PHÉP") {
+          badgeStyle = "bg-emerald-100 text-emerald-700 border-emerald-200";
+        }
+
+        const studentAccum = accum[s.key] || { late: 0, unexcused: 0, excused: 0 };
+
+        const checkboxTd = isParentMode ? '' : `
+          <td class="p-3.5 col-checkbox text-center">
+            <input type="checkbox" ${s.selected ? 'checked' : ''} onchange="toggleStudentSelect(${idx}, this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+          </td>`;
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors ${s.selected ? 'bg-indigo-50/30' : ''}">
+            ${checkboxTd}
+            <td class="p-3.5 text-center text-slate-400 font-medium">${idx + 1}</td>
+            <td class="p-3.5 font-semibold text-slate-800">${s.name}</td>
+            <td class="p-3.5"><span class="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
+            <td class="p-3.5 text-slate-500 font-mono text-xs">${s.maHs}</td>
+            <td class="p-3.5 text-slate-500 font-mono text-xs">${s.time}</td>
+            <td class="p-3.5">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-bold border inline-block ${badgeStyle}">
+                ${s.status}
+              </span>
+            </td>
+            <td class="p-3.5 text-center">
+              <span class="inline-flex items-center gap-1.5 text-xs font-bold font-mono">
+                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800" title="Tổng trễ">${studentAccum.late} Trễ</span>
+                <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800" title="Tổng vắng KP">${studentAccum.unexcused} KP</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800" title="Tổng vắng CP">${studentAccum.excused} CP</span>
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function approveSelected() {
+      pendingStudents = filteredStudents.filter(s => s.selected);
+      if (pendingStudents.length === 0) {
+        alert("Vui lòng tích chọn ít nhất 1 học sinh để duyệt có phép.");
         return;
       }
 
-      var btn = document.getElementById("btnGhiNhanNghi");
+      const selectedClasses = [...new Set(pendingStudents.map(s => s.lop))];
+      document.getElementById("modal-class-input").value = selectedClasses.length === 1 && selectedClasses[0] !== "---" ? selectedClasses[0] : "";
+      document.getElementById("modal-pass-input").value = "";
+
+      document.getElementById("password-modal").classList.remove("hidden");
+    }
+
+    function closePasswordModal() {
+      document.getElementById("password-modal").classList.add("hidden");
+    }
+
+    function confirmApproval() {
+      const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
+      const inputPass = document.getElementById("modal-pass-input").value.trim();
+
+      const correctPass = getClassPassword(targetClass);
+
+      if (inputPass !== correctPass) {
+        alert(`Mật khẩu GVCN Lớp ${targetClass} không chính xác!`);
+        return;
+      }
+
+      let maHsList = [];
+      let rowIndices = [];
+
+      pendingStudents.forEach(s => {
+        if (s.status === "VẮNG KHÔNG PHÉP") {
+          updateStudentAccumulation(s.key, "VẮNG KHÔNG PHÉP", "VẮNG CÓ PHÉP");
+          s.status = "VẮNG CÓ PHÉP";
+          s.selected = false;
+          rowIndices.push(s.rowIdx);
+          if (s.maHs && s.maHs !== "---") {
+            maHsList.push(s.maHs);
+          }
+        }
+      });
+
+      if (maHsList.length === 0 && rowIndices.length === 0) {
+        alert(`Các học sinh được chọn đã ở trạng thái Có phép.`);
+        closePasswordModal();
+        return;
+      }
+
+      closePasswordModal();
+      filterData();
+      updateTimestamp();
+
+      const masterCheckbox = document.getElementById("select-all");
+      if (masterCheckbox) masterCheckbox.checked = false;
+
+      const updateUrl = `${CONFIG_APPS_SCRIPT_URL}?mahss=${encodeURIComponent(maHsList.join(","))}&rows=${rowIndices.join(",")}`;
+      
+      fetch(updateUrl, { 
+        method: 'GET', 
+        mode: 'no-cors',
+        keepalive: true 
+      }).catch(err => console.log("Lỗi cập nhật nền:", err));
+    }
+
+    /* ĐỔI MẬT KHẨU GVCN */
+    function openChangePasswordModal() {
+      const selectedClass = document.getElementById("class-filter").value;
+      document.getElementById("change-pass-class").value = selectedClass || "";
+      document.getElementById("change-pass-old").value = "";
+      document.getElementById("change-pass-new").value = "";
+      document.getElementById("change-pass-modal").classList.remove("hidden");
+    }
+
+    function closeChangePasswordModal() {
+      document.getElementById("change-pass-modal").classList.add("hidden");
+    }
+
+    function saveNewPassword() {
+      const targetClass = document.getElementById("change-pass-class").value.trim().toUpperCase();
+      const oldPass = document.getElementById("change-pass-old").value.trim();
+      const newPass = document.getElementById("change-pass-new").value.trim();
+
+      if (!targetClass) {
+        alert("Vui lòng nhập tên lớp!");
+        return;
+      }
+
+      const currentPass = getClassPassword(targetClass);
+      if (oldPass !== currentPass) {
+        alert("Mật khẩu hiện tại không đúng!");
+        return;
+      }
+
+      if (!newPass || newPass.length < 4) {
+        alert("Mật khẩu mới phải từ 4 ký tự trở lên!");
+        return;
+      }
+
+      setClassPassword(targetClass, newPass);
+      alert(`Đã đổi mật khẩu thành công cho lớp ${targetClass}!`);
+      closeChangePasswordModal();
+    }
+
+    /* RESET MẬT KHẨU CHO ADMIN */
+    function adminResetPassword() {
+      const pass = prompt("Nhập mật khẩu Admin để reset mật khẩu tất cả các lớp:");
+      if (pass === ADMIN_PASSWORD) {
+        localStorage.removeItem("CLASS_PASSWORDS");
+        alert("Đã khôi phục tất cả mật khẩu lớp về mặc định (123456)!");
+      } else if (pass !== null) {
+        alert("Mật khẩu Admin không đúng!");
+      }
+    }
+
+    /* CHỨC NĂNG ADMIN BẤM NÚT "GHI SANG LỊCH SỬ" */
+    function adminRecordToLichSu() {
+      const selected = allStudents.filter(s => s.selected);
+      let rowIndices = [];
+
+      if (selected.length > 0) {
+        rowIndices = selected.map(s => s.rowIdx);
+      } else {
+        if (!confirm("Bạn không chọn riêng học sinh nào. Xác nhận ghi TOÀN BỘ danh sách sang sheet 'lichsu'?")) {
+          return;
+        }
+        rowIndices = allStudents.map(s => s.rowIdx);
+      }
+
+      const btn = document.getElementById("btn-admin-record-log");
       btn.disabled = true;
-      btn.innerText = "⏳ Đang xử lý...";
+      btn.innerText = "⏳ Đang ghi...";
 
-      // Gửi tham số rows, col (cột data=17) và role (admin) sang Apps Script
-      var requestUrl = WEB_APP_URL + "?rows=" + selectedRows.join(",") + "&col=17&role=" + currentUser.role;
+      const requestUrl = `${CONFIG_APPS_SCRIPT_URL}?rows=${rowIndices.join(",")}&role=admin`;
 
       fetch(requestUrl)
-        .then(function(response) {
-          return response.text();
-        })
-        .then(function(data) {
+        .then(res => res.text())
+        .then(data => {
           btn.disabled = false;
-          btn.innerText = "📝 Ghi nhận ngày nghỉ";
-
-          if (data.includes("SUCCESS")) {
-            alert("Thành công: " + data);
-            location.reload(); // Tải lại trang để cập nhật trạng thái mới
-          } else if (data.includes("UNAUTHORIZED")) {
-            alert("LỖI PHÂN QUYỀN: Bạn không có quyền Admin để thực hiện thao tác này!");
-          } else {
-            alert("Có lỗi xảy ra: " + data);
-          }
+          btn.innerHTML = `<i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử`;
+          lucide.createIcons();
+          
+          alert("Kết quả ghi nhận: " + data);
         })
-        .catch(function(error) {
+        .catch(err => {
           btn.disabled = false;
-          btn.innerText = "📝 Ghi nhận ngày nghỉ";
-          alert("Lỗi kết nối máy chủ: " + error);
+          btn.innerHTML = `<i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử`;
+          lucide.createIcons();
+          alert("Lỗi khi kết nối tới Apps Script: " + err.message);
         });
     }
   </script>
