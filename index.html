@@ -52,10 +52,24 @@
           <span>Link Phụ Huynh</span>
         </button>
 
-        <!-- NÚT GHI NHẬN SANG LICHSU DÀNH RIÊNG CHO ADMIN -->
-        <button id="btn-admin-record-log" onclick="adminRecordToLichSu()" class="hidden bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all cursor-pointer">
-          <i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử
-        </button>
+        /* CHỨC NĂNG ADMIN BẤM NÚT "GHI SANG LỊCH SỬ" */
+function adminRecordToLichSu() {
+  // 1. Nhập mật khẩu Admin
+  const adminPass = prompt("Nhập mật khẩu Admin để ghi sang Lịch Sử:");
+  
+  if (adminPass === null) return; // Người dùng bấm Hủy
+  
+  if (adminPass.trim() === "") {
+    alert("Vui lòng nhập mật khẩu Admin!");
+    return;
+  }
+
+  // 2. Link Exec trực tiếp của bạn + tham số xác thực admin
+  const directUrl = `https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec?role=admin&pass=${encodeURIComponent(adminPass.trim())}`;
+
+  // 3. Mở thẳng link trên tab mới (y hệt thao tác dán link bấm Enter)
+  window.open(directUrl, '_blank');
+}
 
         <!-- NÚT RESET MẬT KHẨU DÀNH RIÊNG CHO ADMIN -->
         <button id="btn-admin-reset" onclick="adminResetPassword()" class="hidden bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
