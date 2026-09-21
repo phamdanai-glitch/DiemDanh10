@@ -571,10 +571,14 @@
         return;
       }
 
+      // Điền tên lớp vào riêng ô nhập của Popup xác thực (không đụng vào ô tìm kiếm chính)
       const selectedClasses = [...new Set(pendingStudents.map(s => s.lop))];
-      document.getElementById("modal-class-input").value = selectedClasses.length === 1 && selectedClasses[0] !== "---" ? selectedClasses[0] : "";
-      document.getElementById("modal-pass-input").value = "";
+      const targetClassInput = document.getElementById("modal-class-input");
+      if (targetClassInput) {
+        targetClassInput.value = (selectedClasses.length === 1 && selectedClasses[0] !== "---") ? selectedClasses[0] : "";
+      }
 
+      document.getElementById("modal-pass-input").value = "";
       document.getElementById("password-modal").classList.remove("hidden");
     }
 
@@ -615,6 +619,8 @@
       }
 
       closePasswordModal();
+
+      // Cập nhật lại hiển thị đúng theo bộ lọc hiện tại của GVCN
       filterData();
       updateTimestamp();
 
