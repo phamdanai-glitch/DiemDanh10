@@ -235,7 +235,9 @@
 
   <script>
     const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
-    const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJBCng3RukL3O-ES5qSvkFRata4MajCeoO-70VzssenaXLIcSzO1cGu9QmVlvccjGR/exec";
+    
+    // Đã cập nhật đúng URL Web App đang chạy của bạn
+    const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
     
     // Mật khẩu Admin
     const ADMIN_PASSWORD = "admin123";
@@ -327,7 +329,7 @@
       isAdminMode = (modeParam === 'admin');
 
       applyModeUI();
-      lucide.createIcons();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       fetchAttendanceData();
     });
 
@@ -685,13 +687,12 @@
 
     /* CHỨC NĂNG ADMIN BẤM NÚT "GHI SANG LỊCH SỬ" */
     function adminRecordToLichSu() {
-      // Yêu cầu nhập mật khẩu Admin trước khi thực hiện
       const adminPass = prompt("Nhập mật khẩu Admin để ghi dữ liệu sang sheet 'lichsu':");
       
-      if (adminPass === null) return; // Người dùng bấm Hủy
+      if (adminPass === null) return;
       
-      if (adminPass !== ADMIN_PASSWORD) {
-        alert("Mật khẩu Admin không chính xác!");
+      if (adminPass.trim() === "") {
+        alert("Vui lòng nhập mật khẩu Admin!");
         return;
       }
 
@@ -711,7 +712,6 @@
       btn.disabled = true;
       btn.innerText = "⏳ Đang ghi...";
 
-      // Gửi kèm tham số role=admin và pass để Apps Script xử lý
       const requestUrl = `${CONFIG_APPS_SCRIPT_URL}?rows=${rowIndices.join(",")}&role=admin&pass=${encodeURIComponent(adminPass)}`;
 
       fetch(requestUrl)
@@ -719,15 +719,15 @@
         .then(data => {
           btn.disabled = false;
           btn.innerHTML = `<i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử`;
-          lucide.createIcons();
+          if (typeof lucide !== 'undefined') lucide.createIcons();
           
-          alert("Kết quả ghi nhận: " + data);
+          alert("Kết quả ghi nhận:\n" + data);
         })
         .catch(err => {
           btn.disabled = false;
           btn.innerHTML = `<i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử`;
-          lucide.createIcons();
-          alert("Lỗi khi kết nối tới Apps Script: " + err.message);
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          alert("Lỗi kết nối tới Apps Script: " + err.message);
         });
     }
   </script>
