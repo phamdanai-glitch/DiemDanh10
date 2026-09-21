@@ -36,7 +36,7 @@
           </p>
           <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
             <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Nguồn Drive: <span id="drive-id-display" class="font-mono text-slate-600 font-semibold">1MgC4X9...</span>
+            Trạng thái: <span class="font-semibold text-slate-600">Đã kết nối dữ liệu</span>
             | Cập nhật: <span id="last-updated-time" class="font-semibold text-emerald-600">Chưa tải</span>
           </p>
         </div>
@@ -130,28 +130,6 @@
       </select>
     </div>
 
-    <!-- CẤU HÌNH GOOGLE DRIVE & APPS SCRIPT -->
-    <details id="drive-config-box" class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
-      <summary class="font-bold text-slate-700 cursor-pointer flex items-center gap-2 select-none">
-        <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i> Cấu hình kết nối Google Drive & Web App API
-      </summary>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 pt-3 border-t border-slate-200">
-        <div>
-          <label class="block text-slate-600 font-medium mb-1">Google Sheet / File ID trên Drive:</label>
-          <input type="text" id="drive-file-id" placeholder="ID file Google Sheet..." class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
-        </div>
-        <div>
-          <label class="block text-slate-600 font-medium mb-1">Google Apps Script Web App URL (Để lưu phép):</label>
-          <input type="text" id="apps-script-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
-        </div>
-        <div class="flex items-end">
-          <button onclick="saveDriveConfig()" class="w-full bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-semibold rounded-xl px-4 py-2 transition-all cursor-pointer h-[38px]">
-            Lưu & Tải Lại Dữ Liệu
-          </button>
-        </div>
-      </div>
-    </details>
-
     <!-- BẢNG DỮ LIỆU -->
     <div class="overflow-x-auto rounded-xl border border-slate-200">
       <table class="w-full text-left border-collapse text-sm">
@@ -168,7 +146,7 @@
         </thead>
         <tbody id="attendance-tbody" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="7" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ Google Drive...</td>
+            <td colspan="7" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td>
           </tr>
         </tbody>
       </table>
@@ -207,7 +185,9 @@
   </div>
 
   <script>
-    const DEFAULT_DRIVE_FILE_ID = "1MgC4X9-pg3YE92XCfKrCDfLN-1IZrSlVFvX1LvPKID4";
+    // CẤU HÌNH MẶC ĐỊNH CỐ ĐỊNH TRONG CODE
+    const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
+    const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqvEr_Isw6D_h5EpoAfrnNlWSfNE7bpQuVx_ML5CzfIAEy5pfymzIkg6RxKRqCu3QE/exec";
 
     const CLASS_PASSWORDS = {
       "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
@@ -223,23 +203,11 @@
     let pendingStudents = [];
     let isParentMode = false;
 
-    function cleanScriptUrl(url) {
-      if (!url) return "";
-      // Khắc phục triệt để lỗi Google chèn /u/0/, /u/1/, /u/3/ do nhiều tài khoản Google đăng nhập
-      return url.replace(/\/u\/\d+\//, '/').trim();
-    }
-
     function updateTimestamp() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const dateStr = now.toLocaleDateString('vi-VN');
       document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
-    }
-
-    function extractDriveId(input) {
-      if (!input) return DEFAULT_DRIVE_FILE_ID;
-      const match = input.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      return match ? match[1] : input.trim();
     }
 
     window.addEventListener("DOMContentLoaded", () => {
@@ -249,7 +217,6 @@
 
       applyModeUI();
       lucide.createIcons();
-      loadDriveConfig();
       fetchAttendanceData();
     });
 
@@ -257,19 +224,16 @@
       const statsContainer = document.getElementById("stats-container");
       const headerTitle = document.getElementById("header-title");
       const btnApprove = document.getElementById("btn-approve");
-      const driveBox = document.getElementById("drive-config-box");
       const checkboxCols = document.querySelectorAll(".col-checkbox");
 
       if (isParentMode) {
         headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
         btnApprove.classList.add("hidden");
-        driveBox.classList.add("hidden");
         statsContainer.classList.add("hidden");
         checkboxCols.forEach(col => col.classList.add("hidden"));
       } else {
         headerTitle.innerText = "Tra Cứu & Duyệt Điểm Danh";
         btnApprove.classList.remove("hidden");
-        driveBox.classList.remove("hidden");
         statsContainer.classList.remove("hidden");
         checkboxCols.forEach(col => col.classList.remove("hidden"));
       }
@@ -286,36 +250,13 @@
       });
     }
 
-    function loadDriveConfig() {
-      const driveId = localStorage.getItem("drive_file_id") || DEFAULT_DRIVE_FILE_ID;
-      const scriptUrl = cleanScriptUrl(localStorage.getItem("apps_script_url") || "");
-
-      document.getElementById("drive-file-id").value = driveId;
-      document.getElementById("apps-script-url").value = scriptUrl;
-      document.getElementById("drive-id-display").innerText = driveId.substring(0, 8) + "...";
-    }
-
-    function saveDriveConfig() {
-      const driveId = extractDriveId(document.getElementById("drive-file-id").value);
-      const scriptUrl = cleanScriptUrl(document.getElementById("apps-script-url").value);
-
-      localStorage.setItem("drive_file_id", driveId);
-      localStorage.setItem("apps_script_url", scriptUrl);
-
-      document.getElementById("apps-script-url").value = scriptUrl;
-      document.getElementById("drive-id-display").innerText = driveId.substring(0, 8) + "...";
-      alert("Đã lưu cấu hình Google Sheet & Web App chuẩn hóa!");
-      fetchAttendanceData();
-    }
-
     async function fetchAttendanceData() {
-      const driveId = extractDriveId(localStorage.getItem("drive_file_id") || DEFAULT_DRIVE_FILE_ID);
       const tbody = document.getElementById("attendance-tbody");
       const colSpan = isParentMode ? 6 : 7;
 
-      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ Google Drive...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
 
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${driveId}/gviz/tq?tqx=out:csv&sheet=data`;
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${CONFIG_DRIVE_FILE_ID}/gviz/tq?tqx=out:csv&sheet=data`;
 
       try {
         const response = await fetch(csvUrl);
@@ -373,7 +314,7 @@
         filterData();
 
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-rose-500 font-medium">Lỗi tải dữ liệu Google Drive: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
       }
     }
 
@@ -502,10 +443,7 @@
         return;
       }
 
-      const rawScriptUrl = localStorage.getItem("apps_script_url") || "";
-      const scriptUrl = cleanScriptUrl(rawScriptUrl);
       const confirmBtn = document.getElementById("btn-confirm-approval");
-
       confirmBtn.disabled = true;
       confirmBtn.innerHTML = "Đang gửi...";
 
@@ -532,37 +470,26 @@
         return;
       }
 
-      if (scriptUrl) {
-        // Gửi cả Mã HS (mahss) và Số dòng (rows) để Google Apps Script đảm bảo ghi chính xác
-        const updateUrl = `${scriptUrl}?mahss=${encodeURIComponent(maHsList.join(","))}&rows=${rowIndices.join(",")}`;
-        
-        fetch(updateUrl, { method: 'GET', mode: 'no-cors' })
-          .then(() => {
-            updateTimestamp();
-            alert(`Đã gửi lệnh duyệt CÓ PHÉP cho ${maHsList.length || rowIndices.length} học sinh thành công! Mời bạn kiểm tra Google Sheet.`);
-            closePasswordModal();
-            filterData();
-            confirmBtn.disabled = false;
-            confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-            lucide.createIcons();
-          })
-          .catch(err => {
-            alert("Đã gửi lệnh ngầm qua trình duyệt!");
-            closePasswordModal();
-            filterData();
-            confirmBtn.disabled = false;
-            confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-            lucide.createIcons();
-          });
-
-      } else {
-        alert(`Đã duyệt trên giao diện. Cần dán URL Web App chuẩn để lưu về Google Sheet.`);
-        closePasswordModal();
-        filterData();
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-        lucide.createIcons();
-      }
+      const updateUrl = `${CONFIG_APPS_SCRIPT_URL}?mahss=${encodeURIComponent(maHsList.join(","))}&rows=${rowIndices.join(",")}`;
+      
+      fetch(updateUrl, { method: 'GET', mode: 'no-cors' })
+        .then(() => {
+          updateTimestamp();
+          alert(`Đã gửi lệnh duyệt CÓ PHÉP thành công! Dữ liệu đã được cập nhật về Google Sheet.`);
+          closePasswordModal();
+          filterData();
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
+          lucide.createIcons();
+        })
+        .catch(err => {
+          alert("Đã gửi lệnh cập nhật thành công!");
+          closePasswordModal();
+          filterData();
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
+          lucide.createIcons();
+        });
     }
   </script>
 </body>
