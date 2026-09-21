@@ -115,7 +115,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-        <input type="text" id="search-input" oninput="filterData()" placeholder="Tìm theo tên hoặc mã HS..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
+        <input type="text" id="search-input" value="" autocomplete="off" oninput="filterData()" placeholder="Tìm theo tên hoặc mã HS..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
       </div>
       
       <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
@@ -211,6 +211,17 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+      // Xóa sạch ô tìm kiếm và bộ nhớ đệm trình duyệt
+      try {
+        localStorage.removeItem("searchQuery");
+        sessionStorage.clear();
+      } catch (e) {}
+
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) {
+        searchInput.value = "";
+      }
+
       const urlParams = new URLSearchParams(window.location.search);
       const modeParam = urlParams.get('mode');
       isParentMode = (modeParam === 'phuhuynh' || modeParam === 'parent');
@@ -319,7 +330,8 @@
     }
 
     function filterData() {
-      const search = document.getElementById("search-input").value.toLowerCase().trim();
+      const searchInput = document.getElementById("search-input");
+      const search = searchInput ? searchInput.value.toLowerCase().trim() : "";
       const selectedClass = document.getElementById("class-filter").value;
       const selectedStatus = document.getElementById("status-filter").value;
 
