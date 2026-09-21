@@ -113,6 +113,7 @@
 
     <!-- BỘ LỌC TÌM KIẾM & LỚP -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <!-- Ô TÌM KIẾM TÊN/MÃ HS - MẶC ĐỊNH TRỐNG -->
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
         <input type="text" id="search-input" value="" autocomplete="off" oninput="filterData()" placeholder="Tìm theo tên hoặc mã HS..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
@@ -185,7 +186,6 @@
   </div>
 
   <script>
-    // CẤU HÌNH MẶC ĐỊNH CỐ ĐỊNH TRONG CODE
     const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
     const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqvEr_Isw6D_h5EpoAfrnNlWSfNE7bpQuVx_ML5CzfIAEy5pfymzIkg6RxKRqCu3QE/exec";
 
@@ -211,12 +211,7 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
-      // Xóa sạch ô tìm kiếm và bộ nhớ đệm trình duyệt
-      try {
-        localStorage.removeItem("searchQuery");
-        sessionStorage.clear();
-      } catch (e) {}
-
+      // ĐẢM BẢO Ô TÌM KIẾM LUÔN TRỐNG KHI TẢI TRANG
       const searchInput = document.getElementById("search-input");
       if (searchInput) {
         searchInput.value = "";
@@ -272,7 +267,7 @@
       try {
         const response = await fetch(csvUrl);
         if (!response.ok) {
-          throw new Error("Không thể tải dữ liệu. Hãy đảm bảo Google Sheet đã được Chia sẻ ở chế độ 'Bất kỳ ai có đường liên kết'.");
+          throw new Error("Không thể tải dữ liệu từ Google Sheet.");
         }
 
         const csvText = await response.text();
