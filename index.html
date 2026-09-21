@@ -3,529 +3,686 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Điểm Danh & Tích Lũy Vắng</title>
+  <title>Tra Cứu & Duyệt Điểm Danh - Trường THPT Vị Thanh</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
+    body {
+      font-family: 'Inter', sans-serif;
+    }
   </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800">
+<body class="bg-slate-100 min-h-screen text-slate-800 p-3 sm:p-5 md:p-6">
 
-  <!-- HEADER -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md">
-          <i class="fa-solid me-1 fa-clipboard-user text-lg"></i>
-        </div>
-        <div>
-          <h1 class="font-bold text-lg text-slate-800 leading-tight">HỆ THỐNG ĐIỂM DANH HỌC SINH</h1>
-          <p class="text-xs text-slate-500" id="role-badge">Chế độ: Giáo Viên Chủ Nhiệm</p>
-        </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="flex items-center space-x-2">
-        <button id="btn-admin-reset" onclick="openAdminResetModal()" class="hidden px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-1.5">
-          <i class="fa-solid fa-key"></i> Admin Reset Pass
-        </button>
-        <button id="btn-change-pass" onclick="openChangePassModal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-lock"></i> Đổi Pass Lớp
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- MAIN CONTAINER -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-    <!-- BỘ LỌC & TÌM KIẾM -->
-    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Chọn Lớp</label>
-          <select id="select-lop" onchange="onLopChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            <option value="">-- Tất cả các lớp --</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Tìm kiếm Học Sinh</label>
-          <div class="relative">
-            <input type="text" id="search-input" onkeyup="filterData()" placeholder="Nhập tên hoặc mã HS..." class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Trạng Thái Hôm Nay</label>
-          <select id="select-status" onchange="filterData()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            <option value="">Tất cả trạng thái</option>
-            <option value="CÓ MẶT">Có Mặt</option>
-            <option value="ĐI TRỄ">Đi Trễ</option>
-            <option value="VẮNG CP">Vắng Có Phép</option>
-            <option value="VẮNG KP">Vắng Không Phép</option>
-          </select>
-        </div>
-        <div class="flex items-end">
-          <button onclick="loadAllData()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm shadow transition flex items-center justify-center gap-2">
-            <i class="fa-solid fa-rotate"></i> Cập Nhật Dữ Liệu
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- THỐNG KÊ NHANH (CARDS) -->
-    <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-medium text-slate-500">Sĩ Số Lớp</p>
-          <p class="text-2xl font-bold text-slate-800" id="stat-tong">0</p>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-users text-lg"></i></div>
-      </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-medium text-slate-500">Có Mặt Hôm Nay</p>
-          <p class="text-2xl font-bold text-emerald-600" id="stat-comat">0</p>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-user-check text-lg"></i></div>
-      </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-medium text-slate-500">Đi Trễ Hôm Nay</p>
-          <p class="text-2xl font-bold text-amber-600" id="stat-ditre">0</p>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-clock text-lg"></i></div>
-      </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-medium text-slate-500">Vắng (KP / CP)</p>
-          <p class="text-2xl font-bold text-rose-600" id="stat-vang">0 / 0</p>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"><i class="fa-solid fa-user-xmark text-lg"></i></div>
-      </div>
-    </div>
-
-    <!-- BẢNG DỮ LIỆU ĐIỂM DANH -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-        <h2 class="font-bold text-slate-700 text-sm uppercase tracking-wider">Danh Sách Học Sinh & Tích Lũy Vắng</h2>
-        <span class="text-xs text-slate-500" id="row-count">Đang tải dữ liệu...</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-slate-600">
-          <thead class="bg-slate-100 text-slate-700 font-semibold text-xs uppercase border-b border-slate-200">
-            <tr>
-              <th class="p-3.5 text-center w-12">STT</th>
-              <th class="p-3.5">Họ và Tên</th>
-              <th class="p-3.5 text-center">Lớp</th>
-              <th class="p-3.5 text-center">Mã HS</th>
-              <th class="p-3.5 text-center">Giờ Quét Hôm Nay</th>
-              <th class="p-3.5 text-center">Trạng Thái Hôm Nay</th>
-              <th class="p-3.5 text-center">Tích Lũy Vắng / Trễ</th>
-            </tr>
-          </thead>
-          <tbody id="table-body" class="divide-y divide-slate-200">
-            <!-- Dữ liệu render tại đây -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-
-  <!-- MODAL ADMIN RESET PASS -->
-  <div id="modal-admin" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200">
-      <h3 class="text-lg font-bold text-slate-800 mb-2"><i class="fa-solid fa-shield-halved text-rose-600 me-2"></i>Admin Reset Pass Lớp</h3>
-      <p class="text-xs text-slate-500 mb-4">Reset mật khẩu của lớp về mặc định <strong>123456</strong>.</p>
-      
-      <div class="space-y-3 mb-5">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật Khẩu Admin</label>
-          <input type="password" id="admin-pass-input" placeholder="Nhập mật khẩu Admin..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Chọn Lớp Cần Reset Pass</label>
-          <select id="admin-select-lop" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none">
-            <!-- Render danh sách lớp -->
-          </select>
-        </div>
-      </div>
-      
-      <div class="flex justify-end space-x-2">
-        <button onclick="closeAdminResetModal()" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200">Hủy</button>
-        <button onclick="executeAdminReset()" class="px-4 py-2 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 shadow">Xác Nhận Reset</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL ĐỔI PASS LỚP (GVCN) -->
-  <div id="modal-changepass" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200">
-      <h3 class="text-lg font-bold text-slate-800 mb-2"><i class="fa-solid fa-key text-indigo-600 me-2"></i>Đổi Mật Khẩu Lớp</h3>
-      
-      <div class="space-y-3 mb-5">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Chọn Lớp</label>
-          <select id="user-select-lop" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            <!-- Render danh sách lớp -->
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật Khẩu Hiện Tại</label>
-          <input type="password" id="old-pass-input" placeholder="Mật khẩu hiện tại..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật Khẩu Mới</label>
-          <input type="password" id="new-pass-input" placeholder="Mật khẩu mới..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-        </div>
-      </div>
-      
-      <div class="flex justify-end space-x-2">
-        <button onclick="closeChangePassModal()" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200">Hủy</button>
-        <button onclick="executeChangePass()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 shadow">Cập Nhật Pass</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- JAVASCRIPT LOGIC -->
-  <script>
-    // =========================================================================
-    // 1. CẤU HÌNH HỆ THỐNG & BIẾN TOÀN CỤC
-    // =========================================================================
-    const ADMIN_PASSWORD = "admin123"; // Mật khẩu Quản trị
+  <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-slate-100 space-y-6">
     
-    // Thay ID Google Sheet của bạn vào đây:
-    const SPREADSHEET_ID = "1ABC...YOUR_SHEET_ID_HERE..."; 
-    const URL_DATA = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=data`;
-    const URL_LICHSU = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=LichSu`;
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <div class="flex items-center gap-4">
+        <!-- LOGO TRƯỜNG -->
+        <div class="p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm flex-shrink-0">
+          <img src="logo.jpg" alt="Logo Trường THPT Vị Thanh" onerror="this.src='https://placehold.co/100x100/4f46e5/ffffff?text=THPT+VT'" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-contain">
+        </div>
+        
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold text-slate-800 leading-tight" id="header-title">Tra Cứu & Duyệt Điểm Danh</h1>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">
+            Trường THPT Vị Thanh — Tổng HS trong file: <span id="total-students" class="font-bold text-indigo-600">0</span>
+          </p>
+          <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Trạng thái: <span class="font-semibold text-slate-600">Đã kết nối dữ liệu</span>
+            | Cập nhật: <span id="last-updated-time" class="font-semibold text-emerald-600">Chưa tải</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="fetchAttendanceData()" title="Tải lại dữ liệu mới nhất" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 p-2.5 rounded-xl border border-slate-200 transition-all cursor-pointer">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+
+        <button onclick="copyParentLink()" title="Sao chép đường link cho Phụ huynh tra cứu" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
+          <i data-lucide="share-2" class="w-4 h-4 text-indigo-600"></i>
+          <span>Link Phụ Huynh</span>
+        </button>
+
+        <!-- NÚT RESET MẬT KHẨU DÀNH RIÊNG CHO ADMIN -->
+        <button id="btn-admin-reset" onclick="adminResetPassword()" class="hidden bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-600"></i> Admin
+        </button>
+
+        <button id="btn-change-pass" onclick="openChangePasswordModal()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="key-round" class="w-4 h-4 text-slate-600"></i> Đổi Mật Khẩu
+        </button>
+
+        <button id="btn-approve" onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
+        </button>
+      </div>
+    </div>
+
+    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC -->
+    <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Đang Hiển Thị</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-indigo-900 mt-0.5" id="stat-filtered-total">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
+          <i data-lucide="users" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-amber-50/70 border border-amber-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-amber-600 uppercase tracking-wider">Đi Trễ</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-amber-900 mt-0.5" id="stat-late">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+          <i data-lucide="clock" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-rose-50/70 border border-rose-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-rose-600 uppercase tracking-wider">Không Phép</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-rose-900 mt-0.5" id="stat-unexcused">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600">
+          <i data-lucide="user-x" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Có Phép</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-emerald-900 mt-0.5" id="stat-excused">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+          <i data-lucide="user-check" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="col-span-2 sm:col-span-1 bg-slate-100/80 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Đã Chọn</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-slate-800 mt-0.5" id="stat-selected">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-slate-300/40 flex items-center justify-center text-slate-700">
+          <i data-lucide="check-square" class="w-5 h-5"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- BỘ LỌC TÌM KIẾM & LỚP -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="search-input" value="" autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterData()" placeholder="Nhập họ tên..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
+      </div>
+      
+      <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
+        <option value="">-- Tất cả các lớp --</option>
+      </select>
+
+      <select id="status-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
+        <option value="">-- Tất cả trạng thái --</option>
+        <option value="ĐI TRỄ">ĐI TRỄ</option>
+        <option value="VẮNG KHÔNG PHÉP">VẮNG KHÔNG PHÉP</option>
+        <option value="VẮNG CÓ PHÉP">VẮNG CÓ PHÉP</option>
+      </select>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU -->
+    <div class="overflow-x-auto rounded-xl border border-slate-200">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold select-none">
+            <th class="p-3.5 col-checkbox w-10 text-center"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"></th>
+            <th class="p-3.5 w-12 text-center">STT</th>
+            <th class="p-3.5">Họ và Tên</th>
+            <th class="p-3.5">Lớp</th>
+            <th class="p-3.5">Mã HS</th>
+            <th class="p-3.5">Thời gian</th>
+            <th class="p-3.5">Trạng thái hiện tại</th>
+            <th class="p-3.5 text-center">Tích Lũy (Trễ | Không Phép | Có Phép)</th>
+          </tr>
+        </thead>
+        <tbody id="attendance-tbody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="8" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- POPUP XÁC THỰC MẬT KHẨU GVCN -->
+  <div id="password-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="lock" class="w-5 h-5 text-indigo-600"></i> Xác Thực GVCN
+        </h3>
+        <button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Lớp duyệt phép</label>
+          <input type="text" id="modal-class-input" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu GVCN</label>
+          <input type="password" id="modal-pass-input" placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="closePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
+        <button id="btn-confirm-approval" onclick="confirmApproval()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-emerald-600/20">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP ĐỔI MẬT KHẨU GVCN -->
+  <div id="change-pass-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="key-round" class="w-5 h-5 text-indigo-600"></i> Đổi Mật Khẩu GVCN
+        </h3>
+        <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Chọn Lớp</label>
+          <input type="text" id="change-pass-class" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu hiện tại</label>
+          <input type="password" id="change-pass-old" placeholder="Mật khẩu hiện tại..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu mới</label>
+          <input type="password" id="change-pass-new" placeholder="Nhập mật khẩu mới..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeChangePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
+        <button onclick="saveNewPassword()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-indigo-600/20">
+          <i data-lucide="save" class="w-4 h-4"></i> Lưu Mật Khẩu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
+    // Đã cập nhật Script URL mới từ yêu cầu của bạn
+    const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJBCng3RukL3O-ES5qSvkFRata4MajCeoO-70VzssenaXLIcSzO1cGu9QmVlvccjGR/exec";
+    
+    // Mật khẩu Admin để khôi phục mật khẩu các lớp
+    const ADMIN_PASSWORD = "admin123";
+
+    const DEFAULT_PASSWORDS = {
+      "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
+      "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
+      "11A1": "123456", "11A2": "123456", "11A3": "123456", "11A4": "123456", "11A5": "123456",
+      "11A6": "123456", "11A7": "123456", "11A8": "123456", "11A9": "123456", "11A10": "123456", "11A11": "123456",
+      "12A1": "123456", "12A2": "123456", "12A3": "123456", "12A4": "123456", "12A5": "123456",
+      "12A6": "123456", "12A7": "123456", "12A8": "123456", "12A9": "123456", "12A10": "123456", "12A11": "123456"
+    };
+
+    function getClassPassword(className) {
+      const storedPasses = JSON.parse(localStorage.getItem("CLASS_PASSWORDS") || "{}");
+      return storedPasses[className] || DEFAULT_PASSWORDS[className] || "123456";
+    }
+
+    function setClassPassword(className, newPass) {
+      const storedPasses = JSON.parse(localStorage.getItem("CLASS_PASSWORDS") || "{}");
+      storedPasses[className] = newPass;
+      localStorage.setItem("CLASS_PASSWORDS", JSON.stringify(storedPasses));
+    }
+
+    /* QUẢN LÝ TÍCH LŨY DỮ LIỆU DÙNG LOCALSTORAGE */
+    function getAccumulatedData() {
+      return JSON.parse(localStorage.getItem("ACCUMULATED_ATTENDANCE") || "{}");
+    }
+
+    function saveAccumulatedData(data) {
+      localStorage.setItem("ACCUMULATED_ATTENDANCE", JSON.stringify(data));
+    }
+
+    function updateStudentAccumulation(studentKey, oldStatus, newStatus) {
+      let accum = getAccumulatedData();
+      if (!accum[studentKey]) {
+        accum[studentKey] = { late: 0, unexcused: 0, excused: 0 };
+      }
+
+      // Giảm trạng thái cũ
+      if (oldStatus === "ĐI TRỄ") accum[studentKey].late = Math.max(0, accum[studentKey].late - 1);
+      else if (oldStatus === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused = Math.max(0, accum[studentKey].unexcused - 1);
+      else if (oldStatus === "VẮNG CÓ PHÉP") accum[studentKey].excused = Math.max(0, accum[studentKey].excused - 1);
+
+      // Tăng trạng thái mới
+      if (newStatus === "ĐI TRỄ") accum[studentKey].late++;
+      else if (newStatus === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused++;
+      else if (newStatus === "VẮNG CÓ PHÉP") accum[studentKey].excused++;
+
+      saveAccumulatedData(accum);
+    }
 
     let allStudents = [];
-    let cumulativeDataMap = {}; // Key: maHs hoặc hoTen -> {tongTre, tongVangKP, tongVangCP}
-    let classPasswords = {}; // Lưu mật khẩu các lớp (Mặc định: 123456)
-    let currentMode = "gvcn"; // gvcn, admin, phuhuynh
+    let filteredStudents = [];
+    let pendingStudents = [];
+    let isParentMode = false;
+    let isAdminMode = false;
 
-    // =========================================================================
-    // 2. KHỞI TẠO VÀ PHÂN QUYỀN TRANG
-    // =========================================================================
-    window.addEventListener("DOMContentLoaded", () => {
-      initRoleMode();
-      loadAllData();
+    function formatExcelTime(val) {
+      if (!val || val === "---") return "---";
+      let num = parseFloat(val);
+      if (!isNaN(num) && num >= 0 && num <= 1) {
+        let totalSeconds = Math.round(num * 86400);
+        let hours = Math.floor(totalSeconds / 3600);
+        let minutes = Math.floor((totalSeconds % 3600) / 60);
+        let seconds = totalSeconds % 60;
+        return [hours, minutes, seconds].map(v => String(v).padStart(2, '0')).join(':');
+      }
+      return val;
+    }
+
+    function updateTimestamp() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString('vi-VN');
+      document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
+    }
+
+    window.addEventListener("pageshow", () => {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) searchInput.value = "";
     });
 
-    function initRoleMode() {
+    window.addEventListener("DOMContentLoaded", () => {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) searchInput.value = "";
+
       const urlParams = new URLSearchParams(window.location.search);
-      const mode = urlParams.get('mode');
+      const modeParam = urlParams.get('mode');
+      isParentMode = (modeParam === 'phuhuynh' || modeParam === 'parent');
+      isAdminMode = (modeParam === 'admin');
 
-      const roleBadge = document.getElementById("role-badge");
-      const btnAdminReset = document.getElementById("btn-admin-reset");
+      applyModeUI();
+      lucide.createIcons();
+      fetchAttendanceData();
+    });
+
+    function applyModeUI() {
+      const statsContainer = document.getElementById("stats-container");
+      const headerTitle = document.getElementById("header-title");
+      const btnApprove = document.getElementById("btn-approve");
       const btnChangePass = document.getElementById("btn-change-pass");
+      const btnAdminReset = document.getElementById("btn-admin-reset");
+      const checkboxCols = document.querySelectorAll(".col-checkbox");
 
-      if (mode === 'admin') {
-        currentMode = "admin";
-        roleBadge.innerText = "Chế độ: QUẢN TRỊ VIÊN (ADMIN)";
-        roleBadge.className = "text-xs font-bold text-rose-600";
-        btnAdminReset.classList.remove("hidden");
-      } else if (mode === 'phuhuynh') {
-        currentMode = "phuhuynh";
-        roleBadge.innerText = "Chế độ: TRA CỨU PHỤ HUYNH";
-        roleBadge.className = "text-xs font-semibold text-emerald-600";
-        btnAdminReset.classList.add("hidden");
-        btnChangePass.classList.add("hidden");
+      if (isParentMode) {
+        headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
+        btnApprove.classList.add("hidden");
+        if (btnChangePass) btnChangePass.classList.add("hidden");
+        if (btnAdminReset) btnAdminReset.classList.add("hidden");
+        statsContainer.classList.add("hidden");
+        checkboxCols.forEach(col => col.classList.add("hidden"));
       } else {
-        currentMode = "gvcn";
-        roleBadge.innerText = "Chế độ: GIÁO VIÊN CHỦ NHIỆM";
-        roleBadge.className = "text-xs font-semibold text-indigo-600";
-        btnAdminReset.classList.add("hidden");
+        headerTitle.innerText = "Tra Cứu & Duyệt Điểm Danh";
+        btnApprove.classList.remove("hidden");
+        if (btnChangePass) btnChangePass.classList.remove("hidden");
+        statsContainer.classList.remove("hidden");
+        checkboxCols.forEach(col => col.classList.remove("hidden"));
+
+        if (isAdminMode && btnAdminReset) {
+          btnAdminReset.classList.remove("hidden");
+        }
       }
     }
 
-    // =========================================================================
-    // 3. TẢI VÀ XỬ LÝ DỮ LIỆU TỪ GOOGLE SHEET
-    // =========================================================================
-    async function loadAllData() {
-      document.getElementById("row-count").innerText = "Đang đồng bộ dữ liệu...";
-      try {
-        // Tải đồng thời 2 sheet: data và LichSu
-        const [resData, resLS] = await Promise.all([
-          fetch(URL_DATA).then(r => r.text()),
-          fetch(URL_LICHSU).then(r => r.text()).catch(() => null)
-        ]);
+    function copyParentLink() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const parentUrl = baseUrl + "?mode=phuhuynh";
+      
+      navigator.clipboard.writeText(parentUrl).then(() => {
+        alert("Đã sao chép link tra cứu Phụ huynh:\n" + parentUrl);
+      }).catch(() => {
+        prompt("Sao chép link gửi Phụ huynh dưới đây:", parentUrl);
+      });
+    }
 
-        // Parse dữ liệu Tích Lũy từ sheet LichSu
-        if (resLS) {
-          parseLichSuData(resLS);
+    async function fetchAttendanceData() {
+      const tbody = document.getElementById("attendance-tbody");
+      const colSpan = isParentMode ? 7 : 8;
+
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
+
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${CONFIG_DRIVE_FILE_ID}/gviz/tq?tqx=out:csv&sheet=data`;
+
+      try {
+        const response = await fetch(csvUrl);
+        if (!response.ok) {
+          throw new Error("Không thể tải dữ liệu từ Google Sheet.");
         }
 
-        // Parse dữ liệu Điểm Danh Hôm Nay từ sheet data
-        parseCurrentData(resData);
+        const csvText = await response.text();
+        const workbook = XLSX.read(csvText, { type: 'string' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
 
-        renderClassOptions();
-        filterData();
-      } catch (err) {
-        console.error("Lỗi khi tải dữ liệu:", err);
-        document.getElementById("row-count").innerText = "Lỗi kết nối dữ liệu Google Sheet!";
-      }
-    }
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        allStudents = [];
+        const accum = getAccumulatedData();
 
-    // Xử lý Sheet "LichSu" (Tính tổng tích lũy)
-    function parseLichSuData(jsonText) {
-      cumulativeDataMap = {};
-      try {
-        const rawJson = JSON.parse(jsonText.substring(47, jsonText.length - 2));
-        const rows = rawJson.table.rows;
+        for (let r = 4; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row || !row[1]) continue;
 
-        // Bắt đầu đọc từ dòng index 4 (Dòng 5 trên sheet)
-        for (let i = 4; i < rows.length; i++) {
-          const c = rows[i].c;
-          if (!c) continue;
+          let name = String(row[1]).trim();
+          if (name === "" || name.includes("HỌ VÀ TÊN")) continue;
 
-          const hoTen = c[1] ? (c[1].v || "").toString().trim() : "";
-          const maHs = c[3] ? (c[3].v || "").toString().trim() : "";
-          const key = maHs || hoTen;
+          let lop = row[2] ? String(row[2]).trim().toUpperCase() : "---";
+          let maHs = row[4] ? String(row[4]).trim() : "---";
+          let rawTime = row[10] ? String(row[10]).trim() : "---";
+          let timeVal = formatExcelTime(rawTime);
+          
+          let treVal = row[5] ? String(row[5]).trim() : "";
+          let phepVal = row[15] ? String(row[15]).trim() : "";
 
-          if (!key) continue;
-
-          let tre = 0, vangKP = 0, vangCP = 0;
-
-          // Duyệt qua các cột nhật ký từ Cột E (index 4) trở đi
-          for (let col = 4; col < c.length; col++) {
-            if (!c[col]) continue;
-            const statusVal = (c[col].v || "").toString().trim().toUpperCase();
-
-            if (statusVal === "ĐI TRỄ") tre++;
-            else if (statusVal === "VẮNG KP") vangKP++;
-            else if (statusVal === "VẮNG CP") vangCP++;
+          let status = "VẮNG KHÔNG PHÉP";
+          if (treVal !== "") {
+            status = "ĐI TRỄ";
+          } else if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p" || phepVal.includes("Có phép") || phepVal === "P") {
+            status = "VẮNG CÓ PHÉP";
           }
 
-          cumulativeDataMap[key] = { tongTre: tre, tongVangKP: vangKP, tongVangCP: vangCP };
+          let studentKey = maHs !== "---" ? maHs : `${name}_${lop}`;
+          
+          // Khởi tạo lưu trữ tích lũy ban đầu nếu chưa có
+          if (!accum[studentKey]) {
+            accum[studentKey] = { late: 0, unexcused: 0, excused: 0 };
+            if (status === "ĐI TRỄ") accum[studentKey].late = 1;
+            else if (status === "VẮNG KHÔNG PHÉP") accum[studentKey].unexcused = 1;
+            else if (status === "VẮNG CÓ PHÉP") accum[studentKey].excused = 1;
+          }
+
+          allStudents.push({
+            rowIdx: r + 1,
+            key: studentKey,
+            name: name,
+            lop: lop,
+            maHs: maHs,
+            time: timeVal,
+            status: status,
+            selected: false
+          });
         }
-      } catch (e) {
-        console.warn("Không đọc được sheet LichSu hoặc chưa khởi tạo:", e);
+
+        saveAccumulatedData(accum);
+        document.getElementById("total-students").innerText = allStudents.length;
+        updateTimestamp();
+
+        const classes = [...new Set(allStudents.map(s => s.lop))].sort();
+        const classSelect = document.getElementById("class-filter");
+        classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
+          classes.map(c => `<option value="${c}">${c}</option>`).join('');
+
+        const searchInput = document.getElementById("search-input");
+        if (searchInput) searchInput.value = "";
+
+        filterData();
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
       }
     }
 
-    // Xử lý Sheet "data" (Thông tin hôm nay)
-    function parseCurrentData(jsonText) {
-      allStudents = [];
-      const rawJson = JSON.parse(jsonText.substring(47, jsonText.length - 2));
-      const rows = rawJson.table.rows;
-
-      // Đọc từ dòng 5 (Index 4)
-      for (let i = 4; i < rows.length; i++) {
-        const c = rows[i].c;
-        if (!c) continue;
-
-        const stt = c[0] ? c[0].v : (i - 3);
-        const hoTen = c[1] ? (c[1].v || "").toString().trim() : "";
-        if (!hoTen) continue;
-
-        const lop = c[2] ? (c[2].v || "").toString().trim() : "";
-        const maHs = c[4] ? (c[4].v || "").toString().trim() : "";
-        
-        // Quét QR thời gian ở cột 11 (index 10)
-        const rawTime = c[10] ? (c[10].v || "").toString().trim() : "";
-        const treVal = c[5] ? (c[5].v || "").toString().trim() : "";
-        const phepVal = c[15] ? (c[15].v || "").toString().trim() : "";
-
-        // Xác định trạng thái hôm nay
-        let status = "VẮNG KP";
-        if (treVal !== "") {
-          status = "ĐI TRỄ";
-        } else if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p") {
-          status = "VẮNG CP";
-        } else if (rawTime !== "" && rawTime !== "---") {
-          status = "CÓ MẶT";
-        }
-
-        // Khởi tạo mật khẩu mặc định cho lớp nếu chưa có
-        if (lop && !classPasswords[lop]) {
-          classPasswords[lop] = "123456";
-        }
-
-        // Ghép dữ liệu tích lũy
-        const key = maHs || hoTen;
-        const cum = cumulativeDataMap[key] || { tongTre: 0, tongVangKP: 0, tongVangCP: 0 };
-
-        allStudents.push({
-          stt: stt,
-          hoTen: hoTen,
-          lop: lop,
-          maHs: maHs,
-          time: rawTime || "---",
-          status: status,
-          tongTre: cum.tongTre,
-          tongVangKP: cum.tongVangKP,
-          tongVangCP: cum.tongVangCP
-        });
-      }
-    }
-
-    // =========================================================================
-    // 4. BỘ LỌC VÀ HIỂN THỊ DỮ LIỆU (RENDER)
-    // =========================================================================
     function filterData() {
-      const selectedLop = document.getElementById("select-lop").value.toLowerCase();
-      const searchKeyword = document.getElementById("search-input").value.toLowerCase().trim();
-      const selectedStatus = document.getElementById("select-status").value;
+      const searchInput = document.getElementById("search-input");
+      const search = searchInput ? searchInput.value.toLowerCase().trim() : "";
+      const selectedClass = document.getElementById("class-filter").value;
+      const selectedStatus = document.getElementById("status-filter").value;
 
-      const filtered = allStudents.filter(s => {
-        const matchLop = !selectedLop || s.lop.toLowerCase() === selectedLop;
-        const matchSearch = !searchKeyword || s.hoTen.toLowerCase().includes(searchKeyword) || s.maHs.toLowerCase().includes(searchKeyword);
+      filteredStudents = allStudents.filter(s => {
+        const matchSearch = !search || s.name.toLowerCase().includes(search) || s.maHs.toLowerCase().includes(search);
+        const matchClass = !selectedClass || s.lop === selectedClass;
         const matchStatus = !selectedStatus || s.status === selectedStatus;
-        return matchLop && matchSearch && matchStatus;
+        return matchSearch && matchClass && matchStatus;
       });
 
-      renderTable(filtered);
-      updateStats(filtered);
+      updateStats();
+      renderTable();
     }
 
-    function renderTable(data) {
-      const tbody = document.getElementById("table-body");
-      tbody.innerHTML = "";
+    function updateStats() {
+      if (isParentMode) return;
 
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400 font-medium">Không tìm thấy dữ liệu phù hợp</td></tr>`;
-        document.getElementById("row-count").innerText = "Hiển thị: 0 học sinh";
+      const filteredTotal = filteredStudents.length;
+      let lateCount = 0;
+      let unexcusedCount = 0;
+      let excusedCount = 0;
+      let selectedCount = 0;
+
+      filteredStudents.forEach(s => {
+        if (s.status === "ĐI TRỄ") lateCount++;
+        else if (s.status === "VẮNG KHÔNG PHÉP") unexcusedCount++;
+        else if (s.status === "VẮNG CÓ PHÉP") excusedCount++;
+
+        if (s.selected) selectedCount++;
+      });
+
+      document.getElementById("stat-filtered-total").innerText = filteredTotal;
+      document.getElementById("stat-late").innerText = lateCount;
+      document.getElementById("stat-unexcused").innerText = unexcusedCount;
+      document.getElementById("stat-excused").innerText = excusedCount;
+      document.getElementById("stat-selected").innerText = selectedCount;
+    }
+
+    function toggleSelectAll(master) {
+      filteredStudents.forEach(s => s.selected = master.checked);
+      updateStats();
+      renderTable();
+    }
+
+    function toggleStudentSelect(index, isChecked) {
+      if (filteredStudents[index]) {
+        filteredStudents[index].selected = isChecked;
+        
+        const allSelected = filteredStudents.length > 0 && filteredStudents.every(s => s.selected);
+        const masterCheckbox = document.getElementById("select-all");
+        if (masterCheckbox) masterCheckbox.checked = allSelected;
+
+        updateStats();
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("attendance-tbody");
+      const colSpan = isParentMode ? 7 : 8;
+      const accum = getAccumulatedData();
+
+      if (!filteredStudents || filteredStudents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
         return;
       }
 
-      data.forEach((s, idx) => {
-        // Tag trạng thái hôm nay
-        let statusBadge = "bg-rose-100 text-rose-700 border-rose-200";
-        if (s.status === "CÓ MẶT") statusBadge = "bg-emerald-100 text-emerald-700 border-emerald-200";
-        else if (s.status === "ĐI TRỄ") statusBadge = "bg-amber-100 text-amber-700 border-amber-200";
-        else if (s.status === "VẮNG CP") statusBadge = "bg-blue-100 text-blue-700 border-blue-200";
-
-        // Tag Cảnh Báo Tích Lũy
-        let cumBadge = "bg-slate-100 text-slate-600 border-slate-200";
-        if (s.tongVangKP >= 3) {
-          cumBadge = "bg-rose-100 text-rose-700 font-bold border-rose-300 animate-pulse"; // Cảnh báo ĐỎ
-        } else if (s.tongTre >= 3) {
-          cumBadge = "bg-amber-100 text-amber-800 font-bold border-amber-300"; // Cảnh báo VÀNG
+      tbody.innerHTML = filteredStudents.map((s, idx) => {
+        let badgeStyle = "bg-rose-100 text-rose-700 border-rose-200";
+        if (s.status === "ĐI TRỄ") {
+          badgeStyle = "bg-amber-100 text-amber-800 border-amber-200";
+        } else if (s.status === "VẮNG CÓ PHÉP") {
+          badgeStyle = "bg-emerald-100 text-emerald-700 border-emerald-200";
         }
 
-        const tr = document.createElement("tr");
-        tr.className = "hover:bg-slate-50 transition-colors";
-        tr.innerHTML = `
-          <td class="p-3.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-3.5 font-semibold text-slate-800">${s.hoTen}</td>
-          <td class="p-3.5 text-center"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-bold">${s.lop}</span></td>
-          <td class="p-3.5 text-center text-slate-500 font-mono text-xs">${s.maHs}</td>
-          <td class="p-3.5 text-center text-slate-500 font-mono text-xs">${s.time}</td>
-          <td class="p-3.5 text-center">
-            <span class="px-2.5 py-1 rounded-lg text-xs font-bold border inline-block ${statusBadge}">${s.status}</span>
-          </td>
-          <td class="p-3.5 text-center">
-            <span class="px-3 py-1 rounded-lg text-xs border inline-block ${cumBadge}">
-              ${s.tongTre} Trễ | ${s.tongVangKP} Vắng KP | ${s.tongVangCP} Vắng CP
-            </span>
-          </td>
+        const studentAccum = accum[s.key] || { late: 0, unexcused: 0, excused: 0 };
+
+        const checkboxTd = isParentMode ? '' : `
+          <td class="p-3.5 col-checkbox text-center">
+            <input type="checkbox" ${s.selected ? 'checked' : ''} onchange="toggleStudentSelect(${idx}, this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+          </td>`;
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors ${s.selected ? 'bg-indigo-50/30' : ''}">
+            ${checkboxTd}
+            <td class="p-3.5 text-center text-slate-400 font-medium">${idx + 1}</td>
+            <td class="p-3.5 font-semibold text-slate-800">${s.name}</td>
+            <td class="p-3.5"><span class="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
+            <td class="p-3.5 text-slate-500 font-mono text-xs">${s.maHs}</td>
+            <td class="p-3.5 text-slate-500 font-mono text-xs">${s.time}</td>
+            <td class="p-3.5">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-bold border inline-block ${badgeStyle}">
+                ${s.status}
+              </span>
+            </td>
+            <td class="p-3.5 text-center">
+              <span class="inline-flex items-center gap-1.5 text-xs font-bold font-mono">
+                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800" title="Tổng trễ">${studentAccum.late} Trễ</span>
+                <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800" title="Tổng vắng KP">${studentAccum.unexcused} KP</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800" title="Tổng vắng CP">${studentAccum.excused} CP</span>
+              </span>
+            </td>
+          </tr>
         `;
-        tbody.appendChild(tr);
-      });
-
-      document.getElementById("row-count").innerText = `Hiển thị: ${data.length} / ${allStudents.length} học sinh`;
+      }).join('');
     }
 
-    function updateStats(data) {
-      let coMat = 0, diTre = 0, vangKP = 0, vangCP = 0;
-      data.forEach(s => {
-        if (s.status === "CÓ MẶT") coMat++;
-        else if (s.status === "ĐI TRỄ") diTre++;
-        else if (s.status === "VẮNG KP") vangKP++;
-        else if (s.status === "VẮNG CP") vangCP++;
-      });
+    function approveSelected() {
+      pendingStudents = filteredStudents.filter(s => s.selected);
+      if (pendingStudents.length === 0) {
+        alert("Vui lòng tích chọn ít nhất 1 học sinh để duyệt có phép.");
+        return;
+      }
 
-      document.getElementById("stat-tong").innerText = data.length;
-      document.getElementById("stat-comat").innerText = coMat;
-      document.getElementById("stat-ditre").innerText = diTre;
-      document.getElementById("stat-vang").innerText = `${vangKP} / ${vangCP}`;
+      const selectedClasses = [...new Set(pendingStudents.map(s => s.lop))];
+      document.getElementById("modal-class-input").value = selectedClasses.length === 1 && selectedClasses[0] !== "---" ? selectedClasses[0] : "";
+      document.getElementById("modal-pass-input").value = "";
+
+      document.getElementById("password-modal").classList.remove("hidden");
     }
 
-    function renderClassOptions() {
-      const classes = [...new Set(allStudents.map(s => s.lop))].filter(Boolean).sort();
-      
-      const selectLop = document.getElementById("select-lop");
-      const adminSelectLop = document.getElementById("admin-select-lop");
-      const userSelectLop = document.getElementById("user-select-lop");
-
-      let optionsHtml = '<option value="">-- Tất cả các lớp --</option>';
-      let classOnlyHtml = '';
-
-      classes.forEach(c => {
-        optionsHtml += `<option value="${c}">Lớp ${c}</option>`;
-        classOnlyHtml += `<option value="${c}">Lớp ${c}</option>`;
-      });
-
-      selectLop.innerHTML = optionsHtml;
-      adminSelectLop.innerHTML = classOnlyHtml;
-      userSelectLop.innerHTML = classOnlyHtml;
+    function closePasswordModal() {
+      document.getElementById("password-modal").classList.add("hidden");
     }
 
-    function onLopChange() {
+    function confirmApproval() {
+      const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
+      const inputPass = document.getElementById("modal-pass-input").value.trim();
+
+      const correctPass = getClassPassword(targetClass);
+
+      if (inputPass !== correctPass) {
+        alert(`Mật khẩu GVCN Lớp ${targetClass} không chính xác!`);
+        return;
+      }
+
+      let maHsList = [];
+      let rowIndices = [];
+
+      pendingStudents.forEach(s => {
+        if (s.status === "VẮNG KHÔNG PHÉP") {
+          // Xử lý chuyển đổi & TÍCH LŨY DỮ LIỆU
+          updateStudentAccumulation(s.key, "VẮNG KHÔNG PHÉP", "VẮNG CÓ PHÉP");
+          s.status = "VẮNG CÓ PHÉP";
+          s.selected = false;
+          rowIndices.push(s.rowIdx);
+          if (s.maHs && s.maHs !== "---") {
+            maHsList.push(s.maHs);
+          }
+        }
+      });
+
+      if (maHsList.length === 0 && rowIndices.length === 0) {
+        alert(`Các học sinh được chọn đã ở trạng thái Có phép.`);
+        closePasswordModal();
+        return;
+      }
+
+      closePasswordModal();
       filterData();
+      updateTimestamp();
+
+      const masterCheckbox = document.getElementById("select-all");
+      if (masterCheckbox) masterCheckbox.checked = false;
+
+      const updateUrl = `${CONFIG_APPS_SCRIPT_URL}?mahss=${encodeURIComponent(maHsList.join(","))}&rows=${rowIndices.join(",")}`;
+      
+      fetch(updateUrl, { 
+        method: 'GET', 
+        mode: 'no-cors',
+        keepalive: true 
+      }).catch(err => console.log("Lỗi cập nhật nền:", err));
     }
 
-    // =========================================================================
-    // 5. MÔ-ĐUN QUẢN LÝ MẬT KHẨU (ADMIN & GVCN)
-    // =========================================================================
-    function openAdminResetModal() {
-      document.getElementById("admin-pass-input").value = "";
-      document.getElementById("modal-admin").classList.remove("hidden");
+    /* CHỨC NĂNG ĐỔI MẬT KHẨU GVCN */
+    function openChangePasswordModal() {
+      const selectedClass = document.getElementById("class-filter").value;
+      document.getElementById("change-pass-class").value = selectedClass || "";
+      document.getElementById("change-pass-old").value = "";
+      document.getElementById("change-pass-new").value = "";
+      document.getElementById("change-pass-modal").classList.remove("hidden");
     }
 
-    function closeAdminResetModal() {
-      document.getElementById("modal-admin").classList.add("hidden");
+    function closeChangePasswordModal() {
+      document.getElementById("change-pass-modal").classList.add("hidden");
     }
 
-    function executeAdminReset() {
-      const inputPass = document.getElementById("admin-pass-input").value;
-      const selectedLop = document.getElementById("admin-select-lop").value;
+    function saveNewPassword() {
+      const targetClass = document.getElementById("change-pass-class").value.trim().toUpperCase();
+      const oldPass = document.getElementById("change-pass-old").value.trim();
+      const newPass = document.getElementById("change-pass-new").value.trim();
 
-      if (inputPass !== ADMIN_PASSWORD) {
-        alert("❌ Mật khẩu Admin không chính xác!");
+      if (!targetClass) {
+        alert("Vui lòng nhập tên lớp!");
         return;
       }
 
-      classPasswords[selectedLop] = "123456";
-      alert(`✅ Đã reset mật khẩu Lớp ${selectedLop} thành công về mặc định: 123456`);
-      closeAdminResetModal();
-    }
-
-    function openChangePassModal() {
-      document.getElementById("old-pass-input").value = "";
-      document.getElementById("new-pass-input").value = "";
-      document.getElementById("modal-changepass").classList.remove("hidden");
-    }
-
-    function closeChangePassModal() {
-      document.getElementById("modal-changepass").classList.add("hidden");
-    }
-
-    function executeChangePass() {
-      const selectedLop = document.getElementById("user-select-lop").value;
-      const oldPass = document.getElementById("old-pass-input").value;
-      const newPass = document.getElementById("new-pass-input").value;
-
-      if (!newPass) {
-        alert("⚠️ Vui lòng nhập mật khẩu mới!");
-        return;
-      }
-
-      const currentPass = classPasswords[selectedLop] || "123456";
-
+      const currentPass = getClassPassword(targetClass);
       if (oldPass !== currentPass) {
-        alert("❌ Mật khẩu hiện tại không chính xác!");
+        alert("Mật khẩu hiện tại không đúng!");
         return;
       }
 
-      classPasswords[selectedLop] = newPass;
-      alert(`✅ Đã đổi mật khẩu Lớp ${selectedLop} thành công!`);
-      closeChangePassModal();
+      if (!newPass || newPass.length < 4) {
+        alert("Mật khẩu mới phải từ 4 ký tự trở lên!");
+        return;
+      }
+
+      setClassPassword(targetClass, newPass);
+      alert(`Đã đổi mật khẩu thành công cho lớp ${targetClass}!`);
+      closeChangePasswordModal();
+    }
+
+    /* TÍNH NĂNG RESET MẬT KHẨU DÀNH RIÊNG CHO QUẢN TRỊ VIÊN (ADMIN) */
+    function adminResetPassword() {
+      const adminPass = prompt("Nhập mật khẩu Admin quản trị:");
+      if (adminPass !== ADMIN_PASSWORD) {
+        alert("Mật khẩu Admin không chính xác!");
+        return;
+      }
+
+      const targetClass = prompt("Nhập tên lớp cần khôi phục mật khẩu (Ví dụ: 10A1):");
+      if (!targetClass) return;
+
+      const upperClass = targetClass.trim().toUpperCase();
+      setClassPassword(upperClass, "123456");
+      alert(`Đã đặt lại mật khẩu lớp ${upperClass} về mặc định là: 123456`);
     }
   </script>
 </body>
