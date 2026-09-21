@@ -113,7 +113,6 @@
 
     <!-- BỘ LỌC TÌM KIẾM & LỚP -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <!-- Cấu hình triệt tiêu tự động điền của trình duyệt -->
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
         <input type="text" id="search-input" value="" autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterData()" placeholder="Nhập họ tên..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
@@ -203,7 +202,6 @@
     let pendingStudents = [];
     let isParentMode = false;
 
-    // Định dạng số thập phân Excel thành HH:mm:ss
     function formatExcelTime(val) {
       if (!val || val === "---") return "---";
       let num = parseFloat(val);
@@ -224,19 +222,14 @@
       document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
     }
 
-    // Lắng nghe sự kiện pageshow để chống trình duyệt tự điền giá trị cũ
     window.addEventListener("pageshow", () => {
       const searchInput = document.getElementById("search-input");
-      if (searchInput) {
-        searchInput.value = "";
-      }
+      if (searchInput) searchInput.value = "";
     });
 
     window.addEventListener("DOMContentLoaded", () => {
       const searchInput = document.getElementById("search-input");
-      if (searchInput) {
-        searchInput.value = "";
-      }
+      if (searchInput) searchInput.value = "";
 
       const urlParams = new URLSearchParams(window.location.search);
       const modeParam = urlParams.get('mode');
@@ -340,7 +333,6 @@
         classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
           classes.map(c => `<option value="${c}">${c}</option>`).join('');
 
-        // Đảm bảo ô input trống trước khi lọc
         const searchInput = document.getElementById("search-input");
         if (searchInput) searchInput.value = "";
 
@@ -468,6 +460,7 @@
       document.getElementById("password-modal").classList.add("hidden");
     }
 
+    // TỐI ƯU HÓA: Cập nhật giao diện lập tức + gửi yêu cầu ngầm
     function confirmApproval() {
       const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
       const inputPass = document.getElementById("modal-pass-input").value.trim();
@@ -476,10 +469,6 @@
         alert(`Mật khẩu GVCN Lớp ${targetClass} không chính xác!`);
         return;
       }
-
-      const confirmBtn = document.getElementById("btn-confirm-approval");
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = "Đang gửi...";
 
       let maHsList = [];
       let rowIndices = [];
@@ -498,32 +487,26 @@
       if (maHsList.length === 0 && rowIndices.length === 0) {
         alert(`Các học sinh được chọn đã ở trạng thái Có phép.`);
         closePasswordModal();
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-        lucide.createIcons();
         return;
       }
 
+      // 1. Cập nhật giao diện NGAY LẬP TỨC mà không cần đợi server
+      closePasswordModal();
+      filterData();
+      updateTimestamp();
+
+      // Reset checkbox chọn tất cả
+      const masterCheckbox = document.getElementById("select-all");
+      if (masterCheckbox) masterCheckbox.checked = false;
+
+      // 2. Gửi request ngầm cho Google Apps Script (Fire-and-forget)
       const updateUrl = `${CONFIG_APPS_SCRIPT_URL}?mahss=${encodeURIComponent(maHsList.join(","))}&rows=${rowIndices.join(",")}`;
       
-      fetch(updateUrl, { method: 'GET', mode: 'no-cors' })
-        .then(() => {
-          updateTimestamp();
-          alert(`Đã gửi lệnh duyệt CÓ PHÉP thành công! Dữ liệu đã được cập nhật về Google Sheet.`);
-          closePasswordModal();
-          filterData();
-          confirmBtn.disabled = false;
-          confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-          lucide.createIcons();
-        })
-        .catch(err => {
-          alert("Đã gửi lệnh cập nhật thành công!");
-          closePasswordModal();
-          filterData();
-          confirmBtn.disabled = false;
-          confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-          lucide.createIcons();
-        });
+      fetch(updateUrl, { 
+        method: 'GET', 
+        mode: 'no-cors',
+        keepalive: true 
+      }).catch(err => console.log("Lỗi cập nhật nền:", err));
     }
   </script>
 </body>
