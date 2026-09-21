@@ -58,7 +58,7 @@
       </div>
     </div>
 
-    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC (CHỈ HIỂN THỊ DÀNH CHO GIÁO VIÊN) -->
+    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC (CHỈ HIỂN THỊ CHO GIÁO VIÊN) -->
     <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
         <div>
@@ -113,10 +113,10 @@
 
     <!-- BỘ LỌC TÌM KIẾM & LỚP -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <!-- Ô TRỐNG - NHÃN: "Nhập họ tên..." -->
+      <!-- Cấu hình triệt tiêu tự động điền của trình duyệt -->
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-        <input type="text" id="search-input" value="" autocomplete="off" oninput="filterData()" placeholder="Nhập họ tên..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
+        <input type="text" id="search-input" value="" autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterData()" placeholder="Nhập họ tên..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
       </div>
       
       <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
@@ -203,7 +203,7 @@
     let pendingStudents = [];
     let isParentMode = false;
 
-    // Chuyển đổi số thập phân thời gian từ Excel sang dạng HH:mm:ss
+    // Định dạng số thập phân Excel thành HH:mm:ss
     function formatExcelTime(val) {
       if (!val || val === "---") return "---";
       let num = parseFloat(val);
@@ -224,8 +224,15 @@
       document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
     }
 
+    // Lắng nghe sự kiện pageshow để chống trình duyệt tự điền giá trị cũ
+    window.addEventListener("pageshow", () => {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) {
+        searchInput.value = "";
+      }
+    });
+
     window.addEventListener("DOMContentLoaded", () => {
-      // Đảm bảo ô nhập tên luôn trống khi khởi tạo
       const searchInput = document.getElementById("search-input");
       if (searchInput) {
         searchInput.value = "";
@@ -249,12 +256,12 @@
       if (isParentMode) {
         headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
         btnApprove.classList.add("hidden");
-        statsContainer.classList.add("hidden"); // Ẩn hoàn toàn thống kê ở giao diện Phụ huynh
+        statsContainer.classList.add("hidden");
         checkboxCols.forEach(col => col.classList.add("hidden"));
       } else {
         headerTitle.innerText = "Tra Cứu & Duyệt Điểm Danh";
         btnApprove.classList.remove("hidden");
-        statsContainer.classList.remove("hidden"); // Hiển thị thống kê ở giao diện Giáo viên
+        statsContainer.classList.remove("hidden");
         checkboxCols.forEach(col => col.classList.remove("hidden"));
       }
     }
@@ -332,6 +339,10 @@
         const classSelect = document.getElementById("class-filter");
         classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
           classes.map(c => `<option value="${c}">${c}</option>`).join('');
+
+        // Đảm bảo ô input trống trước khi lọc
+        const searchInput = document.getElementById("search-input");
+        if (searchInput) searchInput.value = "";
 
         filterData();
 
