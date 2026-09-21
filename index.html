@@ -52,13 +52,17 @@
           <span>Link Phụ Huynh</span>
         </button>
 
+        <button id="btn-change-pass" onclick="openChangePasswordModal()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="key-round" class="w-4 h-4 text-slate-600"></i> Đổi Mật Khẩu
+        </button>
+
         <button id="btn-approve" onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
           <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
         </button>
       </div>
     </div>
 
-    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC (CHỈ HIỂN THỊ CHO GIÁO VIÊN) -->
+    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC -->
     <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
         <div>
@@ -184,11 +188,48 @@
     </div>
   </div>
 
+  <!-- POPUP ĐỔI MẬT KHẨU GVCN -->
+  <div id="change-pass-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="key-round" class="w-5 h-5 text-indigo-600"></i> Đổi Mật Khẩu GVCN
+        </h3>
+        <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Chọn Lớp</label>
+          <input type="text" id="change-pass-class" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu hiện tại</label>
+          <input type="password" id="change-pass-old" placeholder="Mặc định là 123456" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu mới</label>
+          <input type="password" id="change-pass-new" placeholder="Nhập mật khẩu mới..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 pt-2">
+        <div class="flex gap-2">
+          <button onclick="closeChangePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
+          <button onclick="saveNewPassword()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-indigo-600/20">
+            <i data-lucide="save" class="w-4 h-4"></i> Lưu Mật Khẩu
+          </button>
+        </div>
+        <button onclick="resetPasswordToDefault()" class="w-full py-1.5 text-xs text-rose-500 hover:underline text-center cursor-pointer">Khôi phục mật khẩu mặc định (123456)</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
     const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqvEr_Isw6D_h5EpoAfrnNlWSfNE7bpQuVx_ML5CzfIAEy5pfymzIkg6RxKRqCu3QE/exec";
 
-    const CLASS_PASSWORDS = {
+    const DEFAULT_PASSWORDS = {
       "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
       "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
       "11A1": "123456", "11A2": "123456", "11A3": "123456", "11A4": "123456", "11A5": "123456",
@@ -196,6 +237,17 @@
       "12A1": "123456", "12A2": "123456", "12A3": "123456", "12A4": "123456", "12A5": "123456",
       "12A6": "123456", "12A7": "123456", "12A8": "123456", "12A9": "123456", "12A10": "123456", "12A11": "123456"
     };
+
+    function getClassPassword(className) {
+      const storedPasses = JSON.parse(localStorage.getItem("CLASS_PASSWORDS") || "{}");
+      return storedPasses[className] || DEFAULT_PASSWORDS[className] || "123456";
+    }
+
+    function setClassPassword(className, newPass) {
+      const storedPasses = JSON.parse(localStorage.getItem("CLASS_PASSWORDS") || "{}");
+      storedPasses[className] = newPass;
+      localStorage.setItem("CLASS_PASSWORDS", JSON.stringify(storedPasses));
+    }
 
     let allStudents = [];
     let filteredStudents = [];
@@ -244,16 +296,19 @@
       const statsContainer = document.getElementById("stats-container");
       const headerTitle = document.getElementById("header-title");
       const btnApprove = document.getElementById("btn-approve");
+      const btnChangePass = document.getElementById("btn-change-pass");
       const checkboxCols = document.querySelectorAll(".col-checkbox");
 
       if (isParentMode) {
         headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
         btnApprove.classList.add("hidden");
+        if (btnChangePass) btnChangePass.classList.add("hidden");
         statsContainer.classList.add("hidden");
         checkboxCols.forEach(col => col.classList.add("hidden"));
       } else {
         headerTitle.innerText = "Tra Cứu & Duyệt Điểm Danh";
         btnApprove.classList.remove("hidden");
+        if (btnChangePass) btnChangePass.classList.remove("hidden");
         statsContainer.classList.remove("hidden");
         checkboxCols.forEach(col => col.classList.remove("hidden"));
       }
@@ -460,12 +515,13 @@
       document.getElementById("password-modal").classList.add("hidden");
     }
 
-    // TỐI ƯU HÓA: Cập nhật giao diện lập tức + gửi yêu cầu ngầm
     function confirmApproval() {
       const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
       const inputPass = document.getElementById("modal-pass-input").value.trim();
 
-      if (!CLASS_PASSWORDS[targetClass] || inputPass !== CLASS_PASSWORDS[targetClass]) {
+      const correctPass = getClassPassword(targetClass);
+
+      if (inputPass !== correctPass) {
         alert(`Mật khẩu GVCN Lớp ${targetClass} không chính xác!`);
         return;
       }
@@ -490,16 +546,13 @@
         return;
       }
 
-      // 1. Cập nhật giao diện NGAY LẬP TỨC mà không cần đợi server
       closePasswordModal();
       filterData();
       updateTimestamp();
 
-      // Reset checkbox chọn tất cả
       const masterCheckbox = document.getElementById("select-all");
       if (masterCheckbox) masterCheckbox.checked = false;
 
-      // 2. Gửi request ngầm cho Google Apps Script (Fire-and-forget)
       const updateUrl = `${CONFIG_APPS_SCRIPT_URL}?mahss=${encodeURIComponent(maHsList.join(","))}&rows=${rowIndices.join(",")}`;
       
       fetch(updateUrl, { 
@@ -507,6 +560,59 @@
         mode: 'no-cors',
         keepalive: true 
       }).catch(err => console.log("Lỗi cập nhật nền:", err));
+    }
+
+    /* CHỨC NĂNG ĐỔI MẬT KHẨU */
+    function openChangePasswordModal() {
+      const selectedClass = document.getElementById("class-filter").value;
+      document.getElementById("change-pass-class").value = selectedClass || "";
+      document.getElementById("change-pass-old").value = "";
+      document.getElementById("change-pass-new").value = "";
+      document.getElementById("change-pass-modal").classList.remove("hidden");
+    }
+
+    function closeChangePasswordModal() {
+      document.getElementById("change-pass-modal").classList.add("hidden");
+    }
+
+    function saveNewPassword() {
+      const targetClass = document.getElementById("change-pass-class").value.trim().toUpperCase();
+      const oldPass = document.getElementById("change-pass-old").value.trim();
+      const newPass = document.getElementById("change-pass-new").value.trim();
+
+      if (!targetClass) {
+        alert("Vui lòng nhập tên lớp!");
+        return;
+      }
+
+      const currentPass = getClassPassword(targetClass);
+      if (oldPass !== currentPass) {
+        alert("Mật khẩu hiện tại không đúng!");
+        return;
+      }
+
+      if (!newPass || newPass.length < 4) {
+        alert("Mật khẩu mới phải từ 4 ký tự trở lên!");
+        return;
+      }
+
+      setClassPassword(targetClass, newPass);
+      alert(`Đã đổi mật khẩu thành công cho lớp ${targetClass}!`);
+      closeChangePasswordModal();
+    }
+
+    function resetPasswordToDefault() {
+      const targetClass = document.getElementById("change-pass-class").value.trim().toUpperCase();
+      if (!targetClass) {
+        alert("Vui lòng nhập tên lớp cần khôi phục!");
+        return;
+      }
+
+      if (confirm(`Khôi phục mật khẩu lớp ${targetClass} về mặc định (123456)?`)) {
+        setClassPassword(targetClass, "123456");
+        alert(`Mật khẩu lớp ${targetClass} đã được đặt lại là: 123456`);
+        closeChangePasswordModal();
+      }
     }
   </script>
 </body>
