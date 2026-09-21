@@ -52,6 +52,11 @@
           <span>Link Phụ Huynh</span>
         </button>
 
+        <!-- NÚT RESET MẬT KHẨU DÀNH RIÊNG CHO ADMIN -->
+        <button id="btn-admin-reset" onclick="adminResetPassword()" class="hidden bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-600"></i> Admin Reset Pass
+        </button>
+
         <button id="btn-change-pass" onclick="openChangePasswordModal()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="key-round" class="w-4 h-4 text-slate-600"></i> Đổi Mật Khẩu
         </button>
@@ -188,7 +193,7 @@
     </div>
   </div>
 
-  <!-- POPUP ĐỔI MẬT KHẨU GVCN -->
+  <!-- POPUP ĐỔI MẬT KHẨU GVCN (ĐÃ LOẠI BỎ NÚT RESET CÔNG KHAI) -->
   <div id="change-pass-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
@@ -205,7 +210,7 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu hiện tại</label>
-          <input type="password" id="change-pass-old" placeholder="Mặc định là 123456" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <input type="password" id="change-pass-old" placeholder="Mật khẩu hiện tại..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu mới</label>
@@ -213,14 +218,11 @@
         </div>
       </div>
 
-      <div class="flex flex-col gap-2 pt-2">
-        <div class="flex gap-2">
-          <button onclick="closeChangePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
-          <button onclick="saveNewPassword()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-indigo-600/20">
-            <i data-lucide="save" class="w-4 h-4"></i> Lưu Mật Khẩu
-          </button>
-        </div>
-        <button onclick="resetPasswordToDefault()" class="w-full py-1.5 text-xs text-rose-500 hover:underline text-center cursor-pointer">Khôi phục mật khẩu mặc định (123456)</button>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeChangePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
+        <button onclick="saveNewPassword()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-indigo-600/20">
+          <i data-lucide="save" class="w-4 h-4"></i> Lưu Mật Khẩu
+        </button>
       </div>
     </div>
   </div>
@@ -228,6 +230,9 @@
   <script>
     const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
     const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqvEr_Isw6D_h5EpoAfrnNlWSfNE7bpQuVx_ML5CzfIAEy5pfymzIkg6RxKRqCu3QE/exec";
+    
+    // Mật khẩu Admin để khôi phục mật khẩu các lớp (Bạn có thể đổi mật khẩu này)
+    const ADMIN_PASSWORD = "admin123";
 
     const DEFAULT_PASSWORDS = {
       "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
@@ -253,6 +258,7 @@
     let filteredStudents = [];
     let pendingStudents = [];
     let isParentMode = false;
+    let isAdminMode = false;
 
     function formatExcelTime(val) {
       if (!val || val === "---") return "---";
@@ -286,6 +292,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       const modeParam = urlParams.get('mode');
       isParentMode = (modeParam === 'phuhuynh' || modeParam === 'parent');
+      isAdminMode = (modeParam === 'admin');
 
       applyModeUI();
       lucide.createIcons();
@@ -297,12 +304,14 @@
       const headerTitle = document.getElementById("header-title");
       const btnApprove = document.getElementById("btn-approve");
       const btnChangePass = document.getElementById("btn-change-pass");
+      const btnAdminReset = document.getElementById("btn-admin-reset");
       const checkboxCols = document.querySelectorAll(".col-checkbox");
 
       if (isParentMode) {
         headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
         btnApprove.classList.add("hidden");
         if (btnChangePass) btnChangePass.classList.add("hidden");
+        if (btnAdminReset) btnAdminReset.classList.add("hidden");
         statsContainer.classList.add("hidden");
         checkboxCols.forEach(col => col.classList.add("hidden"));
       } else {
@@ -311,6 +320,11 @@
         if (btnChangePass) btnChangePass.classList.remove("hidden");
         statsContainer.classList.remove("hidden");
         checkboxCols.forEach(col => col.classList.remove("hidden"));
+
+        // Chỉ hiển thị nút Admin Reset khi có tham số URL ?mode=admin
+        if (isAdminMode && btnAdminReset) {
+          btnAdminReset.classList.remove("hidden");
+        }
       }
     }
 
@@ -562,7 +576,7 @@
       }).catch(err => console.log("Lỗi cập nhật nền:", err));
     }
 
-    /* CHỨC NĂNG ĐỔI MẬT KHẨU */
+    /* CHỨC NĂNG ĐỔI MẬT KHẨU GVCN */
     function openChangePasswordModal() {
       const selectedClass = document.getElementById("class-filter").value;
       document.getElementById("change-pass-class").value = selectedClass || "";
@@ -601,18 +615,20 @@
       closeChangePasswordModal();
     }
 
-    function resetPasswordToDefault() {
-      const targetClass = document.getElementById("change-pass-class").value.trim().toUpperCase();
-      if (!targetClass) {
-        alert("Vui lòng nhập tên lớp cần khôi phục!");
+    /* TÍNH NĂNG RESET MẬT KHẨU DÀNH RIÊNG CHO QUẢN TRỊ VIÊN (ADMIN) */
+    function adminResetPassword() {
+      const adminPass = prompt("Nhập mật khẩu Admin quản trị:");
+      if (adminPass !== ADMIN_PASSWORD) {
+        alert("Mật khẩu Admin không chính xác!");
         return;
       }
 
-      if (confirm(`Khôi phục mật khẩu lớp ${targetClass} về mặc định (123456)?`)) {
-        setClassPassword(targetClass, "123456");
-        alert(`Mật khẩu lớp ${targetClass} đã được đặt lại là: 123456`);
-        closeChangePasswordModal();
-      }
+      const targetClass = prompt("Nhập tên lớp cần khôi phục mật khẩu (Ví dụ: 10A1):");
+      if (!targetClass) return;
+
+      const upperClass = targetClass.trim().toUpperCase();
+      setClassPassword(upperClass, "123456");
+      alert(`Đã đặt lại mật khẩu lớp ${upperClass} về mặc định là: 123456`);
     }
   </script>
 </body>
