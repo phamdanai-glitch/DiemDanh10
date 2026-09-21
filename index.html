@@ -58,7 +58,7 @@
       </div>
     </div>
 
-    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC -->
+    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC (CHỈ HIỂN THỊ DÀNH CHO GIÁO VIÊN) -->
     <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
         <div>
@@ -203,6 +203,20 @@
     let pendingStudents = [];
     let isParentMode = false;
 
+    // Chuyển đổi số thập phân thời gian từ Excel sang dạng HH:mm:ss
+    function formatExcelTime(val) {
+      if (!val || val === "---") return "---";
+      let num = parseFloat(val);
+      if (!isNaN(num) && num >= 0 && num <= 1) {
+        let totalSeconds = Math.round(num * 86400);
+        let hours = Math.floor(totalSeconds / 3600);
+        let minutes = Math.floor((totalSeconds % 3600) / 60);
+        let seconds = totalSeconds % 60;
+        return [hours, minutes, seconds].map(v => String(v).padStart(2, '0')).join(':');
+      }
+      return val;
+    }
+
     function updateTimestamp() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -211,7 +225,7 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
-      // Ép ô nhập tên luôn trống khi tải trang
+      // Đảm bảo ô nhập tên luôn trống khi khởi tạo
       const searchInput = document.getElementById("search-input");
       if (searchInput) {
         searchInput.value = "";
@@ -235,12 +249,12 @@
       if (isParentMode) {
         headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
         btnApprove.classList.add("hidden");
-        statsContainer.classList.add("hidden");
+        statsContainer.classList.add("hidden"); // Ẩn hoàn toàn thống kê ở giao diện Phụ huynh
         checkboxCols.forEach(col => col.classList.add("hidden"));
       } else {
         headerTitle.innerText = "Tra Cứu & Duyệt Điểm Danh";
         btnApprove.classList.remove("hidden");
-        statsContainer.classList.remove("hidden");
+        statsContainer.classList.remove("hidden"); // Hiển thị thống kê ở giao diện Giáo viên
         checkboxCols.forEach(col => col.classList.remove("hidden"));
       }
     }
@@ -287,7 +301,9 @@
 
           let lop = row[2] ? String(row[2]).trim().toUpperCase() : "---";
           let maHs = row[4] ? String(row[4]).trim() : "---";
-          let timeVal = row[10] ? String(row[10]).trim() : "---";
+          let rawTime = row[10] ? String(row[10]).trim() : "---";
+          let timeVal = formatExcelTime(rawTime);
+          
           let treVal = row[5] ? String(row[5]).trim() : "";
           let phepVal = row[15] ? String(row[15]).trim() : "";
 
