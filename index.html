@@ -8,40 +8,63 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- SheetJS -->
+  <!-- SheetJS để parse CSV / Excel -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     body {
       font-family: 'Inter', sans-serif;
+    }
+    /* Tùy chỉnh thanh cuộn đẹp mắt */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 p-3 sm:p-5 md:p-6">
 
+  <!-- MAIN CONTAINER -->
   <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-slate-100 space-y-6">
     
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
       <div class="flex items-center gap-4">
-        <!-- LOGO (Tăng kích thước lên w-16 h-16 / md:w-20 md:h-20) -->
-        <div class="p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm flex-shrink-0">
-          <img src="logo.jpg" alt="Logo Trường THPT Vị Thanh" onerror="this.src='https://placehold.co/100x100/4f46e5/ffffff?text=THPT+VT'" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-contain">
+        <!-- LOGO BẢNG TRƯỜNG -->
+        <div class="p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xs flex-shrink-0">
+          <img src="logo.jpg" alt="Logo Trường THPT Vị Thanh" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=THPT+VT';" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-contain">
         </div>
         
         <div>
-          <h1 class="text-xl sm:text-2xl font-bold text-slate-800 leading-tight" id="header-title">Tra Cứu & Duyệt Điểm Danh</h1>
+          <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800 leading-tight" id="header-title">Tra Cứu & Duyệt Điểm Danh</h1>
           <p class="text-xs sm:text-sm text-slate-500 mt-1">
             Trường THPT Vị Thanh — Tổng HS trong file: <span id="total-students" class="font-bold text-indigo-600">0</span>
           </p>
-          <p class="text-xs text-slate-400 mt-0.5">
-            Cập nhật lần cuối: <span id="last-updated-time" class="font-semibold text-emerald-600">Chưa tải</span>
+          <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Nguồn Drive: <span id="drive-id-display" class="font-mono text-slate-600 font-semibold">1DX7xZgc...</span>
+            | Cập nhật: <span id="last-updated-time" class="font-semibold text-emerald-600">Chưa tải</span>
           </p>
         </div>
       </div>
 
+      <!-- THANH NÚT ĐIỀU KHIỂN -->
       <div class="flex flex-wrap items-center gap-2.5">
-        <button onclick="copyParentLink()" title="Sao chép đường link cho Phụ huynh tra cứu" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
+        <button onclick="fetchAttendanceData()" title="Tải lại dữ liệu từ Google Sheet" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 p-2.5 rounded-xl border border-slate-200 transition-all cursor-pointer">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+
+        <button onclick="copyParentLink()" title="Sao chép đường link tra cứu riêng cho Phụ huynh" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
           <i data-lucide="share-2" class="w-4 h-4 text-indigo-600"></i>
           <span>Link Phụ Huynh</span>
         </button>
@@ -52,7 +75,7 @@
       </div>
     </div>
 
-    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC (Dành riêng cho giao diện Giáo viên) -->
+    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC (Chỉ hiển thị cho GVCN) -->
     <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
         <div>
@@ -105,18 +128,18 @@
       </div>
     </div>
 
-    <!-- BỘ LỌC TÌM KIẾM & LỚP -->
+    <!-- BỘ LỌC TÌM KIẾM & PHÂN LỌC -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
         <input type="text" id="search-input" oninput="filterData()" placeholder="Tìm theo tên hoặc mã HS..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
       </div>
       
-      <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
+      <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all cursor-pointer">
         <option value="">-- Tất cả các lớp --</option>
       </select>
 
-      <select id="status-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
+      <select id="status-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all cursor-pointer">
         <option value="">-- Tất cả trạng thái --</option>
         <option value="ĐI TRỄ">ĐI TRỄ</option>
         <option value="VẮNG KHÔNG PHÉP">VẮNG KHÔNG PHÉP</option>
@@ -124,20 +147,29 @@
       </select>
     </div>
 
-    <!-- CẤU HÌNH GITHUB -->
-    <details id="github-config-box" class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+    <!-- CẤU HÌNH GOOGLE DRIVE & APPS SCRIPT -->
+    <details id="drive-config-box" class="text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
       <summary class="font-bold text-slate-700 cursor-pointer flex items-center gap-2 select-none">
-        <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i> Cấu hình kết nối (GVCN / BQT)
+        <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i> Cấu hình kết nối Google Drive & Web App API
       </summary>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3 pt-3 border-t border-slate-200">
-        <input type="text" id="gh-user" placeholder="User GitHub..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-        <input type="text" id="gh-repo" placeholder="Tên Repo..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-        <input type="password" id="gh-token" placeholder="GitHub Personal Access Token..." class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-        <button onclick="saveGithubConfig()" class="bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-semibold rounded-xl px-4 py-2 transition-all cursor-pointer">Lưu & Tải Dữ Liệu</button>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 pt-3 border-t border-slate-200">
+        <div>
+          <label class="block text-slate-600 font-medium mb-1">Google Sheet / File ID trên Drive:</label>
+          <input type="text" id="drive-file-id" placeholder="1DX7xZgc3f7q7fFX_9SgdmpQfToAO0iVC" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
+        </div>
+        <div>
+          <label class="block text-slate-600 font-medium mb-1">Google Apps Script Web App URL (Để lưu phép):</label>
+          <input type="text" id="apps-script-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
+        </div>
+        <div class="flex items-end">
+          <button onclick="saveDriveConfig()" class="w-full bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-semibold rounded-xl px-4 py-2 transition-all cursor-pointer h-[38px]">
+            Lưu & Tải Lại Dữ Liệu
+          </button>
+        </div>
       </div>
     </details>
 
-    <!-- BẢNG DỮ LIỆU -->
+    <!-- BẢNG DỮ LIỆU ĐIỂM DANH -->
     <div class="overflow-x-auto rounded-xl border border-slate-200">
       <table class="w-full text-left border-collapse text-sm">
         <thead>
@@ -153,7 +185,7 @@
         </thead>
         <tbody id="attendance-tbody" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="7" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ file Excel...</td>
+            <td colspan="7" class="p-8 text-center text-slate-400">Đang kết nối Google Drive & tải dữ liệu CSV...</td>
           </tr>
         </tbody>
       </table>
@@ -192,7 +224,10 @@
   </div>
 
   <script>
-    // Danh sách mật khẩu mẫu cho các lớp
+    // Google Drive File ID mặc định
+    const DEFAULT_DRIVE_FILE_ID = "1DX7xZgc3f7q7fFX_9SgdmpQfToAO0iVC";
+
+    // Danh sách mật khẩu mẫu từng lớp cho Giáo viên Chủ nhiệm
     const CLASS_PASSWORDS = {
       "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
       "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
@@ -204,12 +239,10 @@
 
     let allStudents = [];
     let filteredStudents = [];
-    let rawWorkbook = null;
-    let currentSheetName = "";
-    let fileSha = "";
     let pendingStudents = [];
     let isParentMode = false;
 
+    // Cập nhật thời gian
     function updateTimestamp() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -217,15 +250,14 @@
       document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
     }
 
-    function cleanInput(str) {
-      if (!str) return "";
-      let cleaned = str.trim().replace(/\/$/, "");
-      if (cleaned.includes("github.com/")) {
-        cleaned = cleaned.split("github.com/")[1];
-      }
-      return cleaned.split('/')[0];
+    // Trích xuất Drive ID nếu người dùng dán toàn bộ đường link
+    function extractDriveId(input) {
+      if (!input) return DEFAULT_DRIVE_FILE_ID;
+      const match = input.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      return match ? match[1] : input.trim();
     }
 
+    // Khởi tạo ứng dụng
     window.addEventListener("DOMContentLoaded", () => {
       const urlParams = new URLSearchParams(window.location.search);
       const modeParam = urlParams.get('mode');
@@ -233,34 +265,34 @@
 
       applyModeUI();
       lucide.createIcons();
-      loadGithubConfig();
+      loadDriveConfig();
       fetchAttendanceData();
     });
 
+    // Ẩn/hiện giao diện theo chế độ Phụ huynh / Giáo viên
     function applyModeUI() {
       const statsContainer = document.getElementById("stats-container");
       const headerTitle = document.getElementById("header-title");
       const btnApprove = document.getElementById("btn-approve");
-      const githubBox = document.getElementById("github-config-box");
+      const driveBox = document.getElementById("drive-config-box");
       const checkboxCols = document.querySelectorAll(".col-checkbox");
 
       if (isParentMode) {
         headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
         btnApprove.classList.add("hidden");
-        githubBox.classList.add("hidden");
-        statsContainer.classList.add("hidden"); // Ẩn thẻ thống kê nâng cao ở màn hình phụ huynh
-        
+        driveBox.classList.add("hidden");
+        statsContainer.classList.add("hidden");
         checkboxCols.forEach(col => col.classList.add("hidden"));
       } else {
         headerTitle.innerText = "Tra Cứu & Duyệt Điểm Danh";
         btnApprove.classList.remove("hidden");
-        githubBox.classList.remove("hidden");
-        statsContainer.classList.remove("hidden"); // Hiện thẻ thống kê ở màn hình giáo viên
-
+        driveBox.classList.remove("hidden");
+        statsContainer.classList.remove("hidden");
         checkboxCols.forEach(col => col.classList.remove("hidden"));
       }
     }
 
+    // Copy link phụ huynh
     function copyParentLink() {
       const baseUrl = window.location.origin + window.location.pathname;
       const parentUrl = baseUrl + "?mode=phuhuynh";
@@ -272,88 +304,76 @@
       });
     }
 
-    function loadGithubConfig() {
-      document.getElementById("gh-user").value = localStorage.getItem("gh_user") || "phamdanai-glitch";
-      document.getElementById("gh-repo").value = localStorage.getItem("gh_repo") || "DiemDanh10";
-      document.getElementById("gh-token").value = localStorage.getItem("gh_token") || "";
+    // Đọc cấu hình từ LocalStorage
+    function loadDriveConfig() {
+      const driveId = localStorage.getItem("drive_file_id") || DEFAULT_DRIVE_FILE_ID;
+      const scriptUrl = localStorage.getItem("apps_script_url") || "";
+
+      document.getElementById("drive-file-id").value = driveId;
+      document.getElementById("apps-script-url").value = scriptUrl;
+      document.getElementById("drive-id-display").innerText = driveId.substring(0, 8) + "...";
     }
 
-    function saveGithubConfig() {
-      const user = cleanInput(document.getElementById("gh-user").value);
-      const repo = cleanInput(document.getElementById("gh-repo").value);
-      const token = document.getElementById("gh-token").value.trim();
+    // Lưu cấu hình Drive ID
+    function saveDriveConfig() {
+      const driveId = extractDriveId(document.getElementById("drive-file-id").value);
+      const scriptUrl = document.getElementById("apps-script-url").value.trim();
 
-      localStorage.setItem("gh_user", user);
-      localStorage.setItem("gh_repo", repo);
-      localStorage.setItem("gh_token", token);
+      localStorage.setItem("drive_file_id", driveId);
+      localStorage.setItem("apps_script_url", scriptUrl);
 
-      alert("Đã lưu cấu hình GitHub!");
+      document.getElementById("drive-id-display").innerText = driveId.substring(0, 8) + "...";
+      alert("Đã lưu cấu hình Google Drive!");
       fetchAttendanceData();
     }
 
+    // TẢI DỮ LIỆU ĐIỂM DANH QUA CHẾ ĐỘ GOOGLE SHEET CSV API (Sửa dứt điểm lỗi CORS)
     async function fetchAttendanceData() {
-      let user = cleanInput(localStorage.getItem("gh_user") || "phamdanai-glitch");
-      let repo = cleanInput(localStorage.getItem("gh_repo") || "DiemDanh10");
-      const token = localStorage.getItem("gh_token");
+      const driveId = extractDriveId(localStorage.getItem("drive_file_id") || DEFAULT_DRIVE_FILE_ID);
       const tbody = document.getElementById("attendance-tbody");
-
       const colSpan = isParentMode ? 6 : 7;
-      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ file Excel...</td></tr>`;
+
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh từ Google Drive CSV API...</td></tr>`;
+
+      // Đường dẫn Google Sheets CSV công khai hoàn toàn chống chặn CORS
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${driveId}/gviz/tq?tqx=out:csv&sheet=data`;
 
       try {
-        let arrayBuffer = null;
-
-        const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/data.xlsx?v=${Date.now()}`;
-        try {
-          const rawRes = await fetch(rawUrl);
-          if (rawRes.ok) {
-            arrayBuffer = await rawRes.arrayBuffer();
-          }
-        } catch (e) {
-          console.warn("Raw fetch failed, trying GitHub API...", e);
+        const response = await fetch(csvUrl);
+        if (!response.ok) {
+          throw new Error("Không thể tải dữ liệu. Bạn hãy đảm bảo Google Sheet đã chọn Bất kỳ ai có đường liên kết (Anyone with link can view).");
         }
 
-        if (!arrayBuffer) {
-          const headers = token ? { "Authorization": `token ${token}` } : {};
-          const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, { headers });
-          if (!response.ok) throw new Error("Không thể tải file data.xlsx!");
+        const csvText = await response.text();
+        const workbook = XLSX.read(csvText, { type: 'string' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
 
-          const data = await response.json();
-          fileSha = data.sha;
-          const binaryString = atob(data.content.replace(/\s/g, ''));
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          arrayBuffer = bytes.buffer;
-        }
-
-        rawWorkbook = XLSX.read(arrayBuffer, { type: 'array' });
-        currentSheetName = rawWorkbook.SheetNames.includes("data") ? "data" : rawWorkbook.SheetNames[0];
-        const worksheet = rawWorkbook.Sheets[currentSheetName];
-
-        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z2000');
+        // Chuyển CSV sang mảng dòng/cột
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         allStudents = [];
 
-        for (let r = 4; r <= range.e.r; r++) {
-          const nameCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 1 })]; 
-          const lopCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 2 })];  
-          const maHsCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 4 })]; 
-          const treCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 5 })];  
-          const timeCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 10 })];
-          const phepCell = worksheet[XLSX.utils.encode_cell({ r: r, c: 15 })];
+        // Duyệt từ dòng thứ 5 (chỉ số index = 4)
+        for (let r = 4; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row || !row[1]) continue;
 
-          if (!nameCell || !nameCell.v) continue;
-
-          let name = String(nameCell.v).trim();
+          // Cột B (index 1): Họ và Tên
+          let name = String(row[1]).trim();
           if (name === "" || name.includes("HỌ VÀ TÊN") || name.includes("Tiêu đề")) continue;
 
-          let lop = lopCell && lopCell.v ? String(lopCell.v).trim().toUpperCase() : "---";
-          let maHs = maHsCell && maHsCell.v ? String(maHsCell.v).trim() : "---";
-          let timeVal = timeCell && timeCell.v ? String(timeCell.v).trim() : "---";
-          let treVal = treCell && treCell.v ? String(treCell.v).trim() : "";
-          let phepVal = phepCell && phepCell.v ? String(phepCell.v).trim() : "";
+          // Cột C (index 2): Lớp
+          let lop = row[2] ? String(row[2]).trim().toUpperCase() : "---";
+          // Cột E (index 4): Mã HS
+          let maHs = row[4] ? String(row[4]).trim() : "---";
+          // Cột F (index 5): Đi trễ
+          let treVal = row[5] ? String(row[5]).trim() : "";
+          // Cột K (index 10): Thời gian
+          let timeVal = row[10] ? String(row[10]).trim() : "---";
+          // Cột P (index 15): Vắng có phép
+          let phepVal = row[15] ? String(row[15]).trim() : "";
 
+          // Xử lý trạng thái điểm danh
           let status = "VẮNG KHÔNG PHÉP";
           if (treVal !== "") {
             status = "ĐI TRỄ";
@@ -375,6 +395,7 @@
         document.getElementById("total-students").innerText = allStudents.length;
         updateTimestamp();
 
+        // Nạp danh sách Lớp vào dropdown
         const classes = [...new Set(allStudents.map(s => s.lop))].sort();
         const classSelect = document.getElementById("class-filter");
         classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
@@ -383,10 +404,11 @@
         filterData();
 
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-rose-500 font-medium">Lỗi tải dữ liệu Google Drive: ${err.message}</td></tr>`;
       }
     }
 
+    // Lọc dữ liệu theo Từ khóa, Lớp, Trạng thái
     function filterData() {
       const search = document.getElementById("search-input").value.toLowerCase().trim();
       const selectedClass = document.getElementById("class-filter").value;
@@ -403,6 +425,7 @@
       renderTable();
     }
 
+    // Cập nhật thẻ thống kê
     function updateStats() {
       if (isParentMode) return;
 
@@ -427,17 +450,18 @@
       document.getElementById("stat-selected").innerText = selectedCount;
     }
 
+    // Chọn tất cả các ô checkbox đang hiển thị
     function toggleSelectAll(master) {
       filteredStudents.forEach(s => s.selected = master.checked);
       updateStats();
       renderTable();
     }
 
+    // Chọn từng ô checkbox
     function toggleStudentSelect(index, isChecked) {
       if (filteredStudents[index]) {
         filteredStudents[index].selected = isChecked;
         
-        // Cập nhật checkbox chọn tất cả
         const allSelected = filteredStudents.length > 0 && filteredStudents.every(s => s.selected);
         const masterCheckbox = document.getElementById("select-all");
         if (masterCheckbox) masterCheckbox.checked = allSelected;
@@ -446,6 +470,7 @@
       }
     }
 
+    // Vẽ bảng HTML
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       const colSpan = isParentMode ? 6 : 7;
@@ -486,16 +511,8 @@
       }).join('');
     }
 
+    // Mở popup duyệt có phép
     function approveSelected() {
-      const user = cleanInput(localStorage.getItem("gh_user"));
-      const repo = cleanInput(localStorage.getItem("gh_repo"));
-      const token = localStorage.getItem("gh_token");
-
-      if (!user || !repo || !token) {
-        alert("Để lưu trực tiếp lên GitHub, bạn cần nhập GitHub Token vào mục Cấu hình!");
-        return;
-      }
-
       pendingStudents = filteredStudents.filter(s => s.selected);
       if (pendingStudents.length === 0) {
         alert("Vui lòng tích chọn ít nhất 1 học sinh để duyệt có phép.");
@@ -513,6 +530,7 @@
       document.getElementById("password-modal").classList.add("hidden");
     }
 
+    // Xác nhận mật khẩu và chuyển trạng thái Có Phép
     async function confirmApproval() {
       const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
       const inputPass = document.getElementById("modal-pass-input").value.trim();
@@ -522,35 +540,22 @@
         return;
       }
 
-      const user = cleanInput(localStorage.getItem("gh_user"));
-      const repo = cleanInput(localStorage.getItem("gh_repo"));
-      const token = localStorage.getItem("gh_token");
-
-      if (!token) {
-        alert("Lỗi: Chưa cài đặt GitHub Personal Access Token trong mục Cấu hình!");
-        closePasswordModal();
-        return;
-      }
+      const scriptUrl = localStorage.getItem("apps_script_url");
 
       const confirmBtn = document.getElementById("btn-confirm-approval");
       confirmBtn.disabled = true;
       confirmBtn.innerHTML = "Đang xử lý...";
 
-      const worksheet = rawWorkbook.Sheets[currentSheetName];
-      let count = 0;
-
+      let approvedList = [];
       pendingStudents.forEach(s => {
         if (s.status === "VẮNG KHÔNG PHÉP") {
           s.status = "VẮNG CÓ PHÉP";
           s.selected = false;
-          
-          const phepCellAddr = XLSX.utils.encode_cell({ r: s.rowIdx - 1, c: 15 });
-          worksheet[phepCellAddr] = { t: 's', v: 'P' };
-          count++;
+          approvedList.push({ name: s.name, maHs: s.maHs, lop: s.lop });
         }
       });
 
-      if (count === 0) {
+      if (approvedList.length === 0) {
         alert(`Các học sinh được chọn đã ở trạng thái Có phép.`);
         closePasswordModal();
         confirmBtn.disabled = false;
@@ -559,63 +564,33 @@
         return;
       }
 
-      try {
-        const wbout = XLSX.write(rawWorkbook, { bookType: 'xlsx', type: 'base64' });
+      // Nếu đã cấu hình Apps Script Web App URL -> Gửi dữ liệu cập nhật về Sheet
+      if (scriptUrl) {
+        try {
+          await fetch(scriptUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              targetClass: targetClass,
+              students: approvedList
+            })
+          });
 
-        const getShaRes = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
-          headers: { 
-            "Authorization": `token ${token}`,
-            "Accept": "application/vnd.github.v3+json"
-          }
-        });
-
-        if (getShaRes.status === 401) {
-          throw new Error("GitHub Token không đúng hoặc hết hạn (Bad credentials). Vui lòng cập nhật Token mới trong phần Cấu hình!");
-        }
-
-        if (getShaRes.ok) {
-          const getShaData = await getShaRes.json();
-          fileSha = getShaData.sha;
-        }
-
-        const bodyData = {
-          message: `GVCN Lớp ${targetClass} duyệt có phép cho ${count} học sinh`,
-          content: wbout,
-          sha: fileSha
-        };
-
-        const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/data.xlsx`, {
-          method: "PUT",
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json",
-            "Accept": "application/vnd.github.v3+json"
-          },
-          body: JSON.stringify(bodyData)
-        });
-
-        const resJson = await response.json();
-
-        if (response.ok) {
-          fileSha = resJson.content.sha;
           updateTimestamp();
-          alert(`Thành công! Đã duyệt có phép cho ${count} học sinh và lưu lên GitHub.`);
-          closePasswordModal();
-          filterData();
-        } else {
-          if (response.status === 401) {
-            alert("Lỗi 401 Bad credentials: Mã GitHub Token không hợp lệ. Hãy kiểm tra lại Token ở mục Cấu hình!");
-          } else {
-            alert("Lỗi khi ghi đè file Excel: " + (resJson.message || "Token thiếu quyền 'contents: write'"));
-          }
+          alert(`Đã cập nhật trạng thái "VẮNG CÓ PHÉP" cho ${approvedList.length} học sinh và gửi dữ liệu về Google Apps Script!`);
+        } catch (err) {
+          alert("Lỗi kết nối tới Google Apps Script: " + err.message);
         }
-      } catch (err) {
-        alert("Lỗi kết nối GitHub API: " + err.message);
-      } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
-        lucide.createIcons();
+      } else {
+        alert(`Đã duyệt có phép cho ${approvedList.length} học sinh trên giao diện!\n\n(Lưu ý: Để ghi nhận về file Google Sheet, bạn hãy nhập 'Google Apps Script Web App URL' trong ô Cấu hình).`);
       }
+
+      closePasswordModal();
+      filterData();
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận`;
+      lucide.createIcons();
     }
   </script>
 </body>
