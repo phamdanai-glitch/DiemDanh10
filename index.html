@@ -53,7 +53,7 @@
     </div>
   </div>
 
-  <!-- BẢNG THỐNG KÊ (CARDS) -->
+  <!-- BẢNG THỐNG KÊ CARDS -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-2">
       <div class="stat-card purple">
@@ -153,17 +153,11 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; // Thay URL Apps Script của bạn vào đây
+  const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; // Thay URL Apps Script của bạn
   let allStudents = [];
   let filteredStudents = [];
-  let isAdminMode = false;
 
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('mode') === 'admin') {
-    isAdminMode = true;
-  }
-
-  // 1. CHUẨN HÓA VÀ SO SÁNH GIỜ TỰ ĐỘNG
+  // 1. CHUẨN HÓA VÀ SO SÁNH GIỜ TỰ ĐỘNG (CHUẨN 07:00:00)
   function isLateTime(timeStr) {
     if (!timeStr || timeStr.toString().trim() === "") return false;
 
@@ -175,7 +169,7 @@
     let seconds = parts[2] ? parseInt(parts[2], 10) : 0;
 
     let totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    let limitSeconds = 7 * 3600; // Mốc 07:00:00
+    let limitSeconds = 7 * 3600; // Mốc 07:00:00 (25200 giây)
 
     return totalSeconds > limitSeconds;
   }
@@ -191,15 +185,16 @@
     if (time !== "") {
       return isLateTime(time) ? "TRE" : "DUNG_GIO";
     }
-    return "KP";
+    return "KP"; // Không có thời gian và chưa duyệt phép -> Không phép
   }
 
-  // 3. LẤY DỮ LIỆU TỪ HỆ THỐNG
+  // 3. LẤY DỮ LIỆU TỪ GOOGLE SPREADSHEET
   function fetchData() {
     document.getElementById("txtStatus").className = "text-warning fw-bold";
     document.getElementById("txtStatus").innerText = "Đang tải...";
 
     if (SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
+      // Mockup Data Demo
       allStudents = [
         { row: 5, hoTen: "linh linh", lop: "10A1", maHs: "19104651", thoiGian: "07:00:55", phep: "", khongPhep: "" },
         { row: 6, hoTen: "TRẦN HUỲNH KHÁNH BĂNG", lop: "10A1", maHs: "19442443", thoiGian: "06:00:55", phep: "", khongPhep: "" },
@@ -234,7 +229,7 @@
     filterData();
   }
 
-  // 4. HIỂN THỊ DANH SÁCH LỚP
+  // 4. DROPDOWN LỚP
   function populateLopDropdown() {
     let select = document.getElementById("selectLop");
     let selectedVal = select.value;
@@ -250,7 +245,7 @@
     select.value = selectedVal;
   }
 
-  // 5. BỘ LỌC HỌC SINH
+  // 5. LỌC DỮ LIỆU
   function filterData() {
     let search = document.getElementById("inputSearch").value.toLowerCase().trim();
     let lop = document.getElementById("selectLop").value;
@@ -266,7 +261,7 @@
     renderTable();
   }
 
-  // 6. RENDER BẢNG VÀ THỐNG KÊ
+  // 6. RENDER DỮ LIỆU BẢNG & THỐNG KÊ
   function renderTable() {
     let tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
@@ -311,7 +306,7 @@
     updateSelectedCount();
   }
 
-  // 7. XỬ LÝ CHECKBOX
+  // 7. CHECKBOX
   function toggleSelectAll(master) {
     let checkboxes = document.querySelectorAll(".chk-item");
     checkboxes.forEach(cb => cb.checked = master.checked);
@@ -323,7 +318,7 @@
     document.getElementById("cardSelected").innerText = selected;
   }
 
-  // 8. TÁC VỤ ĐIỀU KHIỂN
+  // 8. TÁC VỤ
   function duyetPhepSelected() {
     let checked = Array.from(document.querySelectorAll(".chk-item:checked")).map(c => c.value);
     if (checked.length === 0) return alert("Vui lòng chọn ít nhất 1 học sinh để duyệt phép!");
