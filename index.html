@@ -153,11 +153,12 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec"; // Thay URL Apps Script của bạn
+  // Dán Web App URL của bạn vào biến bên dưới
+  const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; 
   let allStudents = [];
   let filteredStudents = [];
 
-  // 1. CHUẨN HÓA VÀ SO SÁNH GIỜ TỰ ĐỘNG (CHUẨN 07:00:00)
+  // 1. CHUẨN HÓA VÀ SO SÁNH GIỜ (CHUẨN 07:00:00)
   function isLateTime(timeStr) {
     if (!timeStr || timeStr.toString().trim() === "") return false;
 
@@ -169,7 +170,7 @@
     let seconds = parts[2] ? parseInt(parts[2], 10) : 0;
 
     let totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    let limitSeconds = 7 * 3600; // Mốc 07:00:00 (25200 giây)
+    let limitSeconds = 7 * 3600; // 07:00:00
 
     return totalSeconds > limitSeconds;
   }
@@ -185,22 +186,16 @@
     if (time !== "") {
       return isLateTime(time) ? "TRE" : "DUNG_GIO";
     }
-    return "KP"; // Không có thời gian và chưa duyệt phép -> Không phép
+    return "KP";
   }
 
-  // 3. LẤY DỮ LIỆU TỪ GOOGLE SPREADSHEET
+  // 3. TẢI DỮ LIỆU TỪ GOOGLE SHEETS
   function fetchData() {
     document.getElementById("txtStatus").className = "text-warning fw-bold";
     document.getElementById("txtStatus").innerText = "Đang tải...";
 
     if (SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-      // Mockup Data Demo
-      allStudents = [
-        { row: 5, hoTen: "linh linh", lop: "10A1", maHs: "19104651", thoiGian: "07:00:55", phep: "", khongPhep: "" },
-        { row: 6, hoTen: "TRẦN HUỲNH KHÁNH BĂNG", lop: "10A1", maHs: "19442443", thoiGian: "06:00:55", phep: "", khongPhep: "" },
-        { row: 7, hoTen: "TRẦN NGUYỄN THẾ BẢO", lop: "10A1", maHs: "3848235", thoiGian: "06:04:58", phep: "", khongPhep: "" }
-      ];
-      onDataLoaded();
+      alert("Vui lòng thay SCRIPT_URL bằng URL Google Apps Script của bạn!");
       return;
     }
 
@@ -229,7 +224,7 @@
     filterData();
   }
 
-  // 4. DROPDOWN LỚP
+  // 4. HIỂN THỊ DROPDOWN LỚP
   function populateLopDropdown() {
     let select = document.getElementById("selectLop");
     let selectedVal = select.value;
@@ -245,7 +240,7 @@
     select.value = selectedVal;
   }
 
-  // 5. LỌC DỮ LIỆU
+  // 5. BỘ LỌC HỌC SINH
   function filterData() {
     let search = document.getElementById("inputSearch").value.toLowerCase().trim();
     let lop = document.getElementById("selectLop").value;
@@ -261,7 +256,7 @@
     renderTable();
   }
 
-  // 6. RENDER DỮ LIỆU BẢNG & THỐNG KÊ
+  // 6. RENDER DỮ LIỆU VÀ CARDS
   function renderTable() {
     let tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
