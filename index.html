@@ -3,359 +3,620 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trường THPT Vị Thanh - Điểm Danh</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <title>Tra Cứu & Duyệt Điểm Danh - Trường THPT Vị Thanh</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .card-custom { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .stat-card { border-radius: 12px; padding: 15px; display: flex; align-items: center; justify-content: space-between; }
-    .stat-card.purple { background-color: #f3f0ff; color: #5b21b6; }
-    .stat-card.yellow { background-color: #fefce8; color: #a16207; }
-    .stat-card.pink { background-color: #fff1f2; color: #be123c; }
-    .stat-card.green { background-color: #f0fdf4; color: #15803d; }
-    .stat-card.gray { background-color: #f8fafc; color: #475569; }
-    .stat-number { font-size: 24px; font-weight: bold; }
-    .badge-phep { background-color: #dcfce7; color: #15803d; padding: 5px 10px; border-radius: 6px; font-weight: 600; }
-    .badge-khong-phep { background-color: #ffe4e6; color: #be123c; padding: 5px 10px; border-radius: 6px; font-weight: 600; }
-    .badge-tre { background-color: #fef08a; color: #a16207; padding: 5px 10px; border-radius: 6px; font-weight: 600; }
-    .badge-dung-gio { background-color: #e0e7ff; color: #3730a3; padding: 5px 10px; border-radius: 6px; font-weight: 600; }
-    .table th { background-color: #f8fafc; color: #64748b; font-weight: 600; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
   </style>
 </head>
-<body class="p-3 p-md-4">
+<body class="bg-slate-100 min-h-screen text-slate-800 p-3 sm:p-5 md:p-6">
 
-<div class="container-fluid" style="max-width: 1300px;">
-  
-  <!-- HEADER & TÁC VỤ ADMIN -->
-  <div class="card card-custom p-3 p-md-4">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-      <div class="d-flex align-items-center gap-3">
-        <img src="https://via.placeholder.com/60" alt="Logo" class="rounded-circle" width="60" height="60">
+  <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-slate-100 space-y-6">
+    
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <div class="flex items-center gap-4">
+        <!-- LOGO TRƯỜNG -->
+        <div class="p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm flex-shrink-0">
+          <img src="logo.jpg" alt="Logo Trường THPT Vị Thanh" onerror="this.src='https://placehold.co/100x100/4f46e5/ffffff?text=THPT+VT'" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-contain">
+        </div>
+        
         <div>
-          <h4 class="mb-1 fw-bold">Tra Cứu & Duyệt Điểm Danh</h4>
-          <div class="text-muted small">
-            Trường THPT Vị Thanh — Tổng HS trong file: <b id="txtTotalFile">0</b>
-            <span class="ms-2">| Trạng thái: <span id="txtStatus" class="text-success fw-bold">Đã kết nối</span></span>
-            <span class="ms-2">| Cập nhật: <span id="txtLastUpdate">--:--:--</span></span>
-          </div>
+          <h1 class="text-xl sm:text-2xl font-bold text-slate-800 leading-tight" id="header-title">Tra Cứu & Duyệt Điểm Danh</h1>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">
+            Trường THPT Vị Thanh — Tổng HS trong file: <span id="total-students" class="font-bold text-indigo-600">0</span>
+          </p>
+          <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Trạng thái: <span id="connection-status" class="font-semibold text-slate-600">Đã kết nối dữ liệu</span>
+            | Cập nhật: <span id="last-updated-time" class="font-semibold text-emerald-600">Chưa tải</span>
+          </p>
         </div>
       </div>
 
-      <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-outline-secondary" onclick="fetchData()"><i class="fa-solid fa-rotate"></i></button>
-        <button class="btn btn-outline-primary" onclick="copyParentLink()"><i class="fa-solid fa-share-nodes"></i> Link Phụ Huynh</button>
-        <button class="btn btn-success" id="btnDuyetPhep" onclick="duyetPhepSelected()"><i class="fa-solid fa-user-check"></i> GVCN Duyệt Có Phép</button>
-        <button class="btn btn-primary" id="btnGhiLichSu" style="background-color: #7c3aed; border: none;" onclick="ghiSangLichSu()"><i class="fa-solid fa-clock-rotate-left"></i> Ghi sang Lịch sử</button>
-        <button class="btn btn-outline-danger" id="btnReset" onclick="resetData()"><i class="fa-solid fa-shield-cat"></i> Admin Reset</button>
-        <button class="btn btn-outline-secondary" onclick="changePass()"><i class="fa-solid fa-key"></i> Đổi Mật Khẩu</button>
-      </div>
-    </div>
-  </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="fetchAttendanceData()" title="Tải lại dữ liệu mới nhất" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 p-2.5 rounded-xl border border-slate-200 transition-all cursor-pointer">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
 
-  <!-- BẢNG THỐNG KÊ CARDS -->
-  <div class="row g-3 mb-3">
-    <div class="col-6 col-md-2">
-      <div class="stat-card purple">
-        <div>
-          <div class="small text-uppercase fw-semibold">ĐANG HIỂN THỊ</div>
-          <div class="stat-number" id="cardDisplay">0</div>
-        </div>
-        <i class="fa-solid fa-users fa-2x opacity-50"></i>
-      </div>
-    </div>
-    <div class="col-6 col-md-2">
-      <div class="stat-card yellow">
-        <div>
-          <div class="small text-uppercase fw-semibold">ĐI TRỄ</div>
-          <div class="stat-number" id="cardTre">0</div>
-        </div>
-        <i class="fa-regular fa-clock fa-2x opacity-50"></i>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card pink">
-        <div>
-          <div class="small text-uppercase fw-semibold">KHÔNG PHÉP</div>
-          <div class="stat-number" id="cardKhongPhep">0</div>
-        </div>
-        <i class="fa-solid fa-user-xmark fa-2x opacity-50"></i>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card green">
-        <div>
-          <div class="small text-uppercase fw-semibold">CÓ PHÉP</div>
-          <div class="stat-number" id="cardPhep">0</div>
-        </div>
-        <i class="fa-solid fa-user-check fa-2x opacity-50"></i>
-      </div>
-    </div>
-    <div class="col-12 col-md-2">
-      <div class="stat-card gray">
-        <div>
-          <div class="small text-uppercase fw-semibold">ĐÃ CHỌN</div>
-          <div class="stat-number" id="cardSelected">0</div>
-        </div>
-        <i class="fa-regular fa-square-check fa-2x opacity-50"></i>
-      </div>
-    </div>
-  </div>
+        <button onclick="copyParentLink()" title="Sao chép đường link cho Phụ huynh tra cứu" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
+          <i data-lucide="share-2" class="w-4 h-4 text-indigo-600"></i>
+          <span>Link Phụ Huynh</span>
+        </button>
 
-  <!-- BỘ LỌC DỮ LIỆU -->
-  <div class="card card-custom p-3">
-    <div class="row g-2">
-      <div class="col-12 col-md-5">
-        <div class="input-group">
-          <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-          <input type="text" id="inputSearch" class="form-control border-start-0" placeholder="Nhập họ tên hoặc mã học sinh..." oninput="filterData()">
-        </div>
-      </div>
-      <div class="col-12 col-md-3">
-        <select id="selectLop" class="form-select" onchange="filterData()">
-          <option value="">-- Tất cả các lớp --</option>
-        </select>
-      </div>
-      <div class="col-12 col-md-4">
-        <select id="selectTrangThai" class="form-select" onchange="filterData()">
-          <option value="">-- Tất cả trạng thái --</option>
-          <option value="DUNG_GIO">ĐÚNG GIỜ</option>
-          <option value="TRE">ĐI TRỄ</option>
-          <option value="KP">KHÔNG PHÉP</option>
-          <option value="P">CÓ PHÉP</option>
-        </select>
+        <!-- NÚT GHI NHẬN SANG LICHSU DÀNH RIÊNG CHO ADMIN -->
+        <button id="btn-admin-record-log" onclick="adminRecordToLichSu()" class="hidden bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all cursor-pointer">
+          <i data-lucide="file-spread-sheet" class="w-4 h-4"></i> Ghi sang Lịch sử
+        </button>
+
+        <!-- NÚT RESET MẬT KHẨU DÀNH RIÊNG CHO ADMIN -->
+        <button id="btn-admin-reset" onclick="adminResetPassword()" class="hidden bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-600"></i> Admin Reset
+        </button>
+
+        <button id="btn-change-pass" onclick="openChangePasswordModal()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="key-round" class="w-4 h-4 text-slate-600"></i> Đổi Mật Khẩu
+        </button>
+
+        <button id="btn-approve" onclick="approveSelected()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
+        </button>
       </div>
     </div>
-  </div>
 
-  <!-- BẢNG DỮ LIỆU -->
-  <div class="card card-custom p-0 overflow-hidden">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+    <!-- THỐNG KÊ DỮ LIỆU ĐANG LỌC -->
+    <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Đang Hiển Thị</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-indigo-900 mt-0.5" id="stat-filtered-total">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
+          <i data-lucide="users" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-amber-50/70 border border-amber-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-amber-600 uppercase tracking-wider">Đi Trễ</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-amber-900 mt-0.5" id="stat-late">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+          <i data-lucide="clock" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-rose-50/70 border border-rose-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-rose-600 uppercase tracking-wider">Không Phép</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-rose-900 mt-0.5" id="stat-unexcused">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600">
+          <i data-lucide="user-x" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Có Phép</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-emerald-900 mt-0.5" id="stat-excused">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+          <i data-lucide="user-check" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="col-span-2 sm:col-span-1 bg-slate-100/80 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
+        <div>
+          <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Đã Chọn</p>
+          <p class="text-xl sm:text-2xl font-extrabold text-slate-800 mt-0.5" id="stat-selected">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-slate-300/40 flex items-center justify-center text-slate-700">
+          <i data-lucide="check-square" class="w-5 h-5"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- BỘ LỌC TÌM KIẾM & LỚP -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="search-input" value="" autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterData()" placeholder="Nhập họ tên hoặc mã học sinh..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
+      </div>
+      
+      <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
+        <option value="">-- Tất cả các lớp --</option>
+      </select>
+
+      <select id="status-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
+        <option value="">-- Tất cả trạng thái --</option>
+        <option value="ĐÚNG GIỜ">ĐÚNG GIỜ</option>
+        <option value="ĐI TRỄ">ĐI TRỄ</option>
+        <option value="VẮNG KHÔNG PHÉP">VẮNG KHÔNG PHÉP</option>
+        <option value="VẮNG CÓ PHÉP">VẮNG CÓ PHÉP</option>
+      </select>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU -->
+    <div class="overflow-x-auto rounded-xl border border-slate-200">
+      <table class="w-full text-left border-collapse text-sm">
         <thead>
-          <tr>
-            <th width="40" class="text-center"><input type="checkbox" id="chkSelectAll" onchange="toggleSelectAll(this)"></th>
-            <th width="60" class="text-center">STT</th>
-            <th>Họ và Tên</th>
-            <th>Lớp</th>
-            <th>Mã HS</th>
-            <th>Thời gian</th>
-            <th>Trạng thái hiện tại</th>
+          <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold select-none">
+            <th class="p-3.5 col-checkbox w-10 text-center"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"></th>
+            <th class="p-3.5 w-12 text-center">STT</th>
+            <th class="p-3.5">Họ và Tên</th>
+            <th class="p-3.5">Lớp</th>
+            <th class="p-3.5">Mã HS</th>
+            <th class="p-3.5">Thời gian</th>
+            <th class="p-3.5">Trạng thái hiện tại</th>
           </tr>
         </thead>
-        <tbody id="tableBody">
-          <!-- Dữ liệu render từ JS -->
+        <tbody id="attendance-tbody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="7" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td>
+          </tr>
         </tbody>
       </table>
     </div>
+
   </div>
 
-</div>
+  <!-- POPUP XÁC THỰC MẬT KHẨU GVCN -->
+  <div id="password-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="lock" class="w-5 h-5 text-indigo-600"></i> Xác Thực GVCN
+        </h3>
+        <button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
 
-<script>
-  // Dán Web App URL của bạn vào biến bên dưới
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec"; 
-  let allStudents = [];
-  let filteredStudents = [];
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Lớp duyệt phép</label>
+          <input type="text" id="modal-class-input" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu GVCN</label>
+          <input type="password" id="modal-pass-input" placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+      </div>
 
-  // 1. CHUẨN HÓA VÀ SO SÁNH GIỜ (CHUẨN 07:00:00)
-  function isLateTime(timeStr) {
-    if (!timeStr || timeStr.toString().trim() === "") return false;
+      <div class="flex gap-2 pt-2">
+        <button onclick="closePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
+        <button id="btn-confirm-approval" onclick="confirmApproval()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-emerald-600/20">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Xác Nhận
+        </button>
+      </div>
+    </div>
+  </div>
 
-    let parts = timeStr.toString().trim().split(":");
-    if (parts.length < 2) return false;
+  <!-- POPUP ĐỔI MẬT KHẨU GVCN -->
+  <div id="change-pass-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="key-round" class="w-5 h-5 text-indigo-600"></i> Đổi Mật Khẩu GVCN
+        </h3>
+        <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
 
-    let hours = parseInt(parts[0], 10);
-    let minutes = parseInt(parts[1], 10);
-    let seconds = parts[2] ? parseInt(parts[2], 10) : 0;
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Chọn Lớp</label>
+          <input type="text" id="change-pass-class" placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 border rounded-xl text-sm font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu hiện tại</label>
+          <input type="password" id="change-pass-old" placeholder="Mật khẩu hiện tại..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu mới</label>
+          <input type="password" id="change-pass-new" placeholder="Nhập mật khẩu mới..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+      </div>
 
-    let totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    let limitSeconds = 7 * 3600; // 07:00:00
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeChangePasswordModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold cursor-pointer transition-all">Hủy</button>
+        <button onclick="saveNewPassword()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md shadow-indigo-600/20">
+          <i data-lucide="save" class="w-4 h-4"></i> Lưu Mật Khẩu
+        </button>
+      </div>
+    </div>
+  </div>
 
-    return totalSeconds > limitSeconds;
-  }
+  <script>
+    // DÁN ĐƯỜNG DẪN APPS SCRIPT CỦA BẠN VÀO ĐÂY
+    const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
+    const ADMIN_PASSWORD = "admin123";
 
-  // 2. PHÂN LOẠI TRẠNG THÁI HỌC SINH
-  function getStudentStatus(item) {
-    let phep = String(item.phep || "").trim();
-    let khongPhep = String(item.khongPhep || "").trim();
-    let time = String(item.thoiGian || "").trim();
+    const DEFAULT_PASSWORDS = {
+      "10A1": "123456", "10A2": "123456", "10A3": "123456", "10A4": "123456", "10A5": "123456",
+      "10A6": "123456", "10A7": "123456", "10A8": "123456", "10A9": "123456", "10A10": "123456", "10A11": "123456",
+      "11A1": "123456", "11A2": "123456", "11A3": "123456", "11A4": "123456", "11A5": "123456",
+      "11A6": "123456", "11A7": "123456", "11A8": "123456", "11A9": "123456", "11A10": "123456", "11A11": "123456",
+      "12A1": "123456", "12A2": "123456", "12A3": "123456", "12A4": "123456", "12A5": "123456",
+      "12A6": "123456", "12A7": "123456", "12A8": "123456", "12A9": "123456", "12A10": "123456", "12A11": "123456"
+    };
 
-    if (phep !== "") return "P";
-    if (khongPhep !== "") return "KP";
-    if (time !== "") {
-      return isLateTime(time) ? "TRE" : "DUNG_GIO";
+    function getClassPassword(className) {
+      const storedPasses = JSON.parse(localStorage.getItem("CLASS_PASSWORDS") || "{}");
+      return storedPasses[className] || DEFAULT_PASSWORDS[className] || "123456";
     }
-    return "KP";
-  }
 
-  // 3. TẢI DỮ LIỆU TỪ GOOGLE SHEETS
-  function fetchData() {
-    document.getElementById("txtStatus").className = "text-warning fw-bold";
-    document.getElementById("txtStatus").innerText = "Đang tải...";
-
-    if (SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-      alert("Vui lòng thay SCRIPT_URL bằng URL Google Apps Script của bạn!");
-      return;
+    function setClassPassword(className, newPass) {
+      const storedPasses = JSON.parse(localStorage.getItem("CLASS_PASSWORDS") || "{}");
+      storedPasses[className] = newPass;
+      localStorage.setItem("CLASS_PASSWORDS", JSON.stringify(storedPasses));
     }
 
-    fetch(SCRIPT_URL + "?action=getData")
-      .then(res => res.json())
-      .then(data => {
-        allStudents = data;
-        onDataLoaded();
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById("txtStatus").className = "text-danger fw-bold";
-        document.getElementById("txtStatus").innerText = "Lỗi kết nối";
+    let allStudents = [];
+    let filteredStudents = [];
+    let pendingStudents = [];
+    let isParentMode = false;
+    let isAdminMode = false;
+
+    // KIỂM TRA ĐI TRỄ SAU 07:00:00
+    function isLateTime(timeStr) {
+      if (!timeStr || timeStr === "---") return false;
+      let parts = timeStr.toString().trim().split(":");
+      if (parts.length < 2) return false;
+      let hours = parseInt(parts[0], 10);
+      let minutes = parseInt(parts[1], 10);
+      let seconds = parts[2] ? parseInt(parts[2], 10) : 0;
+      return (hours * 3600 + minutes * 60 + seconds) > (7 * 3600);
+    }
+
+    function calculateStatus(item) {
+      let p = (item.phepVal || "").trim();
+      let kp = (item.khongPhepVal || "").trim();
+      let tr = (item.treVal || "").trim();
+      let tg = (item.thoiGian || "").trim();
+
+      if (p !== "") return "VẮNG CÓ PHÉP";
+      if (kp !== "") return "VẮNG KHÔNG PHÉP";
+      if (tr !== "" || isLateTime(tg)) return "ĐI TRỄ";
+      if (tg !== "---" && tg !== "") return "ĐÚNG GIỜ";
+      return "VẮNG KHÔNG PHÉP";
+    }
+
+    function updateTimestamp() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString('vi-VN');
+      document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) searchInput.value = "";
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const modeParam = urlParams.get('mode');
+      isParentMode = (modeParam === 'phuhuynh' || modeParam === 'parent');
+      isAdminMode = (modeParam === 'admin');
+
+      applyModeUI();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      fetchAttendanceData();
+    });
+
+    function applyModeUI() {
+      const statsContainer = document.getElementById("stats-container");
+      const headerTitle = document.getElementById("header-title");
+      const btnApprove = document.getElementById("btn-approve");
+      const btnChangePass = document.getElementById("btn-change-pass");
+      const btnAdminReset = document.getElementById("btn-admin-reset");
+      const btnAdminRecordLog = document.getElementById("btn-admin-record-log");
+      const checkboxCols = document.querySelectorAll(".col-checkbox");
+
+      if (isParentMode) {
+        headerTitle.innerText = "Tra Cứu Điểm Danh (Phụ Huynh)";
+        btnApprove.classList.add("hidden");
+        if (btnChangePass) btnChangePass.classList.add("hidden");
+        if (btnAdminReset) btnAdminReset.classList.add("hidden");
+        if (btnAdminRecordLog) btnAdminRecordLog.classList.add("hidden");
+        statsContainer.classList.add("hidden");
+        checkboxCols.forEach(col => col.classList.add("hidden"));
+      } else {
+        headerTitle.innerText = "Tra Cứu & Duyệt Điểm Danh";
+        btnApprove.classList.remove("hidden");
+        if (btnChangePass) btnChangePass.classList.remove("hidden");
+        statsContainer.classList.remove("hidden");
+        checkboxCols.forEach(col => col.classList.remove("hidden"));
+
+        if (isAdminMode) {
+          if (btnAdminReset) btnAdminReset.classList.remove("hidden");
+          if (btnAdminRecordLog) btnAdminRecordLog.classList.remove("hidden");
+        }
+      }
+    }
+
+    function copyParentLink() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const parentUrl = baseUrl + "?mode=phuhuynh";
+      
+      navigator.clipboard.writeText(parentUrl).then(() => {
+        alert("Đã sao chép link tra cứu Phụ huynh:\n" + parentUrl);
+      }).catch(() => {
+        prompt("Sao chép link gửi Phụ huynh dưới đây:", parentUrl);
       });
-  }
+    }
 
-  function onDataLoaded() {
-    document.getElementById("txtTotalFile").innerText = allStudents.length;
-    document.getElementById("txtStatus").className = "text-success fw-bold";
-    document.getElementById("txtStatus").innerText = "Đã kết nối";
-    
-    let now = new Date();
-    document.getElementById("txtLastUpdate").innerText = now.toLocaleTimeString() + " - " + now.getDate() + "/" + (now.getMonth() + 1) + "/" + now.getFullYear();
+    async function fetchAttendanceData() {
+      const tbody = document.getElementById("attendance-tbody");
+      const colSpan = isParentMode ? 6 : 7;
+      const statusEl = document.getElementById("connection-status");
 
-    populateLopDropdown();
-    filterData();
-  }
+      statusEl.className = "font-semibold text-amber-500";
+      statusEl.innerText = "Đang tải...";
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
 
-  // 4. HIỂN THỊ DROPDOWN LỚP
-  function populateLopDropdown() {
-    let select = document.getElementById("selectLop");
-    let selectedVal = select.value;
-    let lops = [...new Set(allStudents.map(s => s.lop))].filter(Boolean).sort();
+      try {
+        const response = await fetch(CONFIG_APPS_SCRIPT_URL + "?action=getData");
+        if (!response.ok) throw new Error("Không thể kết nối với Web App.");
 
-    select.innerHTML = `<option value="">-- Tất cả các lớp (${lops.length}) --</option>`;
-    lops.forEach(l => {
-      let opt = document.createElement("option");
-      opt.value = l;
-      opt.innerText = l;
-      select.appendChild(opt);
-    });
-    select.value = selectedVal;
-  }
+        const rawData = await response.json();
+        
+        allStudents = rawData.map(item => ({
+          rowIdx: item.rowIdx,
+          name: item.hoTen,
+          lop: item.lop || "---",
+          maHs: item.maHs || "---",
+          time: item.thoiGian || "---",
+          status: calculateStatus(item),
+          selected: false
+        }));
 
-  // 5. BỘ LỌC HỌC SINH
-  function filterData() {
-    let search = document.getElementById("inputSearch").value.toLowerCase().trim();
-    let lop = document.getElementById("selectLop").value;
-    let status = document.getElementById("selectTrangThai").value;
+        document.getElementById("total-students").innerText = allStudents.length;
+        statusEl.className = "font-semibold text-emerald-600";
+        statusEl.innerText = "Đã kết nối dữ liệu";
+        updateTimestamp();
 
-    filteredStudents = allStudents.filter(item => {
-      let matchSearch = (item.hoTen || "").toLowerCase().includes(search) || (item.maHs || "").toString().toLowerCase().includes(search);
-      let matchLop = lop === "" || item.lop === lop;
-      let matchStatus = status === "" || getStudentStatus(item) === status;
-      return matchSearch && matchLop && matchStatus;
-    });
+        const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
+        const classSelect = document.getElementById("class-filter");
+        classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
+          classes.map(c => `<option value="${c}">${c}</option>`).join('');
 
-    renderTable();
-  }
+        filterData();
 
-  // 6. RENDER DỮ LIỆU VÀ CARDS
-  function renderTable() {
-    let tbody = document.getElementById("tableBody");
-    tbody.innerHTML = "";
+      } catch (err) {
+        statusEl.className = "font-semibold text-rose-500";
+        statusEl.innerText = "Lỗi kết nối";
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+      }
+    }
 
-    let countTre = 0, countKhongPhep = 0, countPhep = 0;
+    function filterData() {
+      const searchInput = document.getElementById("search-input");
+      const search = searchInput ? searchInput.value.toLowerCase().trim() : "";
+      const selectedClass = document.getElementById("class-filter").value;
+      const selectedStatus = document.getElementById("status-filter").value;
 
-    allStudents.forEach(item => {
-      let st = getStudentStatus(item);
-      if (st === "TRE") countTre++;
-      else if (st === "KP") countKhongPhep++;
-      else if (st === "P") countPhep++;
-    });
+      filteredStudents = allStudents.filter(s => {
+        const matchSearch = !search || s.name.toLowerCase().includes(search) || s.maHs.toLowerCase().includes(search);
+        const matchClass = !selectedClass || s.lop === selectedClass;
+        const matchStatus = !selectedStatus || s.status === selectedStatus;
+        return matchSearch && matchClass && matchStatus;
+      });
 
-    document.getElementById("cardDisplay").innerText = filteredStudents.length;
-    document.getElementById("cardTre").innerText = countTre;
-    document.getElementById("cardKhongPhep").innerText = countKhongPhep;
-    document.getElementById("cardPhep").innerText = countPhep;
+      updateStats();
+      renderTable();
+    }
 
-    filteredStudents.forEach((item, idx) => {
-      let st = getStudentStatus(item);
-      let badgeHtml = "";
+    function updateStats() {
+      if (isParentMode) return;
 
-      if (st === "P") badgeHtml = `<span class="badge-phep">CÓ PHÉP</span>`;
-      else if (st === "KP") badgeHtml = `<span class="badge-khong-phep">KHÔNG PHÉP</span>`;
-      else if (st === "TRE") badgeHtml = `<span class="badge-tre">ĐI TRỄ</span>`;
-      else badgeHtml = `<span class="badge-dung-gio">ĐÚNG GIỜ</span>`;
+      const filteredTotal = filteredStudents.length;
+      let lateCount = 0;
+      let unexcusedCount = 0;
+      let excusedCount = 0;
+      let selectedCount = 0;
 
-      let tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="text-center"><input type="checkbox" class="chk-item" value="${item.maHs}" onchange="updateSelectedCount()"></td>
-        <td class="text-center text-muted">${idx + 1}</td>
-        <td><b>${item.hoTen}</b></td>
-        <td><span class="badge bg-light text-dark border">${item.lop}</span></td>
-        <td><code>${item.maHs}</code></td>
-        <td>${item.thoiGian || "--:--:--"}</td>
-        <td>${badgeHtml}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+      filteredStudents.forEach(s => {
+        if (s.status === "ĐI TRỄ") lateCount++;
+        else if (s.status === "VẮNG KHÔNG PHÉP") unexcusedCount++;
+        else if (s.status === "VẮNG CÓ PHÉP") excusedCount++;
 
-    document.getElementById("chkSelectAll").checked = false;
-    updateSelectedCount();
-  }
+        if (s.selected) selectedCount++;
+      });
 
-  // 7. CHECKBOX
-  function toggleSelectAll(master) {
-    let checkboxes = document.querySelectorAll(".chk-item");
-    checkboxes.forEach(cb => cb.checked = master.checked);
-    updateSelectedCount();
-  }
+      document.getElementById("stat-filtered-total").innerText = filteredTotal;
+      document.getElementById("stat-late").innerText = lateCount;
+      document.getElementById("stat-unexcused").innerText = unexcusedCount;
+      document.getElementById("stat-excused").innerText = excusedCount;
+      document.getElementById("stat-selected").innerText = selectedCount;
+    }
 
-  function updateSelectedCount() {
-    let selected = document.querySelectorAll(".chk-item:checked").length;
-    document.getElementById("cardSelected").innerText = selected;
-  }
+    function toggleSelectAll(master) {
+      filteredStudents.forEach(s => s.selected = master.checked);
+      updateStats();
+      renderTable();
+    }
 
-  // 8. TÁC VỤ
-  function duyetPhepSelected() {
-    let checked = Array.from(document.querySelectorAll(".chk-item:checked")).map(c => c.value);
-    if (checked.length === 0) return alert("Vui lòng chọn ít nhất 1 học sinh để duyệt phép!");
+    function toggleStudentSelect(index, isChecked) {
+      if (filteredStudents[index]) {
+        filteredStudents[index].selected = isChecked;
+        
+        const allSelected = filteredStudents.length > 0 && filteredStudents.every(s => s.selected);
+        const masterCheckbox = document.getElementById("select-all");
+        if (masterCheckbox) masterCheckbox.checked = allSelected;
 
-    if (confirm(`Xác nhận duyệt CÓ PHÉP cho ${checked.length} học sinh đã chọn?`)) {
-      fetch(`${SCRIPT_URL}?mahss=${checked.join(",")}`)
+        updateStats();
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("attendance-tbody");
+      const colSpan = isParentMode ? 6 : 7;
+
+      if (!filteredStudents || filteredStudents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Không tìm thấy danh sách học sinh phù hợp.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filteredStudents.map((s, idx) => {
+        let badgeStyle = "bg-rose-100 text-rose-700 border-rose-200";
+        if (s.status === "ĐI TRỄ") {
+          badgeStyle = "bg-amber-100 text-amber-800 border-amber-200";
+        } else if (s.status === "VẮNG CÓ PHÉP") {
+          badgeStyle = "bg-emerald-100 text-emerald-700 border-emerald-200";
+        } else if (s.status === "ĐÚNG GIỜ") {
+          badgeStyle = "bg-indigo-100 text-indigo-700 border-indigo-200";
+        }
+
+        const checkboxTd = isParentMode ? '' : `
+          <td class="p-3.5 col-checkbox text-center">
+            <input type="checkbox" ${s.selected ? 'checked' : ''} onchange="toggleStudentSelect(${idx}, this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+          </td>`;
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors ${s.selected ? 'bg-indigo-50/30' : ''}">
+            ${checkboxTd}
+            <td class="p-3.5 text-center text-slate-400 font-medium">${idx + 1}</td>
+            <td class="p-3.5 font-semibold text-slate-800">${s.name}</td>
+            <td class="p-3.5"><span class="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold">${s.lop}</span></td>
+            <td class="p-3.5 text-slate-500 font-mono text-xs">${s.maHs}</td>
+            <td class="p-3.5 text-slate-500 font-mono text-xs">${s.time}</td>
+            <td class="p-3.5">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-bold border inline-block ${badgeStyle}">
+                ${s.status}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function approveSelected() {
+      pendingStudents = filteredStudents.filter(s => s.selected);
+      if (pendingStudents.length === 0) {
+        alert("Vui lòng tích chọn ít nhất 1 học sinh để duyệt có phép.");
+        return;
+      }
+
+      const selectedClasses = [...new Set(pendingStudents.map(s => s.lop))];
+      const targetClassInput = document.getElementById("modal-class-input");
+      if (targetClassInput) {
+        targetClassInput.value = (selectedClasses.length === 1 && selectedClasses[0] !== "---") ? selectedClasses[0] : "";
+      }
+
+      document.getElementById("modal-pass-input").value = "";
+      document.getElementById("password-modal").classList.remove("hidden");
+    }
+
+    function closePasswordModal() {
+      document.getElementById("password-modal").classList.add("hidden");
+    }
+
+    function confirmApproval() {
+      const targetClass = document.getElementById("modal-class-input").value.trim().toUpperCase();
+      const inputPass = document.getElementById("modal-pass-input").value.trim();
+
+      const correctPass = getClassPassword(targetClass);
+
+      if (inputPass !== correctPass) {
+        alert(`Mật khẩu GVCN Lớp ${targetClass} không chính xác!`);
+        return;
+      }
+
+      let maHsList = [];
+
+      pendingStudents.forEach(s => {
+        if (s.maHs && s.maHs !== "---") {
+          maHsList.push(s.maHs);
+        }
+      });
+
+      if (maHsList.length === 0) {
+        alert("Không tìm thấy Mã HS hợp lệ để gửi cập nhật.");
+        closePasswordModal();
+        return;
+      }
+
+      closePasswordModal();
+
+      const updateUrl = `${CONFIG_APPS_SCRIPT_URL}?mahss=${encodeURIComponent(maHsList.join(","))}`;
+      
+      fetch(updateUrl)
         .then(res => res.text())
         .then(msg => {
           alert(msg);
-          fetchData();
+          fetchAttendanceData();
+        })
+        .catch(err => {
+          alert("Lỗi khi duyệt phép: " + err);
         });
     }
-  }
 
-  function ghiSangLichSu() {
-    let pass = prompt("Nhập mật khẩu Admin để ghi dữ liệu sang sheet Lịch Sử:");
-    if (!pass) return;
+    function openChangePasswordModal() {
+      const selectedClass = document.getElementById("class-filter").value;
+      document.getElementById("change-pass-class").value = selectedClass || "";
+      document.getElementById("change-pass-old").value = "";
+      document.getElementById("change-pass-new").value = "";
+      document.getElementById("change-pass-modal").classList.remove("hidden");
+    }
 
-    fetch(`${SCRIPT_URL}?role=admin&pass=${encodeURIComponent(pass)}`)
-      .then(res => res.text())
-      .then(msg => {
-        alert(msg);
-        fetchData();
-      });
-  }
+    function closeChangePasswordModal() {
+      document.getElementById("change-pass-modal").classList.add("hidden");
+    }
 
-  function resetData() {
-    let pass = prompt("Nhập mật khẩu Admin để Reset dữ liệu:");
-    if (!pass) return;
-    alert("Chức năng Reset đã được gửi xác thực.");
-  }
+    function saveNewPassword() {
+      const targetClass = document.getElementById("change-pass-class").value.trim().toUpperCase();
+      const oldPass = document.getElementById("change-pass-old").value.trim();
+      const newPass = document.getElementById("change-pass-new").value.trim();
 
-  function changePass() {
-    alert("Tính năng Đổi Mật Khẩu Admin.");
-  }
+      if (!targetClass) {
+        alert("Vui lòng nhập tên lớp!");
+        return;
+      }
 
-  function copyParentLink() {
-    navigator.clipboard.writeText(window.location.origin + window.location.pathname);
-    alert("Đã sao chép Link Phụ Huynh vào bộ nhớ tạm!");
-  }
+      const currentPass = getClassPassword(targetClass);
+      if (oldPass !== currentPass) {
+        alert("Mật khẩu hiện tại không đúng!");
+        return;
+      }
 
-  fetchData();
-</script>
+      if (!newPass || newPass.length < 4) {
+        alert("Mật khẩu mới phải từ 4 ký tự trở lên!");
+        return;
+      }
+
+      setClassPassword(targetClass, newPass);
+      alert(`Đã đổi mật khẩu thành công cho lớp ${targetClass}!`);
+      closeChangePasswordModal();
+    }
+
+    function adminResetPassword() {
+      const pass = prompt("Nhập mật khẩu Admin để reset mật khẩu tất cả các lớp:");
+      if (pass === ADMIN_PASSWORD) {
+        localStorage.removeItem("CLASS_PASSWORDS");
+        alert("Đã khôi phục tất cả mật khẩu lớp về mặc định (123456)!");
+      } else if (pass !== null) {
+        alert("Mật khẩu Admin không đúng!");
+      }
+    }
+
+    function adminRecordToLichSu() {
+      const adminPass = prompt("Nhập mật khẩu Admin để ghi sang Lịch Sử:");
+      if (!adminPass) return;
+
+      fetch(`${CONFIG_APPS_SCRIPT_URL}?role=admin&pass=${encodeURIComponent(adminPass.trim())}`)
+        .then(res => res.text())
+        .then(msg => {
+          alert(msg);
+          fetchAttendanceData();
+        })
+        .catch(err => alert("Lỗi ghi lịch sử: " + err));
+    }
+  </script>
 </body>
 </html>
