@@ -153,23 +153,20 @@
 </div>
 
 <script>
-  // CẤU HÌNH APPS SCRIPT URL VÀ MẶC ĐỊNH
   const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; // Thay URL Apps Script của bạn vào đây
   let allStudents = [];
   let filteredStudents = [];
   let isAdminMode = false;
 
-  // Kiểm tra Mode Admin từ Query Parameter (?mode=admin)
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('mode') === 'admin') {
     isAdminMode = true;
   }
 
-  // 1. CHUẨN HÓA VÀ SO SÁNH GIỜ CHÍNH XÁC (SỬA LỖI TRƯỚC 7H)
+  // 1. CHUẨN HÓA VÀ SO SÁNH GIỜ TỰ ĐỘNG
   function isLateTime(timeStr) {
     if (!timeStr || timeStr.toString().trim() === "") return false;
 
-    // Tách Giờ:Phút:Giây (VD: "06:00:55", "6:04:58", "07:05:00")
     let parts = timeStr.toString().trim().split(":");
     if (parts.length < 2) return false;
 
@@ -177,15 +174,13 @@
     let minutes = parseInt(parts[1], 10);
     let seconds = parts[2] ? parseInt(parts[2], 10) : 0;
 
-    // Tính tổng số giây từ đầu ngày
     let totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    let limitSeconds = 7 * 3600; // Mốc 07:00:00 (25200 giây)
+    let limitSeconds = 7 * 3600; // Mốc 07:00:00
 
-    // Chỉ tính ĐI TRỄ nếu thời gian LỚN HƠN 07:00:00
     return totalSeconds > limitSeconds;
   }
 
-  // 2. LẤY TRẠNG THÁI CHÍNH XÁC CỦA HỌC SINH
+  // 2. PHÂN LOẠI TRẠNG THÁI HỌC SINH
   function getStudentStatus(item) {
     let phep = String(item.phep || "").trim();
     let khongPhep = String(item.khongPhep || "").trim();
@@ -196,15 +191,14 @@
     if (time !== "") {
       return isLateTime(time) ? "TRE" : "DUNG_GIO";
     }
-    return "KP"; // Nếu không có thời gian và chưa duyệt phép -> Không phép
+    return "KP";
   }
 
-  // 3. TẢI DỮ LIỆU TỪ SPREADSHEET KHỞI TẠO
+  // 3. LẤY DỮ LIỆU TỪ HỆ THỐNG
   function fetchData() {
     document.getElementById("txtStatus").className = "text-warning fw-bold";
     document.getElementById("txtStatus").innerText = "Đang tải...";
 
-    // Mockup data demo nếu chưa truyền SCRIPT_URL
     if (SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
       allStudents = [
         { row: 5, hoTen: "linh linh", lop: "10A1", maHs: "19104651", thoiGian: "07:00:55", phep: "", khongPhep: "" },
@@ -240,7 +234,7 @@
     filterData();
   }
 
-  // 4. KHỞI TẠO DROPDOWN LỚP HỌC
+  // 4. HIỂN THỊ DANH SÁCH LỚP
   function populateLopDropdown() {
     let select = document.getElementById("selectLop");
     let selectedVal = select.value;
@@ -256,7 +250,7 @@
     select.value = selectedVal;
   }
 
-  // 5. BỘ LỌC TÌM KIẾM
+  // 5. BỘ LỌC HỌC SINH
   function filterData() {
     let search = document.getElementById("inputSearch").value.toLowerCase().trim();
     let lop = document.getElementById("selectLop").value;
@@ -272,14 +266,13 @@
     renderTable();
   }
 
-  // 6. RENDER HIỂN THỊ BẢNG DỮ LIỆU & THỐNG KÊ CARDS
+  // 6. RENDER BẢNG VÀ THỐNG KÊ
   function renderTable() {
     let tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
 
     let countTre = 0, countKhongPhep = 0, countPhep = 0;
 
-    // Thống kê trên toàn bộ danh sách
     allStudents.forEach(item => {
       let st = getStudentStatus(item);
       if (st === "TRE") countTre++;
@@ -318,7 +311,7 @@
     updateSelectedCount();
   }
 
-  // 7. XỬ LÝ CHỌN CHECKBOX
+  // 7. XỬ LÝ CHECKBOX
   function toggleSelectAll(master) {
     let checkboxes = document.querySelectorAll(".chk-item");
     checkboxes.forEach(cb => cb.checked = master.checked);
@@ -330,7 +323,7 @@
     document.getElementById("cardSelected").innerText = selected;
   }
 
-  // 8. CÁC TÁC VỤ DUYỆT PHÉP, GHI LỊCH SỬ, RESET, ĐỔI MẬT KHẨU
+  // 8. TÁC VỤ ĐIỀU KHIỂN
   function duyetPhepSelected() {
     let checked = Array.from(document.querySelectorAll(".chk-item:checked")).map(c => c.value);
     if (checked.length === 0) return alert("Vui lòng chọn ít nhất 1 học sinh để duyệt phép!");
@@ -372,7 +365,6 @@
     alert("Đã sao chép Link Phụ Huynh vào bộ nhớ tạm!");
   }
 
-  // Khởi chạy
   fetchData();
 </script>
 </body>
