@@ -8,6 +8,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body {
@@ -34,7 +36,7 @@
           </p>
           <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
             <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Trạng thái: <span id="connection-status" class="font-semibold text-slate-600">Đã kết nối dữ liệu</span>
+            Trạng thái: <span class="font-semibold text-slate-600">Đã kết nối dữ liệu</span>
             | Cập nhật: <span id="last-updated-time" class="font-semibold text-emerald-600">Chưa tải</span>
           </p>
         </div>
@@ -127,7 +129,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-        <input type="text" id="search-input" value="" autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterData()" placeholder="Nhập họ tên hoặc mã học sinh..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
+        <input type="text" id="search-input" value="" autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterData()" placeholder="Nhập họ tên..." class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-slate-50/50">
       </div>
       
       <select id="class-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
@@ -136,7 +138,6 @@
 
       <select id="status-filter" onchange="filterData()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 transition-all">
         <option value="">-- Tất cả trạng thái --</option>
-        <option value="ĐÚNG GIỜ">ĐÚNG GIỜ</option>
         <option value="ĐI TRỄ">ĐI TRỄ</option>
         <option value="VẮNG KHÔNG PHÉP">VẮNG KHÔNG PHÉP</option>
         <option value="VẮNG CÓ PHÉP">VẮNG CÓ PHÉP</option>
@@ -232,7 +233,7 @@
   </div>
 
   <script>
-    // DÁN ĐƯỜNG DẪN APPS SCRIPT CỦA BẠN VÀO ĐÂY
+    const CONFIG_DRIVE_FILE_ID = "1LjEYF_esrPdu7xpkJAyzL5F_RgO9jnX-qyxvoNn49kc";
     const CONFIG_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
     const ADMIN_PASSWORD = "admin123";
 
@@ -262,28 +263,17 @@
     let isParentMode = false;
     let isAdminMode = false;
 
-    // KIỂM TRA ĐI TRỄ SAU 07:00:00
-    function isLateTime(timeStr) {
-      if (!timeStr || timeStr === "---") return false;
-      let parts = timeStr.toString().trim().split(":");
-      if (parts.length < 2) return false;
-      let hours = parseInt(parts[0], 10);
-      let minutes = parseInt(parts[1], 10);
-      let seconds = parts[2] ? parseInt(parts[2], 10) : 0;
-      return (hours * 3600 + minutes * 60 + seconds) > (7 * 3600);
-    }
-
-    function calculateStatus(item) {
-      let p = (item.phepVal || "").trim();
-      let kp = (item.khongPhepVal || "").trim();
-      let tr = (item.treVal || "").trim();
-      let tg = (item.thoiGian || "").trim();
-
-      if (p !== "") return "VẮNG CÓ PHÉP";
-      if (kp !== "") return "VẮNG KHÔNG PHÉP";
-      if (tr !== "" || isLateTime(tg)) return "ĐI TRỄ";
-      if (tg !== "---" && tg !== "") return "ĐÚNG GIỜ";
-      return "VẮNG KHÔNG PHÉP";
+    function formatExcelTime(val) {
+      if (!val || val === "---") return "---";
+      let num = parseFloat(val);
+      if (!isNaN(num) && num >= 0 && num <= 1) {
+        let totalSeconds = Math.round(num * 86400);
+        let hours = Math.floor(totalSeconds / 3600);
+        let minutes = Math.floor((totalSeconds % 3600) / 60);
+        let seconds = totalSeconds % 60;
+        return [hours, minutes, seconds].map(v => String(v).padStart(2, '0')).join(':');
+      }
+      return val;
     }
 
     function updateTimestamp() {
@@ -292,6 +282,11 @@
       const dateStr = now.toLocaleDateString('vi-VN');
       document.getElementById("last-updated-time").innerText = `${timeStr} - ${dateStr}`;
     }
+
+    window.addEventListener("pageshow", () => {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) searchInput.value = "";
+    });
 
     window.addEventListener("DOMContentLoaded", () => {
       const searchInput = document.getElementById("search-input");
@@ -352,43 +347,75 @@
     async function fetchAttendanceData() {
       const tbody = document.getElementById("attendance-tbody");
       const colSpan = isParentMode ? 6 : 7;
-      const statusEl = document.getElementById("connection-status");
 
-      statusEl.className = "font-semibold text-amber-500";
-      statusEl.innerText = "Đang tải...";
       tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">Đang tải dữ liệu điểm danh...</td></tr>`;
 
-      try {
-        const response = await fetch(CONFIG_APPS_SCRIPT_URL + "?action=getData");
-        if (!response.ok) throw new Error("Không thể kết nối với Web App.");
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${CONFIG_DRIVE_FILE_ID}/gviz/tq?tqx=out:csv&sheet=data`;
 
-        const rawData = await response.json();
-        
-        allStudents = rawData.map(item => ({
-          rowIdx: item.rowIdx,
-          name: item.hoTen,
-          lop: item.lop || "---",
-          maHs: item.maHs || "---",
-          time: item.thoiGian || "---",
-          status: calculateStatus(item),
-          selected: false
-        }));
+      try {
+        const response = await fetch(csvUrl);
+        if (!response.ok) {
+          throw new Error("Không thể tải dữ liệu từ Google Sheet.");
+        }
+
+        const csvText = await response.text();
+        const workbook = XLSX.read(csvText, { type: 'string' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        allStudents = [];
+
+        for (let r = 4; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row || !row[1]) continue;
+
+          let name = String(row[1]).trim();
+          if (name === "" || name.includes("HỌ VÀ TÊN")) continue;
+
+          let lop = row[2] ? String(row[2]).trim().toUpperCase() : "---";
+          let maHs = row[4] ? String(row[4]).trim() : "---";
+          let rawTime = row[10] ? String(row[10]).trim() : "---";
+          let timeVal = formatExcelTime(rawTime);
+          
+          let treVal = row[5] ? String(row[5]).trim() : "";
+          let phepVal = row[15] ? String(row[15]).trim() : "";
+
+          let status = "VẮNG KHÔNG PHÉP";
+          if (treVal !== "") {
+            status = "ĐI TRỄ";
+          } else if (phepVal.toLowerCase() === "x" || phepVal.toLowerCase() === "p" || phepVal.includes("Có phép") || phepVal === "P") {
+            status = "VẮNG CÓ PHÉP";
+          }
+
+          let studentKey = maHs !== "---" ? maHs : `${name}_${lop}`;
+
+          allStudents.push({
+            rowIdx: r + 1,
+            key: studentKey,
+            name: name,
+            lop: lop,
+            maHs: maHs,
+            time: timeVal,
+            status: status,
+            selected: false
+          });
+        }
 
         document.getElementById("total-students").innerText = allStudents.length;
-        statusEl.className = "font-semibold text-emerald-600";
-        statusEl.innerText = "Đã kết nối dữ liệu";
         updateTimestamp();
 
-        const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
+        const classes = [...new Set(allStudents.map(s => s.lop))].sort();
         const classSelect = document.getElementById("class-filter");
         classSelect.innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
           classes.map(c => `<option value="${c}">${c}</option>`).join('');
 
+        const searchInput = document.getElementById("search-input");
+        if (searchInput) searchInput.value = "";
+
         filterData();
 
       } catch (err) {
-        statusEl.className = "font-semibold text-rose-500";
-        statusEl.innerText = "Lỗi kết nối";
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-rose-500 font-medium">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
       }
     }
@@ -467,8 +494,6 @@
           badgeStyle = "bg-amber-100 text-amber-800 border-amber-200";
         } else if (s.status === "VẮNG CÓ PHÉP") {
           badgeStyle = "bg-emerald-100 text-emerald-700 border-emerald-200";
-        } else if (s.status === "ĐÚNG GIỜ") {
-          badgeStyle = "bg-indigo-100 text-indigo-700 border-indigo-200";
         }
 
         const checkboxTd = isParentMode ? '' : `
@@ -492,8 +517,6 @@
           </tr>
         `;
       }).join('');
-      
-      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     function approveSelected() {
@@ -529,32 +552,40 @@
       }
 
       let maHsList = [];
+      let rowIndices = [];
 
       pendingStudents.forEach(s => {
-        if (s.maHs && s.maHs !== "---") {
-          maHsList.push(s.maHs);
+        if (s.status === "VẮNG KHÔNG PHÉP") {
+          s.status = "VẮNG CÓ PHÉP";
+          s.selected = false;
+          rowIndices.push(s.rowIdx);
+          if (s.maHs && s.maHs !== "---") {
+            maHsList.push(s.maHs);
+          }
         }
       });
 
-      if (maHsList.length === 0) {
-        alert("Không tìm thấy Mã HS hợp lệ để gửi cập nhật.");
+      if (maHsList.length === 0 && rowIndices.length === 0) {
+        alert(`Các học sinh được chọn đã ở trạng thái Có phép.`);
         closePasswordModal();
         return;
       }
 
       closePasswordModal();
 
-      const updateUrl = `${CONFIG_APPS_SCRIPT_URL}?mahss=${encodeURIComponent(maHsList.join(","))}`;
+      filterData();
+      updateTimestamp();
+
+      const masterCheckbox = document.getElementById("select-all");
+      if (masterCheckbox) masterCheckbox.checked = false;
+
+      const updateUrl = `${CONFIG_APPS_SCRIPT_URL}?mahss=${encodeURIComponent(maHsList.join(","))}&rows=${rowIndices.join(",")}`;
       
-      fetch(updateUrl)
-        .then(res => res.text())
-        .then(msg => {
-          alert(msg);
-          fetchAttendanceData();
-        })
-        .catch(err => {
-          alert("Lỗi khi duyệt phép: " + err);
-        });
+      fetch(updateUrl, { 
+        method: 'GET', 
+        mode: 'no-cors',
+        keepalive: true 
+      }).catch(err => console.log("Lỗi cập nhật nền:", err));
     }
 
     function openChangePasswordModal() {
@@ -607,15 +638,16 @@
 
     function adminRecordToLichSu() {
       const adminPass = prompt("Nhập mật khẩu Admin để ghi sang Lịch Sử:");
-      if (!adminPass) return;
+      
+      if (adminPass === null) return;
+      
+      if (adminPass.trim() === "") {
+        alert("Vui lòng nhập mật khẩu Admin!");
+        return;
+      }
 
-      fetch(`${CONFIG_APPS_SCRIPT_URL}?role=admin&pass=${encodeURIComponent(adminPass.trim())}`)
-        .then(res => res.text())
-        .then(msg => {
-          alert(msg);
-          fetchAttendanceData();
-        })
-        .catch(err => alert("Lỗi ghi lịch sử: " + err));
+      const directUrl = `${CONFIG_APPS_SCRIPT_URL}?role=admin&pass=${encodeURIComponent(adminPass.trim())}`;
+      window.open(directUrl, '_blank');
     }
   </script>
 </body>
