@@ -119,6 +119,7 @@
 
     let allStudents = [];
     let filteredStudents = [];
+    let lockedStatuses = {}; // Lưu trữ danh sách học sinh bị khóa trạng thái KHÔNG QUÉT
     let isParentMode = false;
     let searchTimeout = null;
     let isFetching = false;
@@ -193,6 +194,11 @@
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
         let statusObj = computeStatus(item.colF, item.colL, item.colP);
+
+        // Kiểm tra nếu học sinh này đã được duyệt khóa trạng thái KHÔNG QUÉT
+        if (lockedStatuses[item.rowIndex]) {
+          statusObj = lockedStatuses[item.rowIndex];
+        }
 
         allStudents.push({
           rowIndex: item.rowIndex,
@@ -350,7 +356,7 @@
       if (approveLabel) approveLabel.innerText = "Đang đồng bộ...";
       if (btnApprove) btnApprove.classList.add('opacity-75', 'pointer-events-none');
 
-      // ⚡ OPTIMISTIC UI: Đổi trạng thái trên Web TỨC THÌ
+      // OPTIMISTIC UI: Cập nhật giao diện TỨC THÌ
       const selectedRowIndexes = selected.map(s => s.rowIndex);
       const newStatusText = statusValue === "P" ? "PHÉP" : "KHÔNG QUÉT";
       const newBadgeClass = statusValue === "P" 
@@ -359,23 +365,34 @@
 
       // Lưu lại trạng thái cũ phòng trường hợp lỗi thì hoàn tác
       const backupData = JSON.parse(JSON.stringify(allStudents));
+      const backupLocked = JSON.parse(JSON.stringify(lockedStatuses));
 
       allStudents.forEach(s => {
         if (selectedRowIndexes.includes(s.rowIndex)) {
           s.status = newStatusText;
           s.badgeClass = newBadgeClass;
           s.selected = false;
+
+          // Cố định trạng thái nếu chọn KHÔNG QUÉT để giữ nguyên khi tự động tải lại
+          if (statusValue === "KQ") {
+            lockedStatuses[s.rowIndex] = {
+              text: "KHÔNG QUÉT",
+              badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium"
+            };
+          } else {
+            delete lockedStatuses[s.rowIndex];
+          }
         }
       });
 
       const selectAllCb = document.getElementById('select-all');
       if (selectAllCb) selectAllCb.checked = false;
 
-      // Cập nhật lại giao diện ngay
+      // Cập nhật lại giao diện ngay lập tức
       updateStatsCounters();
       filterData();
 
-      // Send ngầm tới Google Apps Script
+      // Gửi ngầm dữ liệu lên Google Sheets
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -394,8 +411,9 @@
 
         if (!res.success) {
           alert("❌ " + res.message);
-          // Hoàn tác nếu sai mật khẩu hoặc lỗi server
+          // Hoàn tác nếu sai mật khẩu hoặc bị lỗi server
           allStudents = backupData;
+          lockedStatuses = backupLocked;
           updateStatsCounters();
           filterData();
         }
@@ -405,6 +423,7 @@
         if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
         alert("Lỗi kết nối tới Server. Đã hoàn tác dữ liệu!");
         allStudents = backupData;
+        lockedStatuses = backupLocked;
         updateStatsCounters();
         filterData();
       });
