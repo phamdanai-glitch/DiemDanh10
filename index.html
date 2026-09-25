@@ -231,38 +231,47 @@
       filterData();
     }
 
-    // NÂNG CẤP HÀM XÁC ĐỊNH TRẠNG THÁI THEO CỘT Q & P
+    // LOGIC CHUẨN ĐÃ ĐƯỢC CẬP NHẬT THEO CỘT Q
     function computeStatus(colF, colL, colP, colQ) {
       const qVal = String(colQ || "").toLowerCase().trim();
       const pVal = String(colP || "").toLowerCase().trim();
       const lVal = String(colL || "").toLowerCase().trim();
 
-      // Trường hợp 1: Cột Q rỗng -> Tính trạng thái theo quy tắc P & L
-      if (qVal === "") {
-        if (pVal === "p") {
+      // TRƯỜNG HỢP 1: CỘT Q CÓ GIÁ TRỊ -> HIỂN THỊ TRỰC TIẾP THEO CỘT Q
+      if (qVal !== "") {
+        if (qVal === "p" || qVal === "phép" || qVal === "phep") {
           return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-        } else if (pVal === "kq") {
+        } 
+        if (qVal === "kq" || qVal === "không quét" || qVal === "khong quet") {
           return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
-        } else if (pVal === "") {
-          if (lVal === "") {
-            return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
-          } else {
-            return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
-          }
-        } else {
+        } 
+        if (qVal === "trễ" || qVal === "tre" || qVal === "đi trễ" || qVal === "di tre") {
+          return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
+        } 
+        if (qVal === "đúng giờ" || qVal === "dung gio") {
+          return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+        } 
+        if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
           return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
         }
+
+        // Nếu cột Q là từ khác, vẫn lấy nguyên văn từ cột Q để hiển thị (IN HOA)
+        return { text: qVal.toUpperCase(), badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
       } 
       
-      // Trường hợp 2: Cột Q có giá trị -> Hiển thị theo Q
-      if (qVal === "p") {
+      // TRƯỜNG HỢP 2: CỘT Q RỖNG -> TÍNH THEO CỘT P & L
+      if (pVal === "p") {
         return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-      } else if (qVal === "kq") {
+      } 
+      if (pVal === "kq") {
         return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
-      } else if (qVal === "trễ" || qVal === "tre") {
-        return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
-      } else if (qVal === "đúng giờ" || qVal === "dung gio") {
-        return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+      } 
+      if (pVal === "") {
+        if (lVal === "") {
+          return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+        } else {
+          return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
+        }
       }
 
       return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
