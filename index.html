@@ -134,12 +134,7 @@
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
-      const cached = localStorage.getItem("vt_attendance_cache");
-      if (cached) {
-        try { parseSheetData(JSON.parse(cached)); } catch(e){}
-      }
-
-      fetchDataFromSheet();
+      fetchDataFromSheet(false, false);
 
       if (!isMobile) {
         document.getElementById("status-text").innerText = "Tự động đồng bộ (PC Mode)";
@@ -157,14 +152,16 @@
       const icon = document.getElementById('refresh-icon');
       const label = document.getElementById('refresh-label');
 
-      // PHẢN HỒI THỊ GIÁC LẬP TỨC 0ms
       if (!isSilent) {
         if (icon) icon.classList.add('animate-spin');
         if (label) label.innerText = "Đang tải...";
         if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
       }
 
-      fetch(SCRIPT_URL + "?action=getData", { method: "GET", redirect: "follow" })
+      // Xóa cache trình duyệt bằng cách thêm tham số thời gian thực
+      const fetchUrl = SCRIPT_URL + "?action=getData&cachebust=" + new Date().getTime();
+
+      fetch(fetchUrl, { method: "GET", redirect: "follow" })
         .then(res => res.json())
         .then(data => {
           isFetching = false;
@@ -175,8 +172,9 @@
           }
 
           if (Array.isArray(data)) {
-            localStorage.setItem("vt_attendance_cache", JSON.stringify(data));
             parseSheetData(data);
+          } else if (data.error) {
+            alert("Lỗi: " + data.error);
           }
         })
         .catch(err => {
@@ -191,8 +189,7 @@
     }
 
     function parseSheetData(rows) {
-      const selectedSet = new Set(allStudents.filter(s => s.selected).map(s => s.rowIndex));
-
+      // Làm sạch mảng dữ liệu cũ hoàn toàn trước khi nạp dữ liệu mới
       allStudents = [];
       const len = rows.length;
 
@@ -203,27 +200,28 @@
 
         if (hoTen !== "" || maHs !== "") {
           let statusObj = computeStatus(row);
-          let rIndex = i + 1;
           allStudents.push({
-            rowIndex: rIndex,
+            rowIndex: i + 1,
             name: hoTen,
             lop: String(row[2] || "---").trim().toUpperCase(),
             maHs: maHs !== "" ? maHs : "---",
             time: row[10] ? String(row[10]).trim() : "---",
             status: statusObj.text,
             badgeClass: statusObj.badgeClass,
-            selected: selectedSet.has(rIndex)
+            selected: false
           });
         }
       }
 
       document.getElementById("total-students").innerText = allStudents.length;
 
+      // Cập nhật danh sách chọn lớp
       const currentClassSelection = document.getElementById("class-filter").value;
       const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
         classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
 
+      // Đếm lại số liệu và vẽ lại bảng lập tức
       updateStatsCounters();
       filterData();
     }
@@ -331,7 +329,6 @@
       tbody.innerHTML = html;
     }
 
-    // DUYỆT PHÉP - CẬP NHẬT TỨC THÌ TRÊN GIAO DIỆN (OPTIMISTIC UPDATE)
     function openApproveModal() {
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
@@ -345,25 +342,11 @@
       const btnApprove = document.getElementById('btn-approve');
       const approveLabel = document.getElementById('approve-label');
       
-      // 1. Phản hồi nút bấm ngay lập tức
       if (approveLabel) approveLabel.innerText = "Đang lưu...";
       if (btnApprove) btnApprove.classList.add('opacity-75', 'pointer-events-none');
 
-      // 2. Cập nhật ngay giao diện màn hình (Optimistic UI Update)
       const selectedRowIndexes = selected.map(s => s.rowIndex);
-      allStudents.forEach(s => {
-        if (selectedRowIndexes.includes(s.rowIndex)) {
-          s.status = "PHÉP";
-          s.badgeClass = "bg-emerald-100 text-emerald-700 border-emerald-200";
-          s.selected = false;
-        }
-      });
 
-      // Tải lại giao diện & số liệu ngay lập tức (0ms delay)
-      updateStatsCounters();
-      filterData();
-
-      // 3. Gửi API đồng bộ ngầm lên Google Sheets
       fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify({ action: "approvePhep", password: password, rowIndexes: selectedRowIndexes }),
@@ -375,19 +358,17 @@
         if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
 
         if (res.success) {
-          // Thành công -> Tải lại bản gốc chính xác từ sheet
-          fetchDataFromSheet(false, true);
+          alert("✅ " + res.message);
+          // Tải lại dữ liệu ngay lập tức
+          fetchDataFromSheet(true, false);
         } else {
-          alert("Lỗi: " + res.message);
-          // Nếu mật khẩu sai hoặc lỗi -> Tải lại dữ liệu ban đầu
-          fetchDataFromSheet(true);
+          alert("❌ " + res.message);
         }
       })
       .catch(err => {
         if (approveLabel) approveLabel.innerText = "GVCN Duyệt Phép";
         if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
         alert("Lỗi kết nối: " + err.message);
-        fetchDataFromSheet(true);
       });
     }
   </script>
