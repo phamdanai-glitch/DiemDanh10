@@ -228,7 +228,7 @@
         if (colP === "p") {
           return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
         } else if (colP === "kq") {
-          return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-100 text-slate-600 border-slate-200" };
+          return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
         } else {
           return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
         }
@@ -323,10 +323,9 @@
         return;
       }
 
-      // Chọn trạng thái ghi vào Cột P
       const typeChoice = prompt(
         `Đang chọn ${selected.length} học sinh.\n` +
-        `Nhập số đại diện cho trạng thái:\n` +
+        `Nhập số tương ứng với trạng thái duyệt:\n` +
         `1. CÓ PHÉP (Ghi chữ "P")\n` +
         `2. KHÔNG QUÉT (Ghi chữ "KQ")`,
         "1"
@@ -342,17 +341,41 @@
         return;
       }
 
-      const password = prompt(`Xác nhận ghi "${statusValue}" cho ${selected.length} học sinh.\nNhập mật khẩu GVCN:`);
+      const password = prompt(`Xác nhận ghi "${statusValue === "P" ? "CÓ PHÉP" : "KHÔNG QUÉT"}" cho ${selected.length} học sinh.\nNhập mật khẩu GVCN:`);
       if (!password) return;
 
       const btnApprove = document.getElementById('btn-approve');
       const approveLabel = document.getElementById('approve-label');
       
-      if (approveLabel) approveLabel.innerText = "Đang lưu...";
+      if (approveLabel) approveLabel.innerText = "Đang đồng bộ...";
       if (btnApprove) btnApprove.classList.add('opacity-75', 'pointer-events-none');
 
+      // ⚡ OPTIMISTIC UI: Đổi trạng thái trên Web TỨC THÌ
       const selectedRowIndexes = selected.map(s => s.rowIndex);
+      const newStatusText = statusValue === "P" ? "PHÉP" : "KHÔNG QUÉT";
+      const newBadgeClass = statusValue === "P" 
+        ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
+        : "bg-slate-200 text-slate-700 border-slate-300 font-medium";
 
+      // Lưu lại trạng thái cũ phòng trường hợp lỗi thì hoàn tác
+      const backupData = JSON.parse(JSON.stringify(allStudents));
+
+      allStudents.forEach(s => {
+        if (selectedRowIndexes.includes(s.rowIndex)) {
+          s.status = newStatusText;
+          s.badgeClass = newBadgeClass;
+          s.selected = false;
+        }
+      });
+
+      const selectAllCb = document.getElementById('select-all');
+      if (selectAllCb) selectAllCb.checked = false;
+
+      // Cập nhật lại giao diện ngay
+      updateStatsCounters();
+      filterData();
+
+      // Send ngầm tới Google Apps Script
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -369,17 +392,21 @@
         if (approveLabel) approveLabel.innerText = "GVCN Duyệt Trạng Thái";
         if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
 
-        if (res.success) {
-          alert("✅ " + res.message);
-          fetchDataFromSheet(true, false);
-        } else {
+        if (!res.success) {
           alert("❌ " + res.message);
+          // Hoàn tác nếu sai mật khẩu hoặc lỗi server
+          allStudents = backupData;
+          updateStatsCounters();
+          filterData();
         }
       })
       .catch(err => {
         if (approveLabel) approveLabel.innerText = "GVCN Duyệt Trạng Thái";
         if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
-        alert("Lỗi kết nối: " + err.message);
+        alert("Lỗi kết nối tới Server. Đã hoàn tác dữ liệu!");
+        allStudents = backupData;
+        updateStatsCounters();
+        filterData();
       });
     }
   </script>
