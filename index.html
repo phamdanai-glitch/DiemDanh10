@@ -34,17 +34,13 @@
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2" id="action-buttons">
+      <div class="flex items-center gap-2" id="action-buttons">
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
-        <button id="btn-approve-phep" onclick="openApproveModal('approvePhep')" class="flex-1 sm:flex-none justify-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
-          <i data-lucide="shield-check" class="w-4 h-4"></i> <span>GVCN Duyệt Phép</span>
-        </button>
-
-        <button id="btn-approve-kq" onclick="openApproveModal('approveKQ')" class="flex-1 sm:flex-none justify-center bg-slate-700 hover:bg-slate-800 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
-          <i data-lucide="user-x" class="w-4 h-4"></i> <span>Duyệt Không Quét</span>
+        <button id="btn-approve" onclick="openApproveModal()" class="flex-1 sm:flex-none justify-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+          <i data-lucide="shield-check" class="w-4 h-4" id="approve-icon"></i> <span id="approve-label">GVCN Duyệt Trạng Thái</span>
         </button>
       </div>
     </div>
@@ -134,8 +130,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('mode') === 'phuhuynh') {
         isParentMode = true;
-        document.getElementById('btn-approve-phep').style.display = 'none';
-        document.getElementById('btn-approve-kq').style.display = 'none';
+        document.getElementById('btn-approve').style.display = 'none';
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
@@ -163,7 +158,6 @@
         if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
       }
 
-      // MỐC 3: Thêm cachebust để luôn lấy dữ liệu mới nhất
       const fetchUrl = SCRIPT_URL + "?action=getData&cachebust=" + new Date().getTime();
 
       fetch(fetchUrl, { method: "GET", redirect: "follow" })
@@ -194,7 +188,6 @@
     }
 
     function parseSheetData(items) {
-      // MỐC 3: Xóa sạch danh sách cũ trước khi nạp
       allStudents = [];
 
       for (let i = 0; i < items.length; i++) {
@@ -215,13 +208,11 @@
 
       document.getElementById("total-students").innerText = allStudents.length;
 
-      // Cập nhật danh sách chọn Lớp
       const currentClassSelection = document.getElementById("class-filter").value;
       const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
         classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
 
-      // MỐC 3: Tính lại thống kê & vẽ giao diện lập tức
       updateStatsCounters();
       filterData();
     }
@@ -325,27 +316,59 @@
       tbody.innerHTML = html;
     }
 
-    function openApproveModal(actionType) {
+    function openApproveModal() {
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
         alert("Vui lòng tích chọn ít nhất 1 học sinh!");
         return;
       }
 
-      const typeLabel = (actionType === 'approvePhep') ? 'CÓ PHÉP' : 'KHÔNG QUÉT';
-      const password = prompt(`Duyệt [${typeLabel}] cho ${selected.length} học sinh.\nNhập mật khẩu GVCN:`);
+      // Chọn trạng thái ghi vào Cột P
+      const typeChoice = prompt(
+        `Đang chọn ${selected.length} học sinh.\n` +
+        `Nhập số đại diện cho trạng thái:\n` +
+        `1. CÓ PHÉP (Ghi chữ "P")\n` +
+        `2. KHÔNG QUÉT (Ghi chữ "KQ")`,
+        "1"
+      );
+
+      if (!typeChoice) return;
+
+      let statusValue = "P";
+      if (typeChoice.trim() === "2") {
+        statusValue = "KQ";
+      } else if (typeChoice.trim() !== "1") {
+        alert("Lựa chọn không hợp lệ!");
+        return;
+      }
+
+      const password = prompt(`Xác nhận ghi "${statusValue}" cho ${selected.length} học sinh.\nNhập mật khẩu GVCN:`);
       if (!password) return;
+
+      const btnApprove = document.getElementById('btn-approve');
+      const approveLabel = document.getElementById('approve-label');
+      
+      if (approveLabel) approveLabel.innerText = "Đang lưu...";
+      if (btnApprove) btnApprove.classList.add('opacity-75', 'pointer-events-none');
 
       const selectedRowIndexes = selected.map(s => s.rowIndex);
 
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: actionType, password: password, rowIndexes: selectedRowIndexes }),
+        body: JSON.stringify({ 
+          action: "approvePhep", 
+          password: password, 
+          statusValue: statusValue,
+          rowIndexes: selectedRowIndexes 
+        }),
         redirect: "follow"
       })
       .then(res => res.json())
       .then(res => {
+        if (approveLabel) approveLabel.innerText = "GVCN Duyệt Trạng Thái";
+        if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
+
         if (res.success) {
           alert("✅ " + res.message);
           fetchDataFromSheet(true, false);
@@ -354,6 +377,8 @@
         }
       })
       .catch(err => {
+        if (approveLabel) approveLabel.innerText = "GVCN Duyệt Trạng Thái";
+        if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
         alert("Lỗi kết nối: " + err.message);
       });
     }
