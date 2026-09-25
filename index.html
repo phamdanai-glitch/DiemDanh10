@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Quản Lý Điểm Danh Trực Tuyến - THPT Vị Thanh</title>
+  <title>Điểm Danh Trực Tuyến - THPT Vị Thanh</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -114,13 +114,12 @@
   </div>
 
   <script>
-    // ĐÃ TÍCH HỢP LINK SCRIPT CỦA BẠN VÀO ĐÂY
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
 
     let allStudents = [];
     let filteredStudents = [];
     let isParentMode = false;
-    let lastDataString = "";
+    let isFetching = false;
 
     window.onload = function() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -130,42 +129,41 @@
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
-      // 1. Tải tức thì từ Local Cache (0.01s)
+      // Load dữ liệu từ LocalCache nếu có
       const cached = localStorage.getItem("vt_attendance_cache");
       if (cached) {
-        try {
-          lastDataString = cached;
-          parseSheetData(JSON.parse(cached));
-        } catch(e){}
+        try { parseSheetData(JSON.parse(cached)); } catch(e){}
       }
 
-      // 2. Tải ngầm dữ liệu sống mới nhất
+      // Tải dữ liệu sống
       fetchDataFromSheet();
 
-      // 3. Tự động đồng bộ mỗi 10 giây
+      // Đồng bộ ngầm nhẹ nhàng mỗi 15 giây
       setInterval(() => {
         fetchDataFromSheet(false, true);
-      }, 10000);
+      }, 15000);
     };
 
     function fetchDataFromSheet(isManual = false, isSilent = false) {
+      if (isFetching) return; // Tránh chồng chéo request làm đơ mạng
+      isFetching = true;
+
       const icon = document.getElementById('refresh-icon');
       if (icon && !isSilent) icon.classList.add('animate-spin');
 
       fetch(SCRIPT_URL + "?action=getData", { method: "GET", redirect: "follow" })
         .then(res => res.json())
         .then(data => {
+          isFetching = false;
           if (icon) icon.classList.remove('animate-spin');
           if (Array.isArray(data)) {
-            const currentString = JSON.stringify(data);
-            if (currentString !== lastDataString || isManual) {
-              lastDataString = currentString;
-              localStorage.setItem("vt_attendance_cache", currentString);
-              parseSheetData(data);
-            }
+            // Lưu cache không qua mã hóa phức tạp
+            try { localStorage.setItem("vt_attendance_cache", JSON.stringify(data)); } catch(e){}
+            parseSheetData(data);
           }
         })
         .catch(err => {
+          isFetching = false;
           if (icon) icon.classList.remove('animate-spin');
           console.error(err);
         });
