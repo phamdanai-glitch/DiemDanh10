@@ -27,14 +27,14 @@
             Trường THPT Vị Thanh • Tổng HS: <span id="total-students" class="font-bold text-indigo-600">0</span>
           </p>
           <p class="text-[11px] text-slate-400 flex items-center gap-1">
-            <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span id="connection-status">Tự động đồng bộ</span>
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Đã kết nối Google Sheets</span>
           </p>
         </div>
       </div>
 
       <div class="flex items-center gap-2" id="action-buttons">
-        <button onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+        <button onclick="fetchDataFromSheet()" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-icon"></i> Làm Mới
         </button>
 
@@ -44,7 +44,7 @@
       </div>
     </div>
 
-    <!-- CÁC THẺ THỐNG KÊ -->
+    <!-- THỐNG KÊ -->
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
       <div class="bg-indigo-50/60 border border-indigo-100 p-2.5 rounded-xl">
         <p class="text-[11px] sm:text-xs font-medium text-indigo-600">Đúng giờ</p>
@@ -68,7 +68,7 @@
       </div>
     </div>
 
-    <!-- BỘ LỌC TÌM KIẾM -->
+    <!-- BỘ LỌC -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
@@ -119,7 +119,6 @@
     let allStudents = [];
     let filteredStudents = [];
     let isParentMode = false;
-    let isFetching = false;
 
     window.onload = function() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -129,50 +128,36 @@
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
-      // Load dữ liệu từ LocalCache nếu có
+      // Đọc ngay bộ nhớ đệm nếu có
       const cached = localStorage.getItem("vt_attendance_cache");
       if (cached) {
         try { parseSheetData(JSON.parse(cached)); } catch(e){}
       }
 
-      // Tải dữ liệu sống
       fetchDataFromSheet();
-
-      // Đồng bộ ngầm nhẹ nhàng mỗi 15 giây
-      setInterval(() => {
-        fetchDataFromSheet(false, true);
-      }, 15000);
     };
 
-    function fetchDataFromSheet(isManual = false, isSilent = false) {
-      if (isFetching) return; // Tránh chồng chéo request làm đơ mạng
-      isFetching = true;
-
+    // Hàm gọi dữ liệu chuẩn như mốc 2 (Cực nhanh & nhẹ)
+    function fetchDataFromSheet() {
       const icon = document.getElementById('refresh-icon');
-      if (icon && !isSilent) icon.classList.add('animate-spin');
+      if (icon) icon.classList.add('animate-spin');
 
       fetch(SCRIPT_URL + "?action=getData", { method: "GET", redirect: "follow" })
         .then(res => res.json())
         .then(data => {
-          isFetching = false;
           if (icon) icon.classList.remove('animate-spin');
           if (Array.isArray(data)) {
-            // Lưu cache không qua mã hóa phức tạp
-            try { localStorage.setItem("vt_attendance_cache", JSON.stringify(data)); } catch(e){}
+            localStorage.setItem("vt_attendance_cache", JSON.stringify(data));
             parseSheetData(data);
           }
         })
         .catch(err => {
-          isFetching = false;
           if (icon) icon.classList.remove('animate-spin');
           console.error(err);
         });
     }
 
     function parseSheetData(rows) {
-      const selectedMap = new Map();
-      allStudents.forEach(s => { if (s.selected) selectedMap.set(s.rowIndex, true); });
-
       allStudents = [];
       for (let i = 4; i < rows.length; i++) {
         let row = rows[i] || [];
@@ -181,17 +166,15 @@
 
         if (hoTen !== "" || maHs !== "") {
           let statusObj = computeStatus(row);
-          let rIndex = i + 1;
-
           allStudents.push({
-            rowIndex: rIndex,
+            rowIndex: i + 1,
             name: hoTen,
             lop: String(row[2] || "---").trim().toUpperCase(),
             maHs: maHs !== "" ? maHs : "---",
             time: row[10] ? String(row[10]).trim() : "---",
             status: statusObj.text,
             badgeClass: statusObj.badgeClass,
-            selected: selectedMap.has(rIndex) ? true : false
+            selected: false
           });
         }
       }
@@ -300,7 +283,7 @@
       .then(res => {
         if (res.success) {
           alert(res.message);
-          fetchDataFromSheet(true);
+          fetchDataFromSheet();
         } else {
           alert("Lỗi: " + res.message);
         }
