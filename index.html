@@ -35,16 +35,17 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2" id="action-buttons">
+        <!-- Nút Làm Mới -->
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
-        <!-- Nút 1: Duyệt Có Phép -->
+        <!-- Nút Duyệt Có Phép -->
         <button id="btn-approve-phep" onclick="openApproveModal('approvePhep')" class="flex-1 sm:flex-none justify-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
           <i data-lucide="shield-check" class="w-4 h-4"></i> <span>GVCN Duyệt Phép</span>
         </button>
 
-        <!-- Nút 2: Duyệt Không Quét -->
+        <!-- Nút Duyệt Không Quét -->
         <button id="btn-approve-kq" onclick="openApproveModal('approveKQ')" class="flex-1 sm:flex-none justify-center bg-slate-700 hover:bg-slate-800 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
           <i data-lucide="user-x" class="w-4 h-4"></i> <span>Duyệt Không Quét</span>
         </button>
@@ -165,6 +166,7 @@
         if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
       }
 
+      // Xóa Cache bằng tham số thời gian thực
       const fetchUrl = SCRIPT_URL + "?action=getData&cachebust=" + new Date().getTime();
 
       fetch(fetchUrl, { method: "GET", redirect: "follow" })
@@ -195,6 +197,7 @@
     }
 
     function parseSheetData(rows) {
+      // Mốc 3: Reset mảng dữ liệu cũ hoàn toàn trước khi nạp dữ liệu mới
       allStudents = [];
       const len = rows.length;
 
@@ -220,11 +223,13 @@
 
       document.getElementById("total-students").innerText = allStudents.length;
 
+      // Cập nhật bộ lọc danh sách lớp
       const currentClassSelection = document.getElementById("class-filter").value;
       const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
         classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
 
+      // Đếm lại thống kê và vẽ lại bảng lập tức
       updateStatsCounters();
       filterData();
     }
@@ -345,8 +350,10 @@
 
       const selectedRowIndexes = selected.map(s => s.rowIndex);
 
+      // Dùng Content-Type: text/plain để vượt qua bộ lọc CORS của trình duyệt
       fetch(SCRIPT_URL, {
         method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: actionType, password: password, rowIndexes: selectedRowIndexes }),
         redirect: "follow"
       })
