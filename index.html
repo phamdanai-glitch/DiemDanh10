@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Hệ Thống Điểm Danh Trực Tuyến - THPT Vị Thanh</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -41,14 +41,14 @@
           <i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-icon"></i> Làm Mới
         </button>
 
-        <!-- Nút GVCN Duyệt Phép (Mặc định ẩn với Phụ huynh) -->
+        <!-- Nút GVCN Duyệt Phép -->
         <button id="btn-approve" onclick="openApproveModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
           <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Có Phép
         </button>
       </div>
     </div>
 
-    <!-- CÁC THẺ THỐNG KÊ (STATS CARDS) -->
+    <!-- CÁC THẺ THỐNG KÊ -->
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
       <div class="bg-indigo-50/60 border border-indigo-100 p-3.5 rounded-xl">
         <p class="text-xs font-medium text-indigo-600">Đúng giờ</p>
@@ -72,7 +72,7 @@
       </div>
     </div>
 
-    <!-- BỘ LỌC TÌM KIẾM & LỚP -->
+    <!-- BỘ LỌC TÌM KIẾM -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
@@ -137,18 +137,18 @@
       // Tải dữ liệu ban đầu
       fetchDataFromSheet();
 
-      // TỰ ĐỘNG CẬP NHẬT DỮ LIỆU NGẦM MỖI 15 GIÂY (REALTIME)
+      // TỰ ĐỘNG CẬP NHẬT DỮ LIỆU NGẦM MỖI 15 GIÂY
       setInterval(() => {
         fetchDataFromSheet(false, true);
       }, 15000);
     };
 
-    // 1. TẢI DỮ LIỆU SIÊU TỐC CÓ CACHE & AUTO-REFRESH
+    // 1. TẢI DỮ LIỆU SIÊU TỐC - TƯƠNG THÍCH HOÀN HẢO MOBILE
     function fetchDataFromSheet(isManualRefresh = false, isSilent = false) {
       const refreshIcon = document.getElementById('refresh-icon');
       if (refreshIcon && !isSilent) refreshIcon.classList.add('animate-spin');
 
-      // Đọc Cache hiển thị tức thì nếu không phải làm mới thủ công
+      // Đọc Cache hiển thị tức thì
       const cachedData = localStorage.getItem("vt_attendance_cache");
       if (cachedData && !isManualRefresh && allStudents.length === 0) {
         try {
@@ -159,9 +159,15 @@
           `<tr><td colspan="7" class="p-8 text-center text-slate-400">Đang đồng bộ dữ liệu mới nhất...</td></tr>`;
       }
 
-      // Gọi API lấy dữ liệu thực tế từ Google Sheets
-      fetch(SCRIPT_URL + "?action=getData", { method: "GET" })
-        .then(res => res.json())
+      // Gọi API Google Sheets - Bổ sung redirect: "follow" cho Safari & Chrome Mobile
+      fetch(SCRIPT_URL + "?action=getData", { 
+        method: "GET",
+        redirect: "follow"
+      })
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP Status " + res.status);
+          return res.json();
+        })
         .then(data => {
           if (refreshIcon) refreshIcon.classList.remove('animate-spin');
           if (Array.isArray(data)) {
@@ -171,17 +177,17 @@
         })
         .catch(err => {
           if (refreshIcon) refreshIcon.classList.remove('animate-spin');
-          console.error(err);
+          console.error("Lỗi fetch mobile:", err);
           if (allStudents.length === 0) {
             document.getElementById('attendance-tbody').innerHTML = 
-              `<tr><td colspan="7" class="p-8 text-center text-rose-500 font-semibold">Lỗi kết nối dữ liệu! Vui lòng kiểm tra lại cấu hình.</td></tr>`;
+              `<tr><td colspan="7" class="p-8 text-center text-rose-500 font-semibold">Không thể tải dữ liệu trên điện thoại!<br><span class="text-xs text-slate-400">Hãy mở link bằng trình duyệt Safari/Chrome hoặc kiểm tra kết nối mạng.</span></td></tr>`;
           }
         });
     }
 
     // 2. PHÂN TÍCH DỮ LIỆU TỪ SHEET
     function parseSheetData(rows) {
-      // Giữ trạng thái Checkbox của người dùng khi làm mới ngầm
+      // Giữ trạng thái Checkbox của người dùng
       const selectedMap = new Map();
       allStudents.forEach(s => { if (s.selected) selectedMap.set(s.rowIndex, true); });
 
@@ -212,7 +218,7 @@
 
       document.getElementById("total-students").innerText = allStudents.length;
 
-      // Cập nhật Danh sách Lớp vào bộ lọc
+      // Cập nhật Danh sách Lớp
       const currentClassSelection = document.getElementById("class-filter").value;
       const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
@@ -222,7 +228,7 @@
       filterData();
     }
 
-    // 3. LOGIC XÁC ĐỊNH TRẠNG THÁI THEO QUY TRÌNH F, L, P
+    // 3. LOGIC XÁC ĐỊNH TRẠNG THÁI (F, L, P)
     function computeStatus(row) {
       let colF = String(row[5] || "").trim().toLowerCase();   // Cột F: CÓ MẶT
       let colL = String(row[11] || "").trim();                // Cột L: VÔ TRĨ / ĐI TRỄ
@@ -269,7 +275,7 @@
       }
     }
 
-    // 4. CẬP NHẬT CÁC BỘ ĐẾM THỐNG KÊ
+    // 4. CẬP NHẬT BỘ ĐẾM
     function updateStatsCounters() {
       document.getElementById("stat-dung-gio").innerText = allStudents.filter(s => s.status === "ĐÚNG GIỜ").length;
       document.getElementById("stat-di-tre").innerText = allStudents.filter(s => s.status === "ĐI TRỄ").length;
@@ -299,7 +305,7 @@
       renderTable();
     }
 
-    // 6. RENDER BẢNG DỮ LIỆU
+    // 6. RENDER BẢNG
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       if (filteredStudents.length === 0) {
@@ -324,7 +330,7 @@
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    // 7. GVCN DUYỆT CÓ PHÉP
+    // 7. DUYỆT PHÉP
     function openApproveModal() {
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
@@ -343,7 +349,8 @@
 
       fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        redirect: "follow"
       })
       .then(res => res.json())
       .then(res => {
