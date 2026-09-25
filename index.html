@@ -35,12 +35,12 @@
       </div>
 
       <div class="flex items-center gap-2" id="action-buttons">
-        <button onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
-          <i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-icon"></i> Làm Mới
+        <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
         <button id="btn-approve" onclick="openApproveModal()" class="flex-1 sm:flex-none justify-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
-          <i data-lucide="shield-check" class="w-4 h-4"></i> GVCN Duyệt Phép
+          <i data-lucide="shield-check" class="w-4 h-4" id="approve-icon"></i> <span id="approve-label">GVCN Duyệt Phép</span>
         </button>
       </div>
     </div>
@@ -134,7 +134,6 @@
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
-      // Đọc bộ nhớ tạm để hiển thị ngay
       const cached = localStorage.getItem("vt_attendance_cache");
       if (cached) {
         try { parseSheetData(JSON.parse(cached)); } catch(e){}
@@ -142,8 +141,6 @@
 
       fetchDataFromSheet();
 
-      // Nếu là Máy tính (PC): Tự động đồng bộ mỗi 10 giây
-      // Nếu là Điện thoại: Không dùng Interval ngầm để tránh lag thiết bị
       if (!isMobile) {
         document.getElementById("status-text").innerText = "Tự động đồng bộ (PC Mode)";
         setInterval(() => {
@@ -156,14 +153,27 @@
       if (isFetching) return;
       isFetching = true;
 
+      const btnRefresh = document.getElementById('btn-refresh');
       const icon = document.getElementById('refresh-icon');
-      if (icon && !isSilent) icon.classList.add('animate-spin');
+      const label = document.getElementById('refresh-label');
+
+      // PHẢN HỒI THỊ GIÁC LẬP TỨC 0ms
+      if (!isSilent) {
+        if (icon) icon.classList.add('animate-spin');
+        if (label) label.innerText = "Đang tải...";
+        if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
+      }
 
       fetch(SCRIPT_URL + "?action=getData", { method: "GET", redirect: "follow" })
         .then(res => res.json())
         .then(data => {
           isFetching = false;
-          if (icon) icon.classList.remove('animate-spin');
+          if (!isSilent) {
+            if (icon) icon.classList.remove('animate-spin');
+            if (label) label.innerText = "Làm Mới";
+            if (btnRefresh) btnRefresh.classList.remove('opacity-75', 'pointer-events-none');
+          }
+
           if (Array.isArray(data)) {
             localStorage.setItem("vt_attendance_cache", JSON.stringify(data));
             parseSheetData(data);
@@ -171,13 +181,16 @@
         })
         .catch(err => {
           isFetching = false;
-          if (icon) icon.classList.remove('animate-spin');
+          if (!isSilent) {
+            if (icon) icon.classList.remove('animate-spin');
+            if (label) label.innerText = "Làm Mới";
+            if (btnRefresh) btnRefresh.classList.remove('opacity-75', 'pointer-events-none');
+          }
           console.error(err);
         });
     }
 
     function parseSheetData(rows) {
-      // Giữ lại trạng thái checkbox đang chọn
       const selectedSet = new Set(allStudents.filter(s => s.selected).map(s => s.rowIndex));
 
       allStudents = [];
@@ -292,7 +305,6 @@
       }
     }
 
-    // Hàm render tối ưu hóa kép cho cả PC và Mobile
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       const total = filteredStudents.length;
@@ -319,6 +331,7 @@
       tbody.innerHTML = html;
     }
 
+    // DUYỆT PHÉP - CẬP NHẬT TỨC THÌ TRÊN GIAO DIỆN (OPTIMISTIC UPDATE)
     function openApproveModal() {
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
@@ -329,21 +342,53 @@
       const password = prompt(`Duyệt CÓ PHÉP cho ${selected.length} học sinh.\nNhập mật khẩu GVCN:`);
       if (!password) return;
 
+      const btnApprove = document.getElementById('btn-approve');
+      const approveLabel = document.getElementById('approve-label');
+      
+      // 1. Phản hồi nút bấm ngay lập tức
+      if (approveLabel) approveLabel.innerText = "Đang lưu...";
+      if (btnApprove) btnApprove.classList.add('opacity-75', 'pointer-events-none');
+
+      // 2. Cập nhật ngay giao diện màn hình (Optimistic UI Update)
+      const selectedRowIndexes = selected.map(s => s.rowIndex);
+      allStudents.forEach(s => {
+        if (selectedRowIndexes.includes(s.rowIndex)) {
+          s.status = "PHÉP";
+          s.badgeClass = "bg-emerald-100 text-emerald-700 border-emerald-200";
+          s.selected = false;
+        }
+      });
+
+      // Tải lại giao diện & số liệu ngay lập tức (0ms delay)
+      updateStatsCounters();
+      filterData();
+
+      // 3. Gửi API đồng bộ ngầm lên Google Sheets
       fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify({ action: "approvePhep", password: password, rowIndexes: selected.map(s => s.rowIndex) }),
+        body: JSON.stringify({ action: "approvePhep", password: password, rowIndexes: selectedRowIndexes }),
         redirect: "follow"
       })
       .then(res => res.json())
       .then(res => {
+        if (approveLabel) approveLabel.innerText = "GVCN Duyệt Phép";
+        if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
+
         if (res.success) {
-          alert(res.message);
-          fetchDataFromSheet(true);
+          // Thành công -> Tải lại bản gốc chính xác từ sheet
+          fetchDataFromSheet(false, true);
         } else {
           alert("Lỗi: " + res.message);
+          // Nếu mật khẩu sai hoặc lỗi -> Tải lại dữ liệu ban đầu
+          fetchDataFromSheet(true);
         }
       })
-      .catch(err => alert("Lỗi kết nối: " + err.message));
+      .catch(err => {
+        if (approveLabel) approveLabel.innerText = "GVCN Duyệt Phép";
+        if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
+        alert("Lỗi kết nối: " + err.message);
+        fetchDataFromSheet(true);
+      });
     }
   </script>
 </body>
