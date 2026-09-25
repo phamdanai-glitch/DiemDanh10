@@ -34,13 +34,19 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2" id="action-buttons">
+      <div class="flex flex-wrap items-center gap-2" id="action-buttons">
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
-        <button id="btn-approve" onclick="openApproveModal()" class="flex-1 sm:flex-none justify-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
-          <i data-lucide="shield-check" class="w-4 h-4" id="approve-icon"></i> <span id="approve-label">GVCN Duyệt Phép</span>
+        <!-- Nút 1: Duyệt Có Phép -->
+        <button id="btn-approve-phep" onclick="openApproveModal('approvePhep')" class="flex-1 sm:flex-none justify-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> <span>GVCN Duyệt Phép</span>
+        </button>
+
+        <!-- Nút 2: Duyệt Không Quét -->
+        <button id="btn-approve-kq" onclick="openApproveModal('approveKQ')" class="flex-1 sm:flex-none justify-center bg-slate-700 hover:bg-slate-800 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+          <i data-lucide="user-x" class="w-4 h-4"></i> <span>Duyệt Không Quét</span>
         </button>
       </div>
     </div>
@@ -130,7 +136,8 @@
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('mode') === 'phuhuynh') {
         isParentMode = true;
-        document.getElementById('btn-approve').style.display = 'none';
+        document.getElementById('btn-approve-phep').style.display = 'none';
+        document.getElementById('btn-approve-kq').style.display = 'none';
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
@@ -158,7 +165,6 @@
         if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
       }
 
-      // Xóa cache trình duyệt bằng cách thêm tham số thời gian thực
       const fetchUrl = SCRIPT_URL + "?action=getData&cachebust=" + new Date().getTime();
 
       fetch(fetchUrl, { method: "GET", redirect: "follow" })
@@ -189,7 +195,6 @@
     }
 
     function parseSheetData(rows) {
-      // Làm sạch mảng dữ liệu cũ hoàn toàn trước khi nạp dữ liệu mới
       allStudents = [];
       const len = rows.length;
 
@@ -215,13 +220,11 @@
 
       document.getElementById("total-students").innerText = allStudents.length;
 
-      // Cập nhật danh sách chọn lớp
       const currentClassSelection = document.getElementById("class-filter").value;
       const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
         classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
 
-      // Đếm lại số liệu và vẽ lại bảng lập tức
       updateStatsCounters();
       filterData();
     }
@@ -329,45 +332,34 @@
       tbody.innerHTML = html;
     }
 
-    function openApproveModal() {
+    function openApproveModal(actionType) {
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
         alert("Vui lòng tích chọn ít nhất 1 học sinh!");
         return;
       }
 
-      const password = prompt(`Duyệt CÓ PHÉP cho ${selected.length} học sinh.\nNhập mật khẩu GVCN:`);
+      const typeLabel = (actionType === 'approvePhep') ? 'CÓ PHÉP' : 'KHÔNG QUÉT';
+      const password = prompt(`Duyệt [${typeLabel}] cho ${selected.length} học sinh.\nNhập mật khẩu GVCN:`);
       if (!password) return;
-
-      const btnApprove = document.getElementById('btn-approve');
-      const approveLabel = document.getElementById('approve-label');
-      
-      if (approveLabel) approveLabel.innerText = "Đang lưu...";
-      if (btnApprove) btnApprove.classList.add('opacity-75', 'pointer-events-none');
 
       const selectedRowIndexes = selected.map(s => s.rowIndex);
 
       fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify({ action: "approvePhep", password: password, rowIndexes: selectedRowIndexes }),
+        body: JSON.stringify({ action: actionType, password: password, rowIndexes: selectedRowIndexes }),
         redirect: "follow"
       })
       .then(res => res.json())
       .then(res => {
-        if (approveLabel) approveLabel.innerText = "GVCN Duyệt Phép";
-        if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
-
         if (res.success) {
           alert("✅ " + res.message);
-          // Tải lại dữ liệu ngay lập tức
           fetchDataFromSheet(true, false);
         } else {
           alert("❌ " + res.message);
         }
       })
       .catch(err => {
-        if (approveLabel) approveLabel.innerText = "GVCN Duyệt Phép";
-        if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
         alert("Lỗi kết nối: " + err.message);
       });
     }
