@@ -29,14 +29,14 @@
             Trường THPT Vị Thanh • Tổng HS: <span id="total-students" class="font-bold text-indigo-600">0</span>
           </p>
           <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
-            <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Trạng thái: <span id="connection-status" class="font-semibold text-slate-600">Đã kết nối Google Sheets</span>
+            <span id="status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Trạng thái: <span id="connection-status" class="font-semibold text-slate-600">Tự động đồng bộ</span>
           </p>
         </div>
       </div>
 
       <div class="flex flex-wrap items-center gap-2.5" id="action-buttons">
-        <!-- Nút tải lại dữ liệu -->
+        <!-- Nút làm mới thủ công -->
         <button onclick="fetchDataFromSheet(true)" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3.5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-icon"></i> Làm Mới
         </button>
@@ -109,7 +109,7 @@
         </thead>
         <tbody id="attendance-tbody" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="7" class="p-8 text-center text-slate-400">Đang tải dữ liệu từ Google Sheets...</td>
+            <td colspan="7" class="p-8 text-center text-slate-400">Đang tải dữ liệu...</td>
           </tr>
         </tbody>
       </table>
@@ -119,13 +119,12 @@
 
   <script>
     // DÁN LINK EXEC CỦA GOOGLE APPS SCRIPT VÀO ĐÂY:
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
+    const SCRIPT_URL = "THAY_LINK_WEB_APP_APPS_SCRIPT_CUA_BAN_VAO_DAY";
 
     let allStudents = [];
     let filteredStudents = [];
     let isParentMode = false;
 
-    // KHI TRANG TẢI XONG
     window.onload = function() {
       // Phân quyền Phụ huynh qua tham số URL (?mode=phuhuynh)
       const urlParams = new URLSearchParams(window.location.search);
@@ -135,26 +134,32 @@
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
+      // Tải dữ liệu ban đầu
       fetchDataFromSheet();
+
+      // TỰ ĐỘNG CẬP NHẬT DỮ LIỆU NGẦM MỖI 15 GIÂY (REALTIME)
+      setInterval(() => {
+        fetchDataFromSheet(false, true);
+      }, 15000);
     };
 
-    // 1. TẢI DỮ LIỆU TỐI ƯU TỐC ĐỘ (HIỂN THỊ CACHE NGAY TỨC THÌ)
-    function fetchDataFromSheet(isManualRefresh = false) {
+    // 1. TẢI DỮ LIỆU SIÊU TỐC CÓ CACHE & AUTO-REFRESH
+    function fetchDataFromSheet(isManualRefresh = false, isSilent = false) {
       const refreshIcon = document.getElementById('refresh-icon');
-      if (refreshIcon) refreshIcon.classList.add('animate-spin');
+      if (refreshIcon && !isSilent) refreshIcon.classList.add('animate-spin');
 
-      // Tải dữ liệu từ LocalCache trước nếu có
+      // Đọc Cache hiển thị tức thì nếu không phải làm mới thủ công
       const cachedData = localStorage.getItem("vt_attendance_cache");
-      if (cachedData && !isManualRefresh) {
+      if (cachedData && !isManualRefresh && allStudents.length === 0) {
         try {
           parseSheetData(JSON.parse(cachedData));
         } catch(e) {}
-      } else if (!cachedData) {
+      } else if (!cachedData && allStudents.length === 0) {
         document.getElementById('attendance-tbody').innerHTML = 
           `<tr><td colspan="7" class="p-8 text-center text-slate-400">Đang đồng bộ dữ liệu mới nhất...</td></tr>`;
       }
 
-      // Gọi API lấy dữ liệu sống từ Google Sheets
+      // Gọi API lấy dữ liệu thực tế từ Google Sheets
       fetch(SCRIPT_URL + "?action=getData", { method: "GET" })
         .then(res => res.json())
         .then(data => {
@@ -162,58 +167,62 @@
           if (Array.isArray(data)) {
             localStorage.setItem("vt_attendance_cache", JSON.stringify(data));
             parseSheetData(data);
-          } else if (data.error) {
-            alert("Lỗi Backend: " + data.error);
           }
         })
         .catch(err => {
           if (refreshIcon) refreshIcon.classList.remove('animate-spin');
           console.error(err);
-          if (!cachedData) {
+          if (allStudents.length === 0) {
             document.getElementById('attendance-tbody').innerHTML = 
-              `<tr><td colspan="7" class="p-8 text-center text-rose-500 font-semibold">Lỗi kết nối dữ liệu! Vui lòng kiểm tra lại cấu hình đường link SCRIPT_URL.</td></tr>`;
+              `<tr><td colspan="7" class="p-8 text-center text-rose-500 font-semibold">Lỗi kết nối dữ liệu! Vui lòng kiểm tra lại cấu hình.</td></tr>`;
           }
         });
     }
 
-    // 2. PHÂN TÍCH VÀ ĐỌC DỮ LIỆU TỪ SHEET
+    // 2. PHÂN TÍCH DỮ LIỆU TỪ SHEET
     function parseSheetData(rows) {
+      // Giữ trạng thái Checkbox của người dùng khi làm mới ngầm
+      const selectedMap = new Map();
+      allStudents.forEach(s => { if (s.selected) selectedMap.set(s.rowIndex, true); });
+
       allStudents = [];
       
-      // Đọc bắt đầu từ Hàng 5 (Index 4)
+      // Đọc từ Hàng 5 (Index 4)
       for (let i = 4; i < rows.length; i++) {
         let row = rows[i] || [];
-        let hoTen = String(row[1] || "").trim(); // Cột B: Họ và tên
-        let maHs = String(row[4] || "").trim();  // Cột E: Mã HS
+        let hoTen = String(row[1] || "").trim(); // Cột B
+        let maHs = String(row[4] || "").trim();  // Cột E
 
         if (hoTen !== "" || maHs !== "") {
           let statusObj = computeStatus(row);
+          let rIndex = i + 1;
 
           allStudents.push({
-            rowIndex: i + 1, // Vị trí dòng thực tế trên Sheet
+            rowIndex: rIndex,
             name: hoTen,
-            lop: String(row[2] || "---").trim().toUpperCase(), // Cột C: Lớp
+            lop: String(row[2] || "---").trim().toUpperCase(), // Cột C
             maHs: maHs !== "" ? maHs : "---",
-            time: row[10] ? String(row[10]).trim() : "---",     // Cột K: Thời gian
+            time: row[10] ? String(row[10]).trim() : "---",     // Cột K
             status: statusObj.text,
             badgeClass: statusObj.badgeClass,
-            selected: false
+            selected: selectedMap.has(rIndex) ? true : false
           });
         }
       }
 
       document.getElementById("total-students").innerText = allStudents.length;
 
-      // Cập nhật Danh sách Lớp vào bộ lọc Dropdown
+      // Cập nhật Danh sách Lớp vào bộ lọc
+      const currentClassSelection = document.getElementById("class-filter").value;
       const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
-        classes.map(c => `<option value="${c}">${c}</option>`).join('');
+        classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
 
       updateStatsCounters();
       filterData();
     }
 
-    // 3. LOGIC XÁC ĐỊNH TRẠNG THÁI CHUẨN XÁC (CỘT F, L, P)
+    // 3. LOGIC XÁC ĐỊNH TRẠNG THÁI THEO QUY TRÌNH F, L, P
     function computeStatus(row) {
       let colF = String(row[5] || "").trim().toLowerCase();   // Cột F: CÓ MẶT
       let colL = String(row[11] || "").trim();                // Cột L: VÔ TRĨ / ĐI TRỄ
@@ -269,7 +278,7 @@
       document.getElementById("stat-khong-phep").innerText = allStudents.filter(s => s.status === "KHÔNG PHÉP").length;
     }
 
-    // 5. LỌC TÌM KIẾM THEO DỮ LIỆU INPUT / DROPDOWN
+    // 5. LỌC TÌM KIẾM
     function filterData() {
       const search = document.getElementById("search-input").value.toLowerCase().trim();
       const selectedClass = document.getElementById("class-filter").value;
@@ -290,7 +299,7 @@
       renderTable();
     }
 
-    // 6. RENDER GIAO DIỆN BẢNG DỮ LIỆU
+    // 6. RENDER BẢNG DỮ LIỆU
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       if (filteredStudents.length === 0) {
@@ -315,7 +324,7 @@
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    // 7. THAO TÁC DUYỆT PHÉP CỦA GVCN
+    // 7. GVCN DUYỆT CÓ PHÉP
     function openApproveModal() {
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
@@ -332,7 +341,6 @@
         rowIndexes: selected.map(s => s.rowIndex)
       };
 
-      // Gửi yêu cầu POST cập nhật chữ "P" vào Cột P
       fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify(payload)
@@ -341,7 +349,7 @@
       .then(res => {
         if (res.success) {
           alert(res.message);
-          fetchDataFromSheet(true); // Tải lại dữ liệu trực tiếp mới nhất
+          fetchDataFromSheet(true);
         } else {
           alert("Lỗi: " + res.message);
         }
