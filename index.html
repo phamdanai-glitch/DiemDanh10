@@ -119,7 +119,7 @@
 
     let allStudents = [];
     let filteredStudents = [];
-    let lockedStatuses = {}; // Lưu trữ danh sách học sinh bị khóa trạng thái KHÔNG QUÉT
+    let pendingApprovals = {}; // Biến ghi nhớ trạng thái vừa duyệt (tránh bị sync ghi đè)
     let isParentMode = false;
     let searchTimeout = null;
     let isFetching = false;
@@ -195,9 +195,15 @@
         let item = items[i];
         let statusObj = computeStatus(item.colF, item.colL, item.colP);
 
-        // Kiểm tra nếu học sinh này đã được duyệt khóa trạng thái KHÔNG QUÉT
-        if (lockedStatuses[item.rowIndex]) {
-          statusObj = lockedStatuses[item.rowIndex];
+        // NẾU HỆ THỐNG ĐÃ CẬP NHẬT TRÊN GOOGLE SHEETS THÌ XÓA LƯU TẠM
+        if (pendingApprovals[item.rowIndex]) {
+          if ((pendingApprovals[item.rowIndex].text === "PHÉP" && item.colP === "p") || 
+              (pendingApprovals[item.rowIndex].text === "KHÔNG QUÉT" && item.colP === "kq")) {
+            delete pendingApprovals[item.rowIndex];
+          } else {
+            // Nếu Google Sheets chưa lưu xong, vẫn giữ nguyên trạng thái duyệt trên UI
+            statusObj = pendingApprovals[item.rowIndex];
+          }
         }
 
         allStudents.push({
@@ -356,43 +362,39 @@
       if (approveLabel) approveLabel.innerText = "Đang đồng bộ...";
       if (btnApprove) btnApprove.classList.add('opacity-75', 'pointer-events-none');
 
-      // OPTIMISTIC UI: Cập nhật giao diện TỨC THÌ
       const selectedRowIndexes = selected.map(s => s.rowIndex);
       const newStatusText = statusValue === "P" ? "PHÉP" : "KHÔNG QUÉT";
       const newBadgeClass = statusValue === "P" 
         ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
         : "bg-slate-200 text-slate-700 border-slate-300 font-medium";
 
-      // Lưu lại trạng thái cũ phòng trường hợp lỗi thì hoàn tác
+      // Lưu lại trạng thái cũ phòng trường hợp có lỗi thì rollback
       const backupData = JSON.parse(JSON.stringify(allStudents));
-      const backupLocked = JSON.parse(JSON.stringify(lockedStatuses));
+      const backupPending = JSON.parse(JSON.stringify(pendingApprovals));
 
+      // Cập nhật giao diện TỨC THÌ và ghi nhớ tạm thời
       allStudents.forEach(s => {
         if (selectedRowIndexes.includes(s.rowIndex)) {
           s.status = newStatusText;
           s.badgeClass = newBadgeClass;
           s.selected = false;
 
-          // Cố định trạng thái nếu chọn KHÔNG QUÉT để giữ nguyên khi tự động tải lại
-          if (statusValue === "KQ") {
-            lockedStatuses[s.rowIndex] = {
-              text: "KHÔNG QUÉT",
-              badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium"
-            };
-          } else {
-            delete lockedStatuses[s.rowIndex];
-          }
+          // Lưu trạng thái tạm vào pendingApprovals để khi Auto Sync chạy không bị nhảy về "Không Phép"
+          pendingApprovals[s.rowIndex] = {
+            text: newStatusText,
+            badgeClass: newBadgeClass
+          };
         }
       });
 
       const selectAllCb = document.getElementById('select-all');
       if (selectAllCb) selectAllCb.checked = false;
 
-      // Cập nhật lại giao diện ngay lập tức
+      // Render giao diện ngay
       updateStatsCounters();
       filterData();
 
-      // Gửi ngầm dữ liệu lên Google Sheets
+      // Gửi yêu cầu lên server Google Apps Script
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -413,7 +415,7 @@
           alert("❌ " + res.message);
           // Hoàn tác nếu sai mật khẩu hoặc bị lỗi server
           allStudents = backupData;
-          lockedStatuses = backupLocked;
+          pendingApprovals = backupPending;
           updateStatsCounters();
           filterData();
         }
@@ -423,7 +425,7 @@
         if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
         alert("Lỗi kết nối tới Server. Đã hoàn tác dữ liệu!");
         allStudents = backupData;
-        lockedStatuses = backupLocked;
+        pendingApprovals = backupPending;
         updateStatsCounters();
         filterData();
       });
