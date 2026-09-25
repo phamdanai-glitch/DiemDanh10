@@ -34,6 +34,7 @@
         </div>
       </div>
 
+      <!-- THANH NÚT BẤM (ĐÃ KHÔI PHỤC ĐỦ 2 NÚT) -->
       <div class="flex items-center gap-2" id="action-buttons">
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
@@ -195,7 +196,6 @@
         let item = items[i];
         let statusObj = computeStatus(item.colF, item.colL, item.colP, item.colQ);
 
-        // Trạng thái chờ từ UI nếu Sheet chưa kịp ghi nhận
         if (pendingApprovals[item.rowIndex]) {
           const valP = String(item.colP || "").toLowerCase().trim();
           const valQ = String(item.colQ || "").toLowerCase().trim();
@@ -223,7 +223,7 @@
       document.getElementById("total-students").innerText = allStudents.length;
 
       const currentClassSelection = document.getElementById("class-filter").value;
-      const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---").sort();
+      const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---" && c !== "").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
         classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
 
@@ -231,44 +231,34 @@
       filterData();
     }
 
-    // LOGIC XỬ LÝ TRẠNG THÁI TRIỆT ĐỂ BẰNG CỘT Q (BẮT MỌI TRƯỜNG HỢP CHỮ CỦA Q)
+    // LOGIC TÍNH TRẠNG THÁI ƯU TIÊN CỘT Q TẬN CÙNG
     function computeStatus(colF, colL, colP, colQ) {
       const qVal = String(colQ || "").toLowerCase().trim();
       const pVal = String(colP || "").toLowerCase().trim();
       const lVal = String(colL || "").toLowerCase().trim();
 
-      // ==========================================
-      // 1. NẾU CỘT Q CÓ DỮ LIỆU -> BẮT BUỘC THEO Q
-      // ==========================================
+      // 1. NẾU CỘT Q CÓ DỮ LIỆU
       if (qVal !== "") {
-        // Nhận diện 'không phép'
         if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
           return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
         }
-        // Nhận diện 'phép'
         if (qVal === "p" || qVal === "phép" || qVal === "phep") {
           return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
         } 
-        // Nhận diện 'không quét'
         if (qVal === "kq" || qVal === "không quét" || qVal === "khong quet") {
           return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
         } 
-        // Nhận diện 'trễ'
         if (qVal === "trễ" || qVal === "tre" || qVal === "đi trễ" || qVal === "di tre") {
           return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
         } 
-        // Nhận diện 'đúng giờ'
         if (qVal === "đúng giờ" || qVal === "dung gio") {
           return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
         } 
 
-        // Nếu Q chứa chuỗi khác bất kỳ -> Trả về nguyên văn bản IN HOA của Q
         return { text: qVal.toUpperCase(), badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
       } 
       
-      // ==========================================
-      // 2. NẾU CỘT Q RỖNG -> TÍNH THEO CỘT P & L
-      // ==========================================
+      // 2. CỘT Q RỖNG -> XÉT P VÀ L
       if (pVal === "p") {
         return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
       } 
@@ -276,7 +266,6 @@
         return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
       } 
       
-      // P rỗng -> Kiểm tra L
       if (pVal === "") {
         if (lVal === "" || lVal === "đúng giờ" || lVal === "dung gio") {
           return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
