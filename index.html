@@ -9,6 +9,7 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .table-container { -webkit-overflow-scrolling: touch; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 p-2 sm:p-5">
@@ -26,15 +27,15 @@
           <p class="text-xs sm:text-sm text-slate-500">
             Trường THPT Vị Thanh • Tổng HS: <span id="total-students" class="font-bold text-indigo-600">0</span>
           </p>
-          <p class="text-[11px] text-slate-400 flex items-center gap-1">
-            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Đã kết nối Google Sheets</span>
+          <p class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+            <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="status-text">Đã kết nối Google Sheets</span>
           </p>
         </div>
       </div>
 
       <div class="flex items-center gap-2" id="action-buttons">
-        <button onclick="fetchDataFromSheet()" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+        <button onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-icon"></i> Làm Mới
         </button>
 
@@ -72,7 +73,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-        <input type="text" id="search-input" oninput="filterData()" placeholder="Tìm tên hoặc mã HS..." class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
+        <input type="text" id="search-input" oninput="debounceFilter()" placeholder="Tìm tên hoặc mã HS..." class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
       </div>
       
       <select id="class-filter" onchange="filterData()" class="px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
@@ -90,7 +91,7 @@
     </div>
 
     <!-- BẢNG DỮ LIỆU -->
-    <div class="overflow-x-auto rounded-xl border border-slate-200">
+    <div class="overflow-x-auto rounded-xl border border-slate-200 table-container">
       <table class="w-full text-left border-collapse text-xs sm:text-sm">
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold">
@@ -119,8 +120,13 @@
     let allStudents = [];
     let filteredStudents = [];
     let isParentMode = false;
+    let searchTimeout = null;
+    let isFetching = false;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     window.onload = function() {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('mode') === 'phuhuynh') {
         isParentMode = true;
@@ -128,23 +134,35 @@
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
-      // Đọc ngay bộ nhớ đệm nếu có
+      // Đọc bộ nhớ tạm để hiển thị ngay
       const cached = localStorage.getItem("vt_attendance_cache");
       if (cached) {
         try { parseSheetData(JSON.parse(cached)); } catch(e){}
       }
 
       fetchDataFromSheet();
+
+      // Nếu là Máy tính (PC): Tự động đồng bộ mỗi 10 giây
+      // Nếu là Điện thoại: Không dùng Interval ngầm để tránh lag thiết bị
+      if (!isMobile) {
+        document.getElementById("status-text").innerText = "Tự động đồng bộ (PC Mode)";
+        setInterval(() => {
+          fetchDataFromSheet(false, true);
+        }, 10000);
+      }
     };
 
-    // Hàm gọi dữ liệu chuẩn như mốc 2 (Cực nhanh & nhẹ)
-    function fetchDataFromSheet() {
+    function fetchDataFromSheet(isManual = false, isSilent = false) {
+      if (isFetching) return;
+      isFetching = true;
+
       const icon = document.getElementById('refresh-icon');
-      if (icon) icon.classList.add('animate-spin');
+      if (icon && !isSilent) icon.classList.add('animate-spin');
 
       fetch(SCRIPT_URL + "?action=getData", { method: "GET", redirect: "follow" })
         .then(res => res.json())
         .then(data => {
+          isFetching = false;
           if (icon) icon.classList.remove('animate-spin');
           if (Array.isArray(data)) {
             localStorage.setItem("vt_attendance_cache", JSON.stringify(data));
@@ -152,29 +170,36 @@
           }
         })
         .catch(err => {
+          isFetching = false;
           if (icon) icon.classList.remove('animate-spin');
           console.error(err);
         });
     }
 
     function parseSheetData(rows) {
+      // Giữ lại trạng thái checkbox đang chọn
+      const selectedSet = new Set(allStudents.filter(s => s.selected).map(s => s.rowIndex));
+
       allStudents = [];
-      for (let i = 4; i < rows.length; i++) {
+      const len = rows.length;
+
+      for (let i = 4; i < len; i++) {
         let row = rows[i] || [];
         let hoTen = String(row[1] || "").trim();
         let maHs = String(row[4] || "").trim();
 
         if (hoTen !== "" || maHs !== "") {
           let statusObj = computeStatus(row);
+          let rIndex = i + 1;
           allStudents.push({
-            rowIndex: i + 1,
+            rowIndex: rIndex,
             name: hoTen,
             lop: String(row[2] || "---").trim().toUpperCase(),
             maHs: maHs !== "" ? maHs : "---",
             time: row[10] ? String(row[10]).trim() : "---",
             status: statusObj.text,
             badgeClass: statusObj.badgeClass,
-            selected: false
+            selected: selectedSet.has(rIndex)
           });
         }
       }
@@ -213,11 +238,26 @@
     }
 
     function updateStatsCounters() {
-      document.getElementById("stat-dung-gio").innerText = allStudents.filter(s => s.status === "ĐÚNG GIỜ").length;
-      document.getElementById("stat-di-tre").innerText = allStudents.filter(s => s.status === "ĐI TRỄ").length;
-      document.getElementById("stat-phep").innerText = allStudents.filter(s => s.status === "PHÉP").length;
-      document.getElementById("stat-khong-quet").innerText = allStudents.filter(s => s.status === "KHÔNG QUÉT").length;
-      document.getElementById("stat-khong-phep").innerText = allStudents.filter(s => s.status === "KHÔNG PHÉP").length;
+      let dungGio = 0, diTre = 0, phep = 0, khongQuet = 0, khongPhep = 0;
+      for (let i = 0; i < allStudents.length; i++) {
+        let st = allStudents[i].status;
+        if (st === "ĐÚNG GIỜ") dungGio++;
+        else if (st === "ĐI TRỄ") diTre++;
+        else if (st === "PHÉP") phep++;
+        else if (st === "KHÔNG QUÉT") khongQuet++;
+        else if (st === "KHÔNG PHÉP") khongPhep++;
+      }
+
+      document.getElementById("stat-dung-gio").innerText = dungGio;
+      document.getElementById("stat-di-tre").innerText = diTre;
+      document.getElementById("stat-phep").innerText = phep;
+      document.getElementById("stat-khong-quet").innerText = khongQuet;
+      document.getElementById("stat-khong-phep").innerText = khongPhep;
+    }
+
+    function debounceFilter() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(filterData, 200);
     }
 
     function filterData() {
@@ -236,32 +276,47 @@
     }
 
     function toggleSelectAll(master) {
-      filteredStudents.forEach(s => s.selected = master.checked);
-      renderTable();
+      const checked = master.checked;
+      filteredStudents.forEach(s => s.selected = checked);
+      const checkboxes = document.querySelectorAll('#attendance-tbody input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = checked);
     }
 
+    function onRowSelectChange(idx, element) {
+      filteredStudents[idx].selected = element.checked;
+      const tr = element.closest('tr');
+      if (element.checked) {
+        tr.classList.add('bg-indigo-50/30');
+      } else {
+        tr.classList.remove('bg-indigo-50/30');
+      }
+    }
+
+    // Hàm render tối ưu hóa kép cho cả PC và Mobile
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
-      if (filteredStudents.length === 0) {
+      const total = filteredStudents.length;
+
+      if (total === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Không có dữ liệu phù hợp.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = filteredStudents.map((s, idx) => {
-        return `
-          <tr class="hover:bg-slate-50/80 ${s.selected ? 'bg-indigo-50/30' : ''}">
-            ${!isParentMode ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="filteredStudents[${idx}].selected = this.checked" class="rounded text-indigo-600 cursor-pointer"></td>` : ''}
-            <td class="p-2.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-            <td class="p-2.5 font-semibold text-slate-800">${s.name}</td>
-            <td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>
-            <td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>
-            <td class="p-2.5 text-slate-500 font-mono text-xs">${s.time}</td>
-            <td class="p-2.5"><span class="px-2 py-0.5 rounded-md text-[11px] font-bold border inline-block ${s.badgeClass}">${s.status}</span></td>
-          </tr>
-        `;
-      }).join('');
+      let html = '';
+      for (let idx = 0; idx < total; idx++) {
+        let s = filteredStudents[idx];
+        html += `<tr class="hover:bg-slate-50/80 ${s.selected ? 'bg-indigo-50/30' : ''}">` +
+          (!isParentMode ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${idx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
+          `<td class="p-2.5 text-center text-slate-400 font-medium">${idx + 1}</td>` +
+          `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
+          `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
+          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>` +
+          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.time}</td>` +
+          `<td class="p-2.5"><span class="px-2 py-0.5 rounded-md text-[11px] font-bold border inline-block ${s.badgeClass}">${s.status}</span></td>` +
+        `</tr>`;
+      }
 
-      if (typeof lucide !== 'undefined') lucide.createIcons();
+      tbody.innerHTML = html;
     }
 
     function openApproveModal() {
@@ -283,7 +338,7 @@
       .then(res => {
         if (res.success) {
           alert(res.message);
-          fetchDataFromSheet();
+          fetchDataFromSheet(true);
         } else {
           alert("Lỗi: " + res.message);
         }
