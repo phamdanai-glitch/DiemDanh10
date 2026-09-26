@@ -36,8 +36,14 @@
 
       <!-- THANH CÔNG CỤ -->
       <div class="flex flex-wrap items-center gap-2" id="action-buttons">
+        <!-- NÚT LÀM MỚI (LUÔN GIỮ LẠI) -->
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
+        </button>
+
+        <!-- NÚT LẤY LINK PHỤ HUYNH -->
+        <button id="btn-copy-parent-link" onclick="copyParentLink()" class="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 active:scale-95 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="share-2" class="w-4 h-4"></i> <span>Link Phụ Huynh</span>
         </button>
 
         <div id="login-section" class="flex items-center gap-2">
@@ -154,13 +160,13 @@
 
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Tên đăng nhập (Tên Lớp / Admin):</label>
-          <input type="text" id="login-username" placeholder="Ví dụ: 10A1 hoặc admin" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Tên đăng nhập:</label>
+          <input type="text" id="login-username" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase">
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu (Mặc định: 123456):</label>
-          <input type="password" id="login-password" placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu:</label>
+          <input type="password" id="login-password" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
       </div>
 
@@ -215,11 +221,27 @@
       const btnExport = document.getElementById("btn-export-history");
       const classFilter = document.getElementById("class-filter");
       const colCheckbox = document.querySelector(".col-checkbox");
+      const btnRefresh = document.getElementById("btn-refresh");
+      const btnCopyParent = document.getElementById("btn-copy-parent-link");
 
-      if (currentUser) {
-        loginSec.classList.add("hidden");
-        loggedSec.classList.remove("hidden");
-        if (colCheckbox) colCheckbox.classList.remove("hidden"); // HIỆN CỘT TICK KHI ĐĂNG NHẬP
+      const urlParams = new URLSearchParams(window.location.search);
+      const isParentView = urlParams.get('role') === 'phuhuynh';
+
+      if (isParentView) {
+        // GIAO DIỆN PHỤ HUYNH: ẨN TOÀN BỘ NÚT QUẢN TRỊ & ĐĂNG NHẬP, GIỮ NÚT LÀM MỚI
+        if (loginSec) loginSec.classList.add("hidden");
+        if (loggedSec) loggedSec.classList.add("hidden");
+        if (btnCopyParent) btnCopyParent.classList.add("hidden");
+        if (btnRefresh) btnRefresh.classList.remove("hidden"); // Giữ nút Làm mới
+        if (colCheckbox) colCheckbox.classList.add("hidden");
+        classFilter.disabled = false;
+      } else if (currentUser) {
+        // GIAO DIỆN ĐÃ ĐĂNG NHẬP (GVCN / ADMIN)
+        if (loginSec) loginSec.classList.add("hidden");
+        if (loggedSec) loggedSec.classList.remove("hidden");
+        if (btnCopyParent) btnCopyParent.classList.remove("hidden");
+        if (btnRefresh) btnRefresh.classList.remove("hidden");
+        if (colCheckbox) colCheckbox.classList.remove("hidden");
 
         if (currentUser.role === "admin") {
           userDisplay.innerText = "ADMIN (Toàn quyền)";
@@ -234,13 +256,28 @@
           classFilter.disabled = true;
         }
       } else {
-        loginSec.classList.remove("hidden");
-        loggedSec.classList.add("hidden");
-        btnExport.classList.add("hidden");
-        if (colCheckbox) colCheckbox.classList.add("hidden"); // ẨN CỘT TICK KHI ĐĂNG XUẤT/XEM CHUNG
+        // GIAO DIỆN CHƯA ĐĂNG NHẬP (MẶC ĐỊNH)
+        if (loginSec) loginSec.classList.remove("hidden");
+        if (loggedSec) loggedSec.classList.add("hidden");
+        if (btnCopyParent) btnCopyParent.classList.remove("hidden");
+        if (btnRefresh) btnRefresh.classList.remove("hidden");
+        if (colCheckbox) colCheckbox.classList.add("hidden");
         classFilter.disabled = false;
       }
+
       filterData();
+    }
+
+    // HÀM SAO CHÉP LINK PHỤ HUYNH
+    function copyParentLink() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const parentUrl = baseUrl + "?role=phuhuynh";
+
+      navigator.clipboard.writeText(parentUrl).then(() => {
+        alert("✅ Đã sao chép đường link xem dành cho Phụ huynh:\n\n" + parentUrl + "\n\nBạn có thể gửi ngay link này cho Phụ huynh!");
+      }).catch(err => {
+        prompt("Đường link dành cho Phụ huynh:", parentUrl);
+      });
     }
 
     function openLoginModal() {
@@ -709,7 +746,7 @@
 
       const targetClass = prompt(
         "ADMIN RESET MẬT KHẨU\n" +
-        "Nhập Tên Lớp cần Reset mật khẩu về mặc định (123456):\n" +
+        "Nhập Tên Lớp cần Reset mật khẩu về mặc định:\n" +
         "(Để trống nếu muốn RESET MẬT KHẨU CỦA TẤT CẢ CÁC LỚP)"
       );
 
