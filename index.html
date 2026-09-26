@@ -55,7 +55,7 @@
             <i data-lucide="shield-check" class="w-4 h-4"></i> <span id="approve-label">Duyệt Trạng Thái</span>
           </button>
 
-          <!-- NÚT BẤM RÚT LỊCH SỬ DÀNH CHO ADMIN -->
+          <!-- NÚT RÚT LỊCH SỬ DÀNH CHO ADMIN -->
           <button id="btn-export-history" onclick="exportHistoryToSheet()" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span>Rút Lịch Sử</span>
           </button>
@@ -615,12 +615,12 @@
       });
     }
 
-    // TÍNH NĂNG RÚT LỊCH SỬ DÀNH CHO ADMIN
+    // THAO TÁC RÚT LỊCH SỬ DÀNH CHO ADMIN
     function exportHistoryToSheet() {
       if (!currentUser || currentUser.role !== "admin") return;
 
       const todayStr = new Date().toLocaleDateString("vi-VN");
-      const customDate = prompt("XÁC NHẬN TRÍCH XUẤT LỊCH SỬ ĐIỂM DANH SANG SHEET 'lichsu'\n\nNhập ngày cần trích xuất (định dạng Ngày/Tháng/Năm):", todayStr);
+      const customDate = prompt("XÁC NHẬN RÚT ĐIỂM DANH SANG SHEET 'lichsu'\n\nNhập ngày cần trích xuất (định dạng Ngày/Tháng/Năm):", todayStr);
       
       if (!customDate) return;
 
@@ -655,7 +655,7 @@
         btn.innerHTML = originalText;
         btn.disabled = false;
         if (typeof lucide !== 'undefined') lucide.createIcons();
-        alert("Lỗi kết nối khi trích xuất lịch sử!");
+        alert("Lỗi kết nối khi rút lịch sử!");
       });
     }
 
