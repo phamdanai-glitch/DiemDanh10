@@ -24,8 +24,9 @@
         </div>
         <div>
           <h1 class="text-lg sm:text-2xl font-bold text-slate-800 leading-tight">Quản Lý Điểm Danh Trực Tuyến</h1>
+          <!-- TỔNG SỐ HS HIỂN THỊ THEO BỘ LỌC -->
           <p class="text-xs sm:text-sm text-slate-500">
-            Trường THPT Vị Thanh • Tổng HS: <span id="total-students" class="font-bold text-indigo-600">0</span>
+            Trường THPT Vị Thanh • Hiển thị: <span id="total-students" class="font-bold text-indigo-600">0</span> học sinh
           </p>
           <p class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
             <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -46,7 +47,7 @@
       </div>
     </div>
 
-    <!-- KHU VỰC THỐNG KÊ -->
+    <!-- KHU VỰC THỐNG KÊ (ĐÃ CẬP NHẬT: TỰ ĐỘNG THEO LỌC) -->
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
       <div class="bg-indigo-50/60 border border-indigo-100 p-2.5 rounded-xl">
         <p class="text-[11px] sm:text-xs font-medium text-indigo-600">Đúng giờ</p>
@@ -136,7 +137,7 @@
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
-      // 1. TẢI NGAY DỮ LIỆU TỪ BỘ NHỚ TRÌNH DUYỆT (Hiển thị tức thì trong 0.1 giây)
+      // Tải dữ liệu lưu tạm từ máy người dùng trước (tốc độ 0.1s)
       const localData = localStorage.getItem("local_attendance_data");
       if (localData) {
         try {
@@ -145,7 +146,7 @@
         } catch(e) {}
       }
 
-      // 2. ÂM THẦM GỌI API ĐỂ CẬP NHẬT DỮ LIỆU MỚI NHẤT
+      // Tải dữ liệu mới nhất từ Server
       fetchDataFromSheet(false, false);
 
       if (!isMobile) {
@@ -169,7 +170,6 @@
         if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
       }
 
-      // Nếu người dùng chủ động bấm Làm Mới -> Xóa cache
       const fetchUrl = isManual 
         ? SCRIPT_URL + "?cachebust=" + new Date().getTime() 
         : SCRIPT_URL;
@@ -185,7 +185,6 @@
           }
 
           if (Array.isArray(data)) {
-            // Lưu dữ liệu vào bộ nhớ máy để mở link lần sau là hiện ngay
             localStorage.setItem("local_attendance_data", JSON.stringify(data));
             document.getElementById("status-text").innerText = "Đã kết nối dữ liệu mới nhất";
             parseSheetData(data);
@@ -223,28 +222,24 @@
 
         allStudents.push({
           rowIndex: item.rowIndex,
-          name: item.name,        // Cột 2
-          lop: item.lop,          // Cột 3
-          maHs: item.maHs,        // Cột 5
-          time: item.time,        // Cột 11
+          name: item.name,        // Cột B
+          lop: item.lop,          // Cột C
+          maHs: item.maHs,        // Cột E
+          time: item.time,        // Cột K
           status: statusObj.text,
           badgeClass: statusObj.badgeClass,
           selected: false
         });
       }
 
-      document.getElementById("total-students").innerText = allStudents.length;
-
       const currentClassSelection = document.getElementById("class-filter").value;
       const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---" && c !== "").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
         classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
 
-      updateStatsCounters();
       filterData();
     }
 
-    // LOGIC TÍNH TRẠNG THÁI CHUẨN ĐÃ CHỐT (ƯU TIÊN CỘT Q)
     function computeStatus(colF, colL, colP, colQ) {
       const qVal = String(colQ || "").toLowerCase().trim();
       const pVal = String(colP || "").toLowerCase().trim();
@@ -288,10 +283,12 @@
       return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
     }
 
-    function updateStatsCounters() {
+    // TÍNH TOÁN VÀ CẬP NHẬT THỐNG KÊ DỰA TRÊN MẢNG ĐÃ LỌC
+    function updateFilteredStats() {
       let dungGio = 0, diTre = 0, phep = 0, khongQuet = 0, khongPhep = 0;
-      for (let i = 0; i < allStudents.length; i++) {
-        let st = allStudents[i].status;
+      
+      for (let i = 0; i < filteredStudents.length; i++) {
+        let st = filteredStudents[i].status;
         if (st === "ĐÚNG GIỜ") dungGio++;
         else if (st === "ĐI TRỄ") diTre++;
         else if (st === "PHÉP") phep++;
@@ -299,6 +296,10 @@
         else if (st === "KHÔNG PHÉP") khongPhep++;
       }
 
+      // Cập nhật tổng số học sinh theo bộ lọc
+      document.getElementById("total-students").innerText = filteredStudents.length + " / " + allStudents.length;
+      
+      // Cập nhật 5 ô thống kê
       document.getElementById("stat-dung-gio").innerText = dungGio;
       document.getElementById("stat-di-tre").innerText = diTre;
       document.getElementById("stat-phep").innerText = phep;
@@ -323,6 +324,7 @@
         return matchSearch && matchClass && matchStatus;
       });
 
+      updateFilteredStats(); // Gọi cập nhật thống kê ngay khi lọc
       renderTable();
     }
 
@@ -369,7 +371,6 @@
       tbody.innerHTML = html;
     }
 
-    // DUYỆT TRẠNG THÁI CỦA GVCN (DUYỆT P HẶC KQ)
     function openApproveModal() {
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
@@ -429,7 +430,6 @@
       const selectAllCb = document.getElementById('select-all');
       if (selectAllCb) selectAllCb.checked = false;
 
-      updateStatsCounters();
       filterData();
 
       fetch(SCRIPT_URL, {
@@ -452,7 +452,6 @@
           alert("❌ " + res.message);
           allStudents = backupData;
           pendingApprovals = backupPending;
-          updateStatsCounters();
           filterData();
         }
       })
@@ -462,7 +461,6 @@
         alert("Lỗi kết nối tới Server. Đã hoàn tác dữ liệu!");
         allStudents = backupData;
         pendingApprovals = backupPending;
-        updateStatsCounters();
         filterData();
       });
     }
