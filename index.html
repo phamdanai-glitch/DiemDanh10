@@ -40,10 +40,9 @@
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
-        <!-- KHU VỰC THÔNG TIN ĐĂNG NHẬP -->
         <div id="login-section" class="flex items-center gap-2">
           <button id="btn-login-trigger" onclick="openLoginModal()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
-            <i data-lucide="log-in" class="w-4 h-4"></i> <span>Đăng Nhập GVCN</span>
+            <i data-lucide="log-in" class="w-4 h-4"></i> <span>Đăng Nhập Quản Lý</span>
           </button>
         </div>
 
@@ -54,6 +53,11 @@
 
           <button id="btn-approve" onclick="openApproveModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
             <i data-lucide="shield-check" class="w-4 h-4"></i> <span id="approve-label">Duyệt Trạng Thái</span>
+          </button>
+
+          <!-- NÚT BẤM RÚT LỊCH SỬ DÀNH CHO ADMIN -->
+          <button id="btn-export-history" onclick="exportHistoryToSheet()" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span>Rút Lịch Sử</span>
           </button>
 
           <button id="btn-change-pass" onclick="openChangePassModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
@@ -176,7 +180,7 @@
     let allStudents = [];
     let filteredStudents = [];
     let pendingApprovals = {}; 
-    let currentUser = JSON.parse(sessionStorage.getItem("attendance_user")) || null; // Lưu phiên đăng nhập
+    let currentUser = JSON.parse(sessionStorage.getItem("attendance_user")) || null;
     let searchTimeout = null;
     let isFetching = false;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -208,6 +212,7 @@
       const loggedSec = document.getElementById("logged-section");
       const userDisplay = document.getElementById("user-display-name");
       const btnReset = document.getElementById("btn-admin-reset");
+      const btnExport = document.getElementById("btn-export-history");
       const classFilter = document.getElementById("class-filter");
 
       if (currentUser) {
@@ -217,16 +222,19 @@
         if (currentUser.role === "admin") {
           userDisplay.innerText = "ADMIN (Toàn quyền)";
           btnReset.classList.remove("hidden");
+          btnExport.classList.remove("hidden");
           classFilter.disabled = false;
         } else {
           userDisplay.innerText = "GVCN " + currentUser.className;
           btnReset.classList.add("hidden");
+          btnExport.classList.add("hidden");
           classFilter.value = currentUser.className;
-          classFilter.disabled = true; // Khóa bộ lọc cố định ở lớp GVCN đó
+          classFilter.disabled = true;
         }
       } else {
         loginSec.classList.remove("hidden");
         loggedSec.classList.add("hidden");
+        btnExport.classList.add("hidden");
         classFilter.disabled = false;
       }
       filterData();
@@ -511,10 +519,9 @@
       tbody.innerHTML = html;
     }
 
-    // THAO TÁC DUYỆT ĐIỂM DANH
     function openApproveModal() {
       if (!currentUser) {
-        alert("Bạn chưa đăng nhập! Vui lòng đăng nhập tài khoản GVCN hoặc Admin để thực hiện duyệt.");
+        alert("Bạn chưa đăng nhập! Vui lòng đăng nhập.");
         openLoginModal();
         return;
       }
@@ -608,7 +615,50 @@
       });
     }
 
-    // ĐỔI MẬT KHẨU CỦA TÀI KHOẢN ĐANG ĐĂNG NHẬP
+    // TÍNH NĂNG RÚT LỊCH SỬ DÀNH CHO ADMIN
+    function exportHistoryToSheet() {
+      if (!currentUser || currentUser.role !== "admin") return;
+
+      const todayStr = new Date().toLocaleDateString("vi-VN");
+      const customDate = prompt("XÁC NHẬN TRÍCH XUẤT LỊCH SỬ ĐIỂM DANH SANG SHEET 'lichsu'\n\nNhập ngày cần trích xuất (định dạng Ngày/Tháng/Năm):", todayStr);
+      
+      if (!customDate) return;
+
+      const btn = document.getElementById("btn-export-history");
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4 animate-spin"></i> <span>Đang rút...</span>`;
+      btn.disabled = true;
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "exportHistory",
+          adminPassword: currentUser.password,
+          dateString: customDate.trim()
+        }),
+        redirect: "follow"
+      })
+      .then(res => res.json())
+      .then(res => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        if (res.success) {
+          alert("✅ " + res.message);
+        } else {
+          alert("❌ " + res.message);
+        }
+      })
+      .catch(err => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        alert("Lỗi kết nối khi trích xuất lịch sử!");
+      });
+    }
+
     function openChangePassModal() {
       if (!currentUser) return;
 
@@ -650,7 +700,6 @@
       });
     }
 
-    // ADMIN RESET MẬT KHẨU
     function openAdminResetModal() {
       if (!currentUser || currentUser.role !== "admin") return;
 
