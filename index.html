@@ -40,23 +40,38 @@
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
-        <button id="btn-approve" onclick="openApproveModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
-          <i data-lucide="shield-check" class="w-4 h-4" id="approve-icon"></i> <span id="approve-label">GVCN Duyệt Trạng Thái</span>
-        </button>
+        <!-- KHU VỰC THÔNG TIN ĐĂNG NHẬP -->
+        <div id="login-section" class="flex items-center gap-2">
+          <button id="btn-login-trigger" onclick="openLoginModal()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+            <i data-lucide="log-in" class="w-4 h-4"></i> <span>Đăng Nhập GVCN</span>
+          </button>
+        </div>
 
-        <!-- NÚT ĐỔI MẬT KHẨU GVCN -->
-        <button id="btn-change-pass" onclick="openChangePassModal()" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
-          <i data-lucide="key-round" class="w-4 h-4"></i> <span>Đổi MK GVCN</span>
-        </button>
+        <div id="logged-section" class="hidden flex flex-wrap items-center gap-2">
+          <span id="user-badge" class="bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
+            <i data-lucide="user-check" class="w-3.5 h-3.5"></i> <span id="user-display-name">GVCN 10A1</span>
+          </span>
 
-        <!-- NÚT RESET MẬT KHẨU DÀNH CHO ADMIN -->
-        <button id="btn-admin-reset" onclick="openAdminResetModal()" class="bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
-          <i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span>Reset MK (Admin)</span>
-        </button>
+          <button id="btn-approve" onclick="openApproveModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+            <i data-lucide="shield-check" class="w-4 h-4"></i> <span id="approve-label">Duyệt Trạng Thái</span>
+          </button>
+
+          <button id="btn-change-pass" onclick="openChangePassModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="key-round" class="w-4 h-4"></i> <span>Đổi MK</span>
+          </button>
+
+          <button id="btn-admin-reset" onclick="openAdminResetModal()" class="hidden bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span>Reset MK</span>
+          </button>
+
+          <button onclick="handleLogout()" class="bg-slate-200 hover:bg-rose-100 text-slate-600 hover:text-rose-600 p-2 rounded-xl transition-all cursor-pointer" title="Đăng xuất">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- KHU VỰC THỐNG KÊ (THỐNG KÊ THEO LỌC) -->
+    <!-- KHU VỰC THỐNG KÊ -->
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
       <div class="bg-indigo-50/60 border border-indigo-100 p-2.5 rounded-xl">
         <p class="text-[11px] sm:text-xs font-medium text-indigo-600">Đúng giờ</p>
@@ -125,13 +140,43 @@
 
   </div>
 
+  <!-- MODAL ĐĂNG NHẬP -->
+  <div id="modal-login" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl border border-slate-100">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="font-bold text-slate-800 text-base">Đăng Nhập Quản Lý</h3>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Tên đăng nhập (Tên Lớp / Admin):</label>
+          <input type="text" id="login-username" placeholder="Ví dụ: 10A1 hoặc admin" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu (Mặc định: 123456):</label>
+          <input type="password" id="login-password" placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeLoginModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100">Hủy</button>
+
+        <button onclick="submitLogin()" id="btn-submit-login" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md flex items-center gap-1">
+          <span>Đăng Nhập</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
 
     let allStudents = [];
     let filteredStudents = [];
     let pendingApprovals = {}; 
-    let isParentMode = false;
+    let currentUser = JSON.parse(sessionStorage.getItem("attendance_user")) || null; // Lưu phiên đăng nhập
     let searchTimeout = null;
     let isFetching = false;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -139,14 +184,7 @@
     window.onload = function() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
 
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('mode') === 'phuhuynh') {
-        isParentMode = true;
-        document.getElementById('btn-approve').style.display = 'none';
-        document.getElementById('btn-change-pass').style.display = 'none';
-        document.getElementById('btn-admin-reset').style.display = 'none';
-        document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
-      }
+      updateUserUI();
 
       const localData = localStorage.getItem("local_attendance_data");
       if (localData) {
@@ -164,6 +202,98 @@
         }, 12000);
       }
     };
+
+    function updateUserUI() {
+      const loginSec = document.getElementById("login-section");
+      const loggedSec = document.getElementById("logged-section");
+      const userDisplay = document.getElementById("user-display-name");
+      const btnReset = document.getElementById("btn-admin-reset");
+      const classFilter = document.getElementById("class-filter");
+
+      if (currentUser) {
+        loginSec.classList.add("hidden");
+        loggedSec.classList.remove("hidden");
+
+        if (currentUser.role === "admin") {
+          userDisplay.innerText = "ADMIN (Toàn quyền)";
+          btnReset.classList.remove("hidden");
+          classFilter.disabled = false;
+        } else {
+          userDisplay.innerText = "GVCN " + currentUser.className;
+          btnReset.classList.add("hidden");
+          classFilter.value = currentUser.className;
+          classFilter.disabled = true; // Khóa bộ lọc cố định ở lớp GVCN đó
+        }
+      } else {
+        loginSec.classList.remove("hidden");
+        loggedSec.classList.add("hidden");
+        classFilter.disabled = false;
+      }
+      filterData();
+    }
+
+    function openLoginModal() {
+      document.getElementById("modal-login").classList.remove("hidden");
+    }
+
+    function closeLoginModal() {
+      document.getElementById("modal-login").classList.add("hidden");
+    }
+
+    function submitLogin() {
+      const u = document.getElementById("login-username").value.trim();
+      const p = document.getElementById("login-password").value.trim();
+
+      if (!u || !p) {
+        alert("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
+        return;
+      }
+
+      const btn = document.getElementById("btn-submit-login");
+      btn.innerText = "Đang kiểm tra...";
+      btn.disabled = true;
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "login", username: u, password: p }),
+        redirect: "follow"
+      })
+      .then(res => res.json())
+      .then(res => {
+        btn.innerText = "Đăng Nhập";
+        btn.disabled = false;
+
+        if (res.success) {
+          currentUser = {
+            username: res.username,
+            role: res.role,
+            className: res.className || "",
+            password: p
+          };
+          sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
+          closeLoginModal();
+          updateUserUI();
+          alert("✅ " + res.message);
+        } else {
+          alert("❌ " + res.message);
+        }
+      })
+      .catch(err => {
+        btn.innerText = "Đăng Nhập";
+        btn.disabled = false;
+        alert("Lỗi kết nối máy chủ khi đăng nhập!");
+      });
+    }
+
+    function handleLogout() {
+      if (confirm("Xác nhận đăng xuất khỏi hệ thống?")) {
+        currentUser = null;
+        sessionStorage.removeItem("attendance_user");
+        document.getElementById("class-filter").disabled = false;
+        updateUserUI();
+      }
+    }
 
     function fetchDataFromSheet(isManual = false, isSilent = false) {
       if (isFetching) return;
@@ -245,6 +375,11 @@
       const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---" && c !== "").sort();
       document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
         classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
+
+      if (currentUser && currentUser.role === "gvcn") {
+        document.getElementById("class-filter").value = currentUser.className;
+        document.getElementById("class-filter").disabled = true;
+      }
 
       filterData();
     }
@@ -363,7 +498,7 @@
       for (let idx = 0; idx < total; idx++) {
         let s = filteredStudents[idx];
         html += `<tr class="hover:bg-slate-50/80 ${s.selected ? 'bg-indigo-50/30' : ''}">` +
-          (!isParentMode ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${idx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
+          (currentUser ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${idx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
           `<td class="p-2.5 text-center text-slate-400 font-medium">${idx + 1}</td>` +
           `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
@@ -376,15 +511,30 @@
       tbody.innerHTML = html;
     }
 
+    // THAO TÁC DUYỆT ĐIỂM DANH
     function openApproveModal() {
+      if (!currentUser) {
+        alert("Bạn chưa đăng nhập! Vui lòng đăng nhập tài khoản GVCN hoặc Admin để thực hiện duyệt.");
+        openLoginModal();
+        return;
+      }
+
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
         alert("Vui lòng tích chọn ít nhất 1 học sinh!");
         return;
       }
 
+      const selectedClasses = [...new Set(selected.map(s => s.lop))];
+      if (currentUser.role === "gvcn" && selectedClasses.some(c => c !== currentUser.className)) {
+        alert("Tài khoản của bạn chỉ có quyền duyệt điểm danh cho lớp " + currentUser.className + "!");
+        return;
+      }
+
+      const targetClass = selectedClasses[0];
+
       const typeChoice = prompt(
-        `Đang chọn ${selected.length} học sinh.\n` +
+        `Đang duyệt điểm danh cho LỚP ${targetClass} (${selected.length} học sinh).\n` +
         `Nhập số tương ứng với trạng thái duyệt:\n` +
         `1. CÓ PHÉP (Ghi chữ "P")\n` +
         `2. KHÔNG QUÉT (Ghi chữ "KQ")`,
@@ -400,15 +550,6 @@
         alert("Lựa chọn không hợp lệ!");
         return;
       }
-
-      const password = prompt(`Xác nhận ghi "${statusValue === "P" ? "CÓ PHÉP" : "KHÔNG QUÉT"}" cho ${selected.length} học sinh.\nNhập mật khẩu GVCN:`);
-      if (!password) return;
-
-      const btnApprove = document.getElementById('btn-approve');
-      const approveLabel = document.getElementById('approve-label');
-      
-      if (approveLabel) approveLabel.innerText = "Đang đồng bộ...";
-      if (btnApprove) btnApprove.classList.add('opacity-75', 'pointer-events-none');
 
       const selectedRowIndexes = selected.map(s => s.rowIndex);
       const newStatusText = statusValue === "P" ? "PHÉP" : "KHÔNG QUÉT";
@@ -442,7 +583,9 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ 
           action: "approvePhep", 
-          password: password, 
+          className: targetClass,
+          password: currentUser.password,
+          sessionRole: currentUser.role,
           statusValue: statusValue,
           rowIndexes: selectedRowIndexes 
         }),
@@ -450,9 +593,6 @@
       })
       .then(res => res.json())
       .then(res => {
-        if (approveLabel) approveLabel.innerText = "GVCN Duyệt Trạng Thái";
-        if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
-
         if (!res.success) {
           alert("❌ " + res.message);
           allStudents = backupData;
@@ -461,8 +601,6 @@
         }
       })
       .catch(err => {
-        if (approveLabel) approveLabel.innerText = "GVCN Duyệt Trạng Thái";
-        if (btnApprove) btnApprove.classList.remove('opacity-75', 'pointer-events-none');
         alert("Lỗi kết nối tới Server. Đã hoàn tác dữ liệu!");
         allStudents = backupData;
         pendingApprovals = backupPending;
@@ -470,15 +608,17 @@
       });
     }
 
-    // 1. CHỨC NĂNG ĐỔI MẬT KHẨU GVCN
+    // ĐỔI MẬT KHẨU CỦA TÀI KHOẢN ĐANG ĐĂNG NHẬP
     function openChangePassModal() {
-      const oldPassword = prompt("Nhập mật khẩu GVCN hiện tại:");
+      if (!currentUser) return;
+
+      const oldPassword = prompt(`Đang đổi mật khẩu cho tài khoản ${currentUser.username}.\nNhập mật khẩu HIỆN TẠI:`);
       if (!oldPassword) return;
 
-      const newPassword = prompt("Nhập mật khẩu GVCN mới (từ 4 ký tự trở lên):");
+      const newPassword = prompt(`Nhập mật khẩu MỚI (từ 4 ký tự trở lên):`);
       if (!newPassword) return;
 
-      const confirmPassword = prompt("Nhập lại mật khẩu GVCN mới để xác nhận:");
+      const confirmPassword = prompt("Nhập lại mật khẩu MỚI để xác nhận:");
       if (newPassword !== confirmPassword) {
         alert("Mật khẩu mới xác nhận không khớp!");
         return;
@@ -489,6 +629,7 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
           action: "changeGvcnPassword",
+          className: currentUser.username,
           oldPassword: oldPassword,
           newPassword: newPassword
         }),
@@ -497,6 +638,8 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
+          currentUser.password = newPassword.trim();
+          sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
           alert("✅ " + res.message);
         } else {
           alert("❌ " + res.message);
@@ -507,17 +650,28 @@
       });
     }
 
-    // 2. CHỨC NĂNG ADMIN RESET MẬT KHẨU GVCN
+    // ADMIN RESET MẬT KHẨU
     function openAdminResetModal() {
-      const adminPassword = prompt("DÀNH CHO ADMIN / BAN GIÁM HIỆU\nNhập mật khẩu Admin để reset mật khẩu GVCN về mặc định (123456):");
-      if (!adminPassword) return;
+      if (!currentUser || currentUser.role !== "admin") return;
+
+      const targetClass = prompt(
+        "ADMIN RESET MẬT KHẨU\n" +
+        "Nhập Tên Lớp cần Reset mật khẩu về mặc định (123456):\n" +
+        "(Để trống nếu muốn RESET MẬT KHẨU CỦA TẤT CẢ CÁC LỚP)"
+      );
+
+      if (targetClass === null) return;
+
+      const confirmAdminPass = prompt("Xác nhận MK Admin để hoàn tất Reset:");
+      if (!confirmAdminPass) return;
 
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
           action: "resetGvcnPasswordByAdmin",
-          adminPassword: adminPassword
+          targetClass: targetClass,
+          adminPassword: confirmAdminPass
         }),
         redirect: "follow"
       })
