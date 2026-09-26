@@ -29,12 +29,12 @@
           </p>
           <p class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
             <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span id="status-text">Đã kết nối Google Sheets</span>
+            <span id="status-text">Đang tải dữ liệu tức thì...</span>
           </p>
         </div>
       </div>
 
-      <!-- THANH NÚT BẤM CÔNG CỤ -->
+      <!-- THANH CÔNG CỤ -->
       <div class="flex items-center gap-2" id="action-buttons">
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="flex-1 sm:flex-none justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
@@ -70,7 +70,7 @@
       </div>
     </div>
 
-    <!-- KHU VỰC BỘ LỌC DỮ LIỆU -->
+    <!-- BỘ LỌC DỮ LIỆU -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
@@ -136,13 +136,22 @@
         document.querySelectorAll('.col-checkbox').forEach(el => el.style.display = 'none');
       }
 
+      // 1. TẢI NGAY DỮ LIỆU TỪ BỘ NHỚ TRÌNH DUYỆT (Hiển thị tức thì trong 0.1 giây)
+      const localData = localStorage.getItem("local_attendance_data");
+      if (localData) {
+        try {
+          parseSheetData(JSON.parse(localData), true);
+          document.getElementById("status-text").innerText = "Đã tải từ bộ nhớ đệm (Đang đồng bộ...)";
+        } catch(e) {}
+      }
+
+      // 2. ÂM THẦM GỌI API ĐỂ CẬP NHẬT DỮ LIỆU MỚI NHẤT
       fetchDataFromSheet(false, false);
 
       if (!isMobile) {
-        document.getElementById("status-text").innerText = "Tự động đồng bộ (PC Mode)";
         setInterval(() => {
           fetchDataFromSheet(false, true);
-        }, 10000);
+        }, 12000);
       }
     };
 
@@ -160,7 +169,10 @@
         if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
       }
 
-      const fetchUrl = SCRIPT_URL + "?action=getData&cachebust=" + new Date().getTime();
+      // Nếu người dùng chủ động bấm Làm Mới -> Xóa cache
+      const fetchUrl = isManual 
+        ? SCRIPT_URL + "?cachebust=" + new Date().getTime() 
+        : SCRIPT_URL;
 
       fetch(fetchUrl, { method: "GET", redirect: "follow" })
         .then(res => res.json())
@@ -173,9 +185,10 @@
           }
 
           if (Array.isArray(data)) {
+            // Lưu dữ liệu vào bộ nhớ máy để mở link lần sau là hiện ngay
+            localStorage.setItem("local_attendance_data", JSON.stringify(data));
+            document.getElementById("status-text").innerText = "Đã kết nối dữ liệu mới nhất";
             parseSheetData(data);
-          } else if (data.error) {
-            alert("Lỗi: " + data.error);
           }
         })
         .catch(err => {
@@ -185,18 +198,17 @@
             if (label) label.innerText = "Làm Mới";
             if (btnRefresh) btnRefresh.classList.remove('opacity-75', 'pointer-events-none');
           }
-          console.error(err);
+          document.getElementById("status-text").innerText = "Kết nối chậm, đang dùng dữ liệu lưu tạm";
         });
     }
 
-    function parseSheetData(items) {
+    function parseSheetData(items, isFromLocal = false) {
       allStudents = [];
 
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
         let statusObj = computeStatus(item.colF, item.colL, item.colP, item.colQ);
 
-        // Giữ trạng thái vừa bấm Duyệt nếu server chưa kịp phản hồi cập nhật
         if (pendingApprovals[item.rowIndex]) {
           const valP = String(item.colP || "").toLowerCase().trim();
           const valQ = String(item.colQ || "").toLowerCase().trim();
@@ -232,13 +244,12 @@
       filterData();
     }
 
-    // TÍNH TRẠNG THÁI THEO DÚNG LOGIC CỘT Q ƯU TIÊN VÀ XÉT CỘT P/L
+    // LOGIC TÍNH TRẠNG THÁI CHUẨN ĐÃ CHỐT (ƯU TIÊN CỘT Q)
     function computeStatus(colF, colL, colP, colQ) {
       const qVal = String(colQ || "").toLowerCase().trim();
       const pVal = String(colP || "").toLowerCase().trim();
       const lVal = String(colL || "").toLowerCase().trim();
 
-      // 1. NẾU CỘT Q CÓ DỮ LIỆU -> ƯU TIÊN TUYỆT ĐỐI THEO Q
       if (qVal !== "") {
         if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
           return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
@@ -259,7 +270,6 @@
         return { text: qVal.toUpperCase(), badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
       } 
       
-      // 2. CỘT Q RỖNG -> XÉT CỘT P VÀ L
       if (pVal === "p") {
         return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
       } 
@@ -298,7 +308,7 @@
 
     function debounceFilter() {
       clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(filterData, 150);
+      searchTimeout = setTimeout(filterData, 100);
     }
 
     function filterData() {
@@ -359,7 +369,7 @@
       tbody.innerHTML = html;
     }
 
-    // CHỨC NĂNG GVCN DUYỆT TRẠNG THÁI (DUYỆT P HẶC KQ)
+    // DUYỆT TRẠNG THÁI CỦA GVCN (DUYỆT P HẶC KQ)
     function openApproveModal() {
       const selected = filteredStudents.filter(s => s.selected);
       if (selected.length === 0) {
