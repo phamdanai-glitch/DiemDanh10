@@ -125,7 +125,7 @@
       <table class="w-full text-left border-collapse text-xs sm:text-sm">
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold">
-            <th class="p-2.5 w-8 text-center col-checkbox"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" class="rounded text-indigo-600 cursor-pointer"></th>
+            <th class="p-2.5 w-8 text-center col-checkbox hidden"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" class="rounded text-indigo-600 cursor-pointer"></th>
             <th class="p-2.5 w-10 text-center">STT</th>
             <th class="p-2.5">Họ và Tên</th>
             <th class="p-2.5">Lớp</th>
@@ -214,10 +214,12 @@
       const btnReset = document.getElementById("btn-admin-reset");
       const btnExport = document.getElementById("btn-export-history");
       const classFilter = document.getElementById("class-filter");
+      const colCheckbox = document.querySelector(".col-checkbox");
 
       if (currentUser) {
         loginSec.classList.add("hidden");
         loggedSec.classList.remove("hidden");
+        if (colCheckbox) colCheckbox.classList.remove("hidden"); // HIỆN CỘT TICK KHI ĐĂNG NHẬP
 
         if (currentUser.role === "admin") {
           userDisplay.innerText = "ADMIN (Toàn quyền)";
@@ -235,6 +237,7 @@
         loginSec.classList.remove("hidden");
         loggedSec.classList.add("hidden");
         btnExport.classList.add("hidden");
+        if (colCheckbox) colCheckbox.classList.add("hidden"); // ẨN CỘT TICK KHI ĐĂNG XUẤT/XEM CHUNG
         classFilter.disabled = false;
       }
       filterData();
@@ -498,7 +501,8 @@
       const total = filteredStudents.length;
 
       if (total === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Không có dữ liệu phù hợp.</td></tr>`;
+        const colSpan = currentUser ? 7 : 6;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400">Không có dữ liệu phù hợp.</td></tr>`;
         return;
       }
 
