@@ -432,48 +432,49 @@
       filterData();
     }
 
-    function computeStatus(colF, colL, colP, colQ) {
-      const qVal = String(colQ || "").toLowerCase().trim();
-      const pVal = String(colP || "").toLowerCase().trim();
-      const lVal = String(colL || "").toLowerCase().trim();
+   // Cập nhật hàm tính toán trạng thái với tham số colAD
+  function computeStatus(colF, colAD, colP, colQ) {
+  const qVal = String(colQ || "").toLowerCase().trim();
+  const pVal = String(colP || "").toLowerCase().trim();
+  const adVal = String(colAD || "").toLowerCase().trim(); // Đổi từ colL sang colAD
 
-      if (qVal !== "") {
-        if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
-          return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
-        }
-        if (qVal === "p" || qVal === "phép" || qVal === "phep") {
-          return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-        } 
-        if (qVal === "kq" || qVal === "không quét" || qVal === "khong quet") {
-          return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
-        } 
-        if (qVal === "trễ" || qVal === "tre" || qVal === "đi trễ" || qVal === "di tre") {
-          return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
-        } 
-        if (qVal === "đúng giờ" || qVal === "dung gio") {
-          return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
-        } 
-
-        return { text: qVal.toUpperCase(), badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
-      } 
-      
-      if (pVal === "p") {
-        return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-      } 
-      if (pVal === "kq") {
-        return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
-      } 
-      
-      if (pVal === "") {
-        if (lVal === "" || lVal === "đúng giờ" || lVal === "dung gio") {
-          return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
-        } else {
-          return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
-        }
-      }
-
+  if (qVal !== "") {
+    if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
       return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
     }
+    if (qVal === "p" || qVal === "phép" || qVal === "phep") {
+      return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+    } 
+    if (qVal === "kq" || qVal === "không quét" || qVal === "khong quet") {
+      return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
+    } 
+    if (qVal === "trễ" || qVal === "tre" || qVal === "đi trễ" || qVal === "di tre") {
+      return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
+    } 
+    if (qVal === "đúng giờ" || qVal === "dung gio") {
+      return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+    } 
+
+    return { text: qVal.toUpperCase(), badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
+  } 
+  
+  if (pVal === "p") {
+    return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+  } 
+  if (pVal === "kq") {
+    return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
+  } 
+  
+  if (pVal === "") {
+    if (adVal === "" || adVal === "đúng giờ" || adVal === "dung gio") {
+      return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+    } else {
+      return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
+    }
+  }
+
+  return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
+}
 
     function updateFilteredStats() {
       let dungGio = 0, diTre = 0, phep = 0, khongQuet = 0, khongPhep = 0;
