@@ -36,12 +36,10 @@
 
       <!-- THANH CÔNG CỤ -->
       <div class="flex flex-wrap items-center gap-2" id="action-buttons">
-        <!-- NÚT LÀM MỚI -->
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
-        <!-- NÚT LẤY LINK PHỤ HUYNH -->
         <button id="btn-copy-parent-link" onclick="copyParentLink()" class="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 active:scale-95 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="share-2" class="w-4 h-4"></i> <span>Link Phụ Huynh</span>
         </button>
@@ -61,7 +59,6 @@
             <i data-lucide="shield-check" class="w-4 h-4"></i> <span id="approve-label">Duyệt Trạng Thái</span>
           </button>
 
-          <!-- NÚT RÚT LỊCH SỬ DÀNH CHO ADMIN -->
           <button id="btn-export-history" onclick="exportHistoryToSheet()" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span>Rút Lịch Sử</span>
           </button>
@@ -126,7 +123,7 @@
       </select>
     </div>
 
-    <!-- BẢNG HIỂN THỊ DỮ LIỆU -->
+    <!-- BẢNG GIỮ NGUYÊN CẤU TRÚC GỐC (CHỈ CÓ 1 CỘT THỜI GIAN) -->
     <div class="overflow-x-auto rounded-xl border border-slate-200 table-container">
       <table class="w-full text-left border-collapse text-xs sm:text-sm">
         <thead>
@@ -384,18 +381,18 @@
         });
     }
 
-    // ĐÃ CẬP NHẬT LOGIC ĐỌC CỘT THỜI GIAN MỚI (colAC) VÀ CỘT TRỄ MỚI (colAD)
+    // THAY ĐỔI NGUỒN DỮ LIỆU: ĐỌC TỪ CỘT AC VÀ CỘT AD
     function parseSheetData(items, isFromLocal = false) {
       allStudents = [];
 
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
         
-        // Đọc colAD (Cột trễ AD mới) hoặc fallback sang colL (Cột L cũ)
-        let delayCol = item.colAD !== undefined ? item.colAD : item.colL;
+        // Cột trễ: Đọc từ AD (nếu không có thì quay về L)
+        let delayCol = item.colAD !== undefined ? item.colAD : (item.colL !== undefined ? item.colL : "");
         
-        // Đọc colAC (Cột thời gian AC mới) hoặc fallback sang colK / item.time
-        let timeVal = item.colAC !== undefined ? item.colAC : (item.colK !== undefined ? item.colK : item.time);
+        // Cột thời gian: Đọc từ AC (nếu không có thì quay về K / time)
+        let timeVal = item.colAC !== undefined ? item.colAC : (item.colK !== undefined ? item.colK : (item.time || ""));
 
         let statusObj = computeStatus(item.colF, delayCol, item.colP, item.colQ);
 
@@ -537,6 +534,7 @@
       }
     }
 
+    // RENDER BẢNG THEO CẤU TRÚC GỐC BAN ĐẦU
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       const total = filteredStudents.length;
@@ -556,7 +554,7 @@
           `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
           `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>` +
-          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.time}</td>` +
+          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.time || "---"}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 rounded-md text-[11px] font-bold border inline-block ${s.badgeClass}">${s.status}</span></td>` +
         `</tr>`;
       }
