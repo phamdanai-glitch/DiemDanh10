@@ -123,7 +123,7 @@
       </select>
     </div>
 
-    <!-- BẢNG GIỮ NGUYÊN CẤU TRÚC GỐC (CHỈ CÓ 1 CỘT THỜI GIAN) -->
+    <!-- BẢNG ĐIỂM DANH -->
     <div class="overflow-x-auto rounded-xl border border-slate-200 table-container">
       <table class="w-full text-left border-collapse text-xs sm:text-sm">
         <thead>
@@ -381,20 +381,41 @@
         });
     }
 
-    // THAY ĐỔI NGUỒN DỮ LIỆU: ĐỌC TỪ CỘT AC VÀ CỘT AD
+    // ĐỊNH DẠNG VÀ XỬ LÝ CHUỖI THỜI GIAN TỪ CỘT AC
+    function formatTimeValue(rawVal) {
+      if (rawVal === null || rawVal === undefined || rawVal === "") return "---";
+
+      let str = String(rawVal).trim();
+      if (!str) return "---";
+
+      // Nếu chứa định dạng ISO Date (VD: 2026-09-27T07:30:00.000Z)
+      if (str.includes("T") && str.includes("Z")) {
+        try {
+          let d = new Date(str);
+          if (!isNaN(d.getTime())) {
+            let hh = String(d.getHours()).padStart(2, '0');
+            let mm = String(d.getMinutes()).padStart(2, '0');
+            let ss = String(d.getSeconds()).padStart(2, '0');
+            return `${hh}:${mm}:${ss}`;
+          }
+        } catch(e) {}
+      }
+
+      return str;
+    }
+
     function parseSheetData(items, isFromLocal = false) {
       allStudents = [];
 
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
-        
-        // Cột trễ: Đọc từ AD (nếu không có thì quay về L)
-        let delayCol = item.colAD !== undefined ? item.colAD : (item.colL !== undefined ? item.colL : "");
-        
-        // Cột thời gian: Đọc từ AC (nếu không có thì quay về K / time)
-        let timeVal = item.colAC !== undefined ? item.colAC : (item.colK !== undefined ? item.colK : (item.time || ""));
 
-        let statusObj = computeStatus(item.colF, delayCol, item.colP, item.colQ);
+        // Lấy dữ liệu thô từ các trường AC/AD hoặc K/L/time
+        let rawAC = item.colAC !== undefined ? item.colAC : (item.colK !== undefined ? item.colK : (item.time !== undefined ? item.time : ""));
+        let rawAD = item.colAD !== undefined ? item.colAD : (item.colL !== undefined ? item.colL : "");
+
+        let timeVal = formatTimeValue(rawAC);
+        let statusObj = computeStatus(item.colF, rawAD, item.colP, item.colQ);
 
         if (pendingApprovals[item.rowIndex]) {
           const valP = String(item.colP || "").toLowerCase().trim();
@@ -410,9 +431,9 @@
 
         allStudents.push({
           rowIndex: item.rowIndex,
-          name: item.name,
-          lop: item.lop,
-          maHs: item.maHs,
+          name: item.name || "",
+          lop: item.lop || "",
+          maHs: item.maHs || "",
           time: timeVal,
           status: statusObj.text,
           badgeClass: statusObj.badgeClass,
@@ -534,7 +555,6 @@
       }
     }
 
-    // RENDER BẢNG THEO CẤU TRÚC GỐC BAN ĐẦU
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
       const total = filteredStudents.length;
