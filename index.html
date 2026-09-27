@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Điểm Danh Trực Tuyến - THPT Vị Thanh</title>
+  <title>Quản Lý Điểm Danh Trực Tuyến - THPT Vị Thanh</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -188,27 +188,28 @@
     let isFetching = false;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    // HÀM CHUYỂN ĐỔI CHUỖI VỀ MÚI GIỜ VIỆT NAM (GMT+7)
+    // HÀM TRÍCH XUẤT CHUỖI GIỜ NGUYÊN BẢN TỪ GOOGLE SHEETS
+    // Giải quyết vấn đề tự động ép kiểu làm lệch giờ sang 21:xx / 22:xx
     function formatTimeDisplay(timeStr) {
       if (!timeStr) return "";
       let str = String(timeStr).trim();
 
-      // Trường hợp dữ liệu trả về dạng HH:mm:ss sẵn
+      // 1. Trường hợp là định dạng chuẩn HH:mm:ss hoặc HH:mm (vd: 06:57:24)
       if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
         return str;
       }
 
-      // Trường hợp dữ liệu là chuỗi Date của Google Sheets (vd: Sat Dec 30 1899...)
-      let dateObj = new Date(str);
-      if (!isNaN(dateObj.getTime())) {
-        // Chuyển sang chuỗi giờ chuẩn Việt Nam (Asia/Ho_Chi_Minh - GMT+7)
-        return dateObj.toLocaleTimeString("vi-VN", {
-          timeZone: "Asia/Ho_Chi_Minh",
-          hour12: false,
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit"
-        });
+      // 2. Trường hợp trả về chuỗi Date đầy đủ (vd: "Sat Dec 30 1899 06:57:24 GMT+...")
+      // Dùng Regex trích xuất chuỗi HH:mm:ss chính xác không thông qua Múi giờ
+      let match = str.match(/(\d{2}:\d{2}:\d{2})/);
+      if (match) {
+        return match[1];
+      }
+
+      // 3. Trường hợp dạng chuỗi ISO (vd: "1899-12-30T06:57:24.000Z")
+      if (str.includes("T")) {
+        let timePart = str.split("T")[1];
+        if (timePart) return timePart.substring(0, 8);
       }
 
       return str;
@@ -426,7 +427,7 @@
           }
         }
 
-        // ĐỊNH DẠNG LẠI THỜI GIAN HIỂN THỊ DÙNG Asia/Ho_Chi_Minh
+        // XỬ LÝ CHUỖI THỜI GIAN THEO FORMAT CHUẨN TỪ COL_AC
         let rawTime = item.colAC || item.time || "";
         let formattedTime = formatTimeDisplay(rawTime);
 
