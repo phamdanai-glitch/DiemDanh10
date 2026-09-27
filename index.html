@@ -36,7 +36,7 @@
 
       <!-- THANH CÔNG CỤ -->
       <div class="flex flex-wrap items-center gap-2" id="action-buttons">
-        <!-- NÚT LÀM MỚI (LUÔN GIỮ LẠI) -->
+        <!-- NÚT LÀM MỚI -->
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
@@ -228,15 +228,13 @@
       const isParentView = urlParams.get('role') === 'phuhuynh';
 
       if (isParentView) {
-        // GIAO DIỆN PHỤ HUYNH: ẨN TOÀN BỘ NÚT QUẢN TRỊ & ĐĂNG NHẬP, GIỮ NÚT LÀM MỚI
         if (loginSec) loginSec.classList.add("hidden");
         if (loggedSec) loggedSec.classList.add("hidden");
         if (btnCopyParent) btnCopyParent.classList.add("hidden");
-        if (btnRefresh) btnRefresh.classList.remove("hidden"); // Giữ nút Làm mới
+        if (btnRefresh) btnRefresh.classList.remove("hidden");
         if (colCheckbox) colCheckbox.classList.add("hidden");
         classFilter.disabled = false;
       } else if (currentUser) {
-        // GIAO DIỆN ĐÃ ĐĂNG NHẬP (GVCN / ADMIN)
         if (loginSec) loginSec.classList.add("hidden");
         if (loggedSec) loggedSec.classList.remove("hidden");
         if (btnCopyParent) btnCopyParent.classList.remove("hidden");
@@ -256,7 +254,6 @@
           classFilter.disabled = true;
         }
       } else {
-        // GIAO DIỆN CHƯA ĐĂNG NHẬP (MẶC ĐỊNH)
         if (loginSec) loginSec.classList.remove("hidden");
         if (loggedSec) loggedSec.classList.add("hidden");
         if (btnCopyParent) btnCopyParent.classList.remove("hidden");
@@ -268,7 +265,6 @@
       filterData();
     }
 
-    // HÀM SAO CHÉP LINK PHỤ HUYNH
     function copyParentLink() {
       const baseUrl = window.location.origin + window.location.pathname;
       const parentUrl = baseUrl + "?role=phuhuynh";
@@ -388,12 +384,20 @@
         });
     }
 
+    // ĐÃ CẬP NHẬT LOGIC ĐỌC CỘT THỜI GIAN MỚI (colAC) VÀ CỘT TRỄ MỚI (colAD)
     function parseSheetData(items, isFromLocal = false) {
       allStudents = [];
 
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
-        let statusObj = computeStatus(item.colF, item.colL, item.colP, item.colQ);
+        
+        // Đọc colAD (Cột trễ AD mới) hoặc fallback sang colL (Cột L cũ)
+        let delayCol = item.colAD !== undefined ? item.colAD : item.colL;
+        
+        // Đọc colAC (Cột thời gian AC mới) hoặc fallback sang colK / item.time
+        let timeVal = item.colAC !== undefined ? item.colAC : (item.colK !== undefined ? item.colK : item.time);
+
+        let statusObj = computeStatus(item.colF, delayCol, item.colP, item.colQ);
 
         if (pendingApprovals[item.rowIndex]) {
           const valP = String(item.colP || "").toLowerCase().trim();
@@ -412,7 +416,7 @@
           name: item.name,
           lop: item.lop,
           maHs: item.maHs,
-          time: item.time,
+          time: timeVal,
           status: statusObj.text,
           badgeClass: statusObj.badgeClass,
           selected: false
@@ -432,49 +436,48 @@
       filterData();
     }
 
-   // Cập nhật hàm tính toán trạng thái với tham số colAD
-  function computeStatus(colF, colAD, colP, colQ) {
-  const qVal = String(colQ || "").toLowerCase().trim();
-  const pVal = String(colP || "").toLowerCase().trim();
-  const adVal = String(colAD || "").toLowerCase().trim(); // Đổi từ colL sang colAD
+    function computeStatus(colF, delayCol, colP, colQ) {
+      const qVal = String(colQ || "").toLowerCase().trim();
+      const pVal = String(colP || "").toLowerCase().trim();
+      const dVal = String(delayCol || "").toLowerCase().trim();
 
-  if (qVal !== "") {
-    if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
+      if (qVal !== "") {
+        if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
+          return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
+        }
+        if (qVal === "p" || qVal === "phép" || qVal === "phep") {
+          return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+        } 
+        if (qVal === "kq" || qVal === "không quét" || qVal === "khong quet") {
+          return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
+        } 
+        if (qVal === "trễ" || qVal === "tre" || qVal === "đi trễ" || qVal === "di tre") {
+          return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
+        } 
+        if (qVal === "đúng giờ" || qVal === "dung gio") {
+          return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+        } 
+
+        return { text: qVal.toUpperCase(), badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
+      } 
+      
+      if (pVal === "p") {
+        return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+      } 
+      if (pVal === "kq") {
+        return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
+      } 
+      
+      if (pVal === "") {
+        if (dVal === "" || dVal === "đúng giờ" || dVal === "dung gio") {
+          return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+        } else {
+          return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
+        }
+      }
+
       return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
     }
-    if (qVal === "p" || qVal === "phép" || qVal === "phep") {
-      return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-    } 
-    if (qVal === "kq" || qVal === "không quét" || qVal === "khong quet") {
-      return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
-    } 
-    if (qVal === "trễ" || qVal === "tre" || qVal === "đi trễ" || qVal === "di tre") {
-      return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
-    } 
-    if (qVal === "đúng giờ" || qVal === "dung gio") {
-      return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
-    } 
-
-    return { text: qVal.toUpperCase(), badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
-  } 
-  
-  if (pVal === "p") {
-    return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-  } 
-  if (pVal === "kq") {
-    return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
-  } 
-  
-  if (pVal === "") {
-    if (adVal === "" || adVal === "đúng giờ" || adVal === "dung gio") {
-      return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
-    } else {
-      return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
-    }
-  }
-
-  return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
-}
 
     function updateFilteredStats() {
       let dungGio = 0, diTre = 0, phep = 0, khongQuet = 0, khongPhep = 0;
@@ -657,7 +660,6 @@
       });
     }
 
-    // THAO TÁC RÚT LỊCH SỬ DÀNH CHO ADMIN
     function exportHistoryToSheet() {
       if (!currentUser || currentUser.role !== "admin") return;
 
@@ -730,39 +732,37 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          currentUser.password = newPassword.trim();
-          sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
           alert("✅ " + res.message);
+          currentUser.password = newPassword;
+          sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
         } else {
           alert("❌ " + res.message);
         }
       })
       .catch(err => {
-        alert("Lỗi kết nối khi đổi mật khẩu!");
+        alert("Lỗi khi kết nối đổi mật khẩu!");
       });
     }
 
     function openAdminResetModal() {
       if (!currentUser || currentUser.role !== "admin") return;
 
-      const targetClass = prompt(
-        "ADMIN RESET MẬT KHẨU\n" +
-        "Nhập Tên Lớp cần Reset mật khẩu về mặc định:\n" +
-        "(Để trống nếu muốn RESET MẬT KHẨU CỦA TẤT CẢ CÁC LỚP)"
-      );
-
+      const targetClass = prompt("NHẬP TÊN LỚP CẦN RESET MẬT KHẨU VỀ 123456:\n(Để trống nếu muốn Reset TẤT CẢ các lớp về 123456)");
       if (targetClass === null) return;
 
-      const confirmAdminPass = prompt("Xác nhận MK Admin để hoàn tất Reset:");
-      if (!confirmAdminPass) return;
+      const confirmMsg = targetClass.trim() === "" 
+        ? "CẢNH BÁO: Bạn có chắc chắn muốn Reset mật khẩu TẤT CẢ CÁC LỚP về '123456'?" 
+        : `Xác nhận reset mật khẩu Lớp ${targetClass.trim().toUpperCase()} về '123456'?`;
+
+      if (!confirm(confirmMsg)) return;
 
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
           action: "resetGvcnPasswordByAdmin",
-          targetClass: targetClass,
-          adminPassword: confirmAdminPass
+          adminPassword: currentUser.password,
+          targetClass: targetClass.trim()
         }),
         redirect: "follow"
       })
@@ -775,7 +775,7 @@
         }
       })
       .catch(err => {
-        alert("Lỗi kết nối khi Reset mật khẩu!");
+        alert("Lỗi khi kết nối reset mật khẩu!");
       });
     }
   </script>
