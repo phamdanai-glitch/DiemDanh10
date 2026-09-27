@@ -2,108 +2,781 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Duyệt Phép Học Sinh</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Điểm Danh Trực Tuyến - THPT Vị Thanh</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-    th { background-color: #f4f4f4; }
-    .btn-approve { background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-    .btn-approve:hover { background-color: #218838; }
-    .approved { color: #28a745; font-weight: bold; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .table-container { -webkit-overflow-scrolling: touch; }
   </style>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-2 sm:p-5">
 
-  <h2>Danh sách điểm danh & Duyệt phép</h2>
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th>STT</th>
-        <th>Họ tên</th>
-        <th>Lớp</th>
-        <th>Mã số</th>
-        <th>Thời gian</th>
-        <th>Trạng thái</th>
-        <th>Thao tác</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-xl p-3 sm:p-6 border border-slate-100 space-y-4 sm:space-y-6">
+    
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="p-1 bg-white border border-slate-200 rounded-xl shadow-sm flex-shrink-0">
+          <img src="logo.jpg" alt="Logo" onerror="this.src='https://placehold.co/100x100/4f46e5/ffffff?text=THPT+VT'" class="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-contain">
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-2xl font-bold text-slate-800 leading-tight">Quản Lý Điểm Danh Trực Tuyến</h1>
+          <p class="text-xs sm:text-sm text-slate-500">
+            Trường THPT Vị Thanh • Hiển thị: <span id="total-students" class="font-bold text-indigo-600">0</span> học sinh
+          </p>
+          <p class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+            <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="status-text">Đang tải dữ liệu tức thì...</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- THANH CÔNG CỤ -->
+      <div class="flex flex-wrap items-center gap-2" id="action-buttons">
+        <!-- NÚT LÀM MỚI (LUÔN GIỮ LẠI) -->
+        <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
+        </button>
+
+        <!-- NÚT LẤY LINK PHỤ HUYNH -->
+        <button id="btn-copy-parent-link" onclick="copyParentLink()" class="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 active:scale-95 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="share-2" class="w-4 h-4"></i> <span>Link Phụ Huynh</span>
+        </button>
+
+        <div id="login-section" class="flex items-center gap-2">
+          <button id="btn-login-trigger" onclick="openLoginModal()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+            <i data-lucide="log-in" class="w-4 h-4"></i> <span>Đăng Nhập Quản Lý</span>
+          </button>
+        </div>
+
+        <div id="logged-section" class="hidden flex flex-wrap items-center gap-2">
+          <span id="user-badge" class="bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
+            <i data-lucide="user-check" class="w-3.5 h-3.5"></i> <span id="user-display-name">GVCN 10A1</span>
+          </span>
+
+          <button id="btn-approve" onclick="openApproveModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+            <i data-lucide="shield-check" class="w-4 h-4"></i> <span id="approve-label">Duyệt Trạng Thái</span>
+          </button>
+
+          <!-- NÚT RÚT LỊCH SỬ DÀNH CHO ADMIN -->
+          <button id="btn-export-history" onclick="exportHistoryToSheet()" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span>Rút Lịch Sử</span>
+          </button>
+
+          <button id="btn-change-pass" onclick="openChangePassModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="key-round" class="w-4 h-4"></i> <span>Đổi MK</span>
+          </button>
+
+          <button id="btn-admin-reset" onclick="openAdminResetModal()" class="hidden bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span>Reset MK</span>
+          </button>
+
+          <button onclick="handleLogout()" class="bg-slate-200 hover:bg-rose-100 text-slate-600 hover:text-rose-600 p-2 rounded-xl transition-all cursor-pointer" title="Đăng xuất">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KHU VỰC THỐNG KÊ -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
+      <div class="bg-indigo-50/60 border border-indigo-100 p-2.5 rounded-xl">
+        <p class="text-[11px] sm:text-xs font-medium text-indigo-600">Đúng giờ</p>
+        <p id="stat-dung-gio" class="text-lg sm:text-xl font-bold text-indigo-900 mt-0.5">0</p>
+      </div>
+      <div class="bg-amber-50/60 border border-amber-100 p-2.5 rounded-xl">
+        <p class="text-[11px] sm:text-xs font-medium text-amber-600">Đi trễ</p>
+        <p id="stat-di-tre" class="text-lg sm:text-xl font-bold text-amber-900 mt-0.5">0</p>
+      </div>
+      <div class="bg-emerald-50/60 border border-emerald-100 p-2.5 rounded-xl">
+        <p class="text-[11px] sm:text-xs font-medium text-emerald-600">Vắng có phép</p>
+        <p id="stat-phep" class="text-lg sm:text-xl font-bold text-emerald-900 mt-0.5">0</p>
+      </div>
+      <div class="bg-slate-100/80 border border-slate-200 p-2.5 rounded-xl">
+        <p class="text-[11px] sm:text-xs font-medium text-slate-600">Không quét thẻ</p>
+        <p id="stat-khong-quet" class="text-lg sm:text-xl font-bold text-slate-800 mt-0.5">0</p>
+      </div>
+      <div class="bg-rose-50/60 border border-rose-100 p-2.5 rounded-xl col-span-2 sm:col-span-1">
+        <p class="text-[11px] sm:text-xs font-medium text-rose-600">Không phép</p>
+        <p id="stat-khong-phep" class="text-lg sm:text-xl font-bold text-rose-900 mt-0.5">0</p>
+      </div>
+    </div>
+
+    <!-- BỘ LỌC DỮ LIỆU -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="search-input" oninput="debounceFilter()" placeholder="Tìm tên hoặc mã HS..." class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
+      </div>
+      
+      <select id="class-filter" onchange="filterData()" class="px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
+        <option value="">-- Tất cả các lớp --</option>
+      </select>
+
+      <select id="status-filter" onchange="filterData()" class="px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
+        <option value="">-- Tất cả trạng thái --</option>
+        <option value="ĐÚNG GIỜ">ĐÚNG GIỜ</option>
+        <option value="ĐI TRỄ">ĐI TRỄ</option>
+        <option value="PHÉP">PHÉP</option>
+        <option value="KHÔNG QUÉT">KHÔNG QUÉT</option>
+        <option value="KHÔNG PHÉP">KHÔNG PHÉP</option>
+      </select>
+    </div>
+
+    <!-- BẢNG HIỂN THỊ DỮ LIỆU -->
+    <div class="overflow-x-auto rounded-xl border border-slate-200 table-container">
+      <table class="w-full text-left border-collapse text-xs sm:text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold">
+            <th class="p-2.5 w-8 text-center col-checkbox hidden"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" class="rounded text-indigo-600 cursor-pointer"></th>
+            <th class="p-2.5 w-10 text-center">STT</th>
+            <th class="p-2.5">Họ và Tên</th>
+            <th class="p-2.5">Lớp</th>
+            <th class="p-2.5">Mã HS</th>
+            <th class="p-2.5">Thời Gian</th>
+            <th class="p-2.5">Trạng Thái</th>
+          </tr>
+        </thead>
+        <tbody id="attendance-tbody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="7" class="p-6 text-center text-slate-400">Đang tải dữ liệu...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- MODAL ĐĂNG NHẬP -->
+  <div id="modal-login" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl border border-slate-100">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="font-bold text-slate-800 text-base">Đăng Nhập Quản Lý</h3>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Tên đăng nhập:</label>
+          <input type="text" id="login-username" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu:</label>
+          <input type="password" id="login-password" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeLoginModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100">Hủy</button>
+
+        <button onclick="submitLogin()" id="btn-submit-login" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md flex items-center gap-1">
+          <span>Đăng Nhập</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    // Link CSV từ Google Sheet (File -> Share -> Publish to web -> Chọn xuất bản CSV)
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/YOUR_SHEET_ID/pub?output=csv';
-    
-    // Link Web App URL lấy từ Apps Script sau khi Deploy
-    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_APPS_SCRIPT_ID/exec';
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
 
-    async function loadData() {
-      try {
-        const response = await fetch(SHEET_CSV_URL);
-        const csvText = await response.text();
-        
-        // Tách các dòng dữ liệu
-        const rows = csvText.split('\n').map(row => row.split(','));
-        const tbody = document.querySelector('#dataTable tbody');
-        tbody.innerHTML = '';
+    let allStudents = [];
+    let filteredStudents = [];
+    let pendingApprovals = {}; 
+    let currentUser = JSON.parse(sessionStorage.getItem("attendance_user")) || null;
+    let searchTimeout = null;
+    let isFetching = false;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // Đọc dữ liệu từ dòng 2 (Bỏ qua tiêu đề ở dòng 1)
-        for (let i = 1; i < rows.length; i++) {
-          if (!rows[i][0]) continue; // Bỏ qua dòng trống
-          
-          const rowData = rows[i];
-          const rowIndexInSheet = i + 1; // Vị trí dòng thực tế trên Google Sheet
+    window.onload = function() {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
 
-          // Trích xuất dữ liệu theo đúng chỉ số cột
-          const stt = rowData[0] || '';       // Cột A
-          const hoTen = rowData[1] || '';     // Cột B
-          const lop = rowData[2] || '';       // Cột C
-          const maSo = rowData[4] || '';      // Cột E
-          const trangThai = rowData[16] || 'Chưa duyệt'; // Cột Q
-          const thoiGian = rowData[28] || ''; // Cột AC
+      updateUserUI();
 
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${stt}</td>
-            <td>${hoTen}</td>
-            <td>${lop}</td>
-            <td>${maSo}</td>
-            <td>${thoiGian}</td>
-            <td id="status-${rowIndexInSheet}" class="${trangThai === 'Đã duyệt' ? 'approved' : ''}">${trangThai}</td>
-            <td>
-              ${trangThai !== 'Đã duyệt' 
-                ? `<button class="btn-approve" onclick="approveLeave(${rowIndexInSheet})">Duyệt phép</button>` 
-                : '<span class="approved">✓</span>'}
-            </td>
-          `;
-          tbody.appendChild(tr);
-        }
-      } catch (error) {
-        console.error('Lỗi khi tải dữ liệu:', error);
+      const localData = localStorage.getItem("local_attendance_data");
+      if (localData) {
+        try {
+          parseSheetData(JSON.parse(localData), true);
+          document.getElementById("status-text").innerText = "Đã tải từ bộ nhớ đệm (Đang đồng bộ...)";
+        } catch(e) {}
       }
+
+      fetchDataFromSheet(false, false);
+
+      if (!isMobile) {
+        setInterval(() => {
+          fetchDataFromSheet(false, true);
+        }, 12000);
+      }
+    };
+
+    function updateUserUI() {
+      const loginSec = document.getElementById("login-section");
+      const loggedSec = document.getElementById("logged-section");
+      const userDisplay = document.getElementById("user-display-name");
+      const btnReset = document.getElementById("btn-admin-reset");
+      const btnExport = document.getElementById("btn-export-history");
+      const classFilter = document.getElementById("class-filter");
+      const colCheckbox = document.querySelector(".col-checkbox");
+      const btnRefresh = document.getElementById("btn-refresh");
+      const btnCopyParent = document.getElementById("btn-copy-parent-link");
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const isParentView = urlParams.get('role') === 'phuhuynh';
+
+      if (isParentView) {
+        // GIAO DIỆN PHỤ HUYNH: ẨN TOÀN BỘ NÚT QUẢN TRỊ & ĐĂNG NHẬP, GIỮ NÚT LÀM MỚI
+        if (loginSec) loginSec.classList.add("hidden");
+        if (loggedSec) loggedSec.classList.add("hidden");
+        if (btnCopyParent) btnCopyParent.classList.add("hidden");
+        if (btnRefresh) btnRefresh.classList.remove("hidden"); // Giữ nút Làm mới
+        if (colCheckbox) colCheckbox.classList.add("hidden");
+        classFilter.disabled = false;
+      } else if (currentUser) {
+        // GIAO DIỆN ĐÃ ĐĂNG NHẬP (GVCN / ADMIN)
+        if (loginSec) loginSec.classList.add("hidden");
+        if (loggedSec) loggedSec.classList.remove("hidden");
+        if (btnCopyParent) btnCopyParent.classList.remove("hidden");
+        if (btnRefresh) btnRefresh.classList.remove("hidden");
+        if (colCheckbox) colCheckbox.classList.remove("hidden");
+
+        if (currentUser.role === "admin") {
+          userDisplay.innerText = "ADMIN (Toàn quyền)";
+          btnReset.classList.remove("hidden");
+          btnExport.classList.remove("hidden");
+          classFilter.disabled = false;
+        } else {
+          userDisplay.innerText = "GVCN " + currentUser.className;
+          btnReset.classList.add("hidden");
+          btnExport.classList.add("hidden");
+          classFilter.value = currentUser.className;
+          classFilter.disabled = true;
+        }
+      } else {
+        // GIAO DIỆN CHƯA ĐĂNG NHẬP (MẶC ĐỊNH)
+        if (loginSec) loginSec.classList.remove("hidden");
+        if (loggedSec) loggedSec.classList.add("hidden");
+        if (btnCopyParent) btnCopyParent.classList.remove("hidden");
+        if (btnRefresh) btnRefresh.classList.remove("hidden");
+        if (colCheckbox) colCheckbox.classList.add("hidden");
+        classFilter.disabled = false;
+      }
+
+      filterData();
     }
 
-    // Hàm cập nhật trạng thái khi nhấn nút Duyệt
-    function approveLeave(rowIndex) {
-      // 1. Cập nhật giao diện ngay lập tức (Optimistic UI)
-      const statusCell = document.getElementById(`status-${rowIndex}`);
-      statusCell.innerText = 'Đã duyệt';
-      statusCell.className = 'approved';
+    // HÀM SAO CHÉP LINK PHỤ HUYNH
+    function copyParentLink() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const parentUrl = baseUrl + "?role=phuhuynh";
 
-      // 2. Gửi request ngầm ghi dữ liệu vào Cột Q trên Google Sheet
-      fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          row: rowIndex, 
-          status: 'Đã duyệt' 
-        })
+      navigator.clipboard.writeText(parentUrl).then(() => {
+        alert("✅ Đã sao chép đường link xem dành cho Phụ huynh:\n\n" + parentUrl + "\n\nBạn có thể gửi ngay link này cho Phụ huynh!");
+      }).catch(err => {
+        prompt("Đường link dành cho Phụ huynh:", parentUrl);
       });
     }
 
-    loadData();
+    function openLoginModal() {
+      document.getElementById("modal-login").classList.remove("hidden");
+    }
+
+    function closeLoginModal() {
+      document.getElementById("modal-login").classList.add("hidden");
+    }
+
+    function submitLogin() {
+      const u = document.getElementById("login-username").value.trim();
+      const p = document.getElementById("login-password").value.trim();
+
+      if (!u || !p) {
+        alert("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
+        return;
+      }
+
+      const btn = document.getElementById("btn-submit-login");
+      btn.innerText = "Đang kiểm tra...";
+      btn.disabled = true;
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "login", username: u, password: p }),
+        redirect: "follow"
+      })
+      .then(res => res.json())
+      .then(res => {
+        btn.innerText = "Đăng Nhập";
+        btn.disabled = false;
+
+        if (res.success) {
+          currentUser = {
+            username: res.username,
+            role: res.role,
+            className: res.className || "",
+            password: p
+          };
+          sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
+          closeLoginModal();
+          updateUserUI();
+          alert("✅ " + res.message);
+        } else {
+          alert("❌ " + res.message);
+        }
+      })
+      .catch(err => {
+        btn.innerText = "Đăng Nhập";
+        btn.disabled = false;
+        alert("Lỗi kết nối máy chủ khi đăng nhập!");
+      });
+    }
+
+    function handleLogout() {
+      if (confirm("Xác nhận đăng xuất khỏi hệ thống?")) {
+        currentUser = null;
+        sessionStorage.removeItem("attendance_user");
+        document.getElementById("class-filter").disabled = false;
+        updateUserUI();
+      }
+    }
+
+    function fetchDataFromSheet(isManual = false, isSilent = false) {
+      if (isFetching) return;
+      isFetching = true;
+
+      const btnRefresh = document.getElementById('btn-refresh');
+      const icon = document.getElementById('refresh-icon');
+      const label = document.getElementById('refresh-label');
+
+      if (!isSilent) {
+        if (icon) icon.classList.add('animate-spin');
+        if (label) label.innerText = "Đang tải...";
+        if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
+      }
+
+      const fetchUrl = isManual 
+        ? SCRIPT_URL + "?cachebust=" + new Date().getTime() 
+        : SCRIPT_URL;
+
+      fetch(fetchUrl, { method: "GET", redirect: "follow" })
+        .then(res => res.json())
+        .then(data => {
+          isFetching = false;
+          if (!isSilent) {
+            if (icon) icon.classList.remove('animate-spin');
+            if (label) label.innerText = "Làm Mới";
+            if (btnRefresh) btnRefresh.classList.remove('opacity-75', 'pointer-events-none');
+          }
+
+          if (Array.isArray(data)) {
+            localStorage.setItem("local_attendance_data", JSON.stringify(data));
+            document.getElementById("status-text").innerText = "Đã kết nối dữ liệu mới nhất";
+            parseSheetData(data);
+          }
+        })
+        .catch(err => {
+          isFetching = false;
+          if (!isSilent) {
+            if (icon) icon.classList.remove('animate-spin');
+            if (label) label.innerText = "Làm Mới";
+            if (btnRefresh) btnRefresh.classList.remove('opacity-75', 'pointer-events-none');
+          }
+          document.getElementById("status-text").innerText = "Kết nối chậm, đang dùng dữ liệu lưu tạm";
+        });
+    }
+
+    function parseSheetData(items, isFromLocal = false) {
+      allStudents = [];
+
+      for (let i = 0; i < items.length; i++) {
+        let item = items[i];
+        let statusObj = computeStatus(item.colF, item.colL, item.colP, item.colQ);
+
+        if (pendingApprovals[item.rowIndex]) {
+          const valP = String(item.colP || "").toLowerCase().trim();
+          const valQ = String(item.colQ || "").toLowerCase().trim();
+          
+          if ((pendingApprovals[item.rowIndex].text === "PHÉP" && (valP === "p" || valQ === "p")) || 
+              (pendingApprovals[item.rowIndex].text === "KHÔNG QUÉT" && (valP === "kq" || valQ === "kq"))) {
+            delete pendingApprovals[item.rowIndex];
+          } else {
+            statusObj = pendingApprovals[item.rowIndex];
+          }
+        }
+
+        allStudents.push({
+          rowIndex: item.rowIndex,
+          name: item.name,
+          lop: item.lop,
+          maHs: item.maHs,
+          time: item.time,
+          status: statusObj.text,
+          badgeClass: statusObj.badgeClass,
+          selected: false
+        });
+      }
+
+      const currentClassSelection = document.getElementById("class-filter").value;
+      const classes = [...new Set(allStudents.map(s => s.lop))].filter(c => c !== "---" && c !== "").sort();
+      document.getElementById("class-filter").innerHTML = `<option value="">-- Tất cả các lớp (${classes.length}) --</option>` + 
+        classes.map(c => `<option value="${c}" ${c === currentClassSelection ? 'selected' : ''}>${c}</option>`).join('');
+
+      if (currentUser && currentUser.role === "gvcn") {
+        document.getElementById("class-filter").value = currentUser.className;
+        document.getElementById("class-filter").disabled = true;
+      }
+
+      filterData();
+    }
+
+    function computeStatus(colF, colL, colP, colQ) {
+      const qVal = String(colQ || "").toLowerCase().trim();
+      const pVal = String(colP || "").toLowerCase().trim();
+      const lVal = String(colL || "").toLowerCase().trim();
+
+      if (qVal !== "") {
+        if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
+          return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
+        }
+        if (qVal === "p" || qVal === "phép" || qVal === "phep") {
+          return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+        } 
+        if (qVal === "kq" || qVal === "không quét" || qVal === "khong quet") {
+          return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
+        } 
+        if (qVal === "trễ" || qVal === "tre" || qVal === "đi trễ" || qVal === "di tre") {
+          return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
+        } 
+        if (qVal === "đúng giờ" || qVal === "dung gio") {
+          return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+        } 
+
+        return { text: qVal.toUpperCase(), badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
+      } 
+      
+      if (pVal === "p") {
+        return { text: "PHÉP", badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+      } 
+      if (pVal === "kq") {
+        return { text: "KHÔNG QUÉT", badgeClass: "bg-slate-200 text-slate-700 border-slate-300 font-medium" };
+      } 
+      
+      if (pVal === "") {
+        if (lVal === "" || lVal === "đúng giờ" || lVal === "dung gio") {
+          return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+        } else {
+          return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
+        }
+      }
+
+      return { text: "KHÔNG PHÉP", badgeClass: "bg-rose-100 text-rose-700 border-rose-200" };
+    }
+
+    function updateFilteredStats() {
+      let dungGio = 0, diTre = 0, phep = 0, khongQuet = 0, khongPhep = 0;
+      
+      for (let i = 0; i < filteredStudents.length; i++) {
+        let st = filteredStudents[i].status;
+        if (st === "ĐÚNG GIỜ") dungGio++;
+        else if (st === "ĐI TRỄ") diTre++;
+        else if (st === "PHÉP") phep++;
+        else if (st === "KHÔNG QUÉT") khongQuet++;
+        else if (st === "KHÔNG PHÉP") khongPhep++;
+      }
+
+      document.getElementById("total-students").innerText = filteredStudents.length + " / " + allStudents.length;
+      document.getElementById("stat-dung-gio").innerText = dungGio;
+      document.getElementById("stat-di-tre").innerText = diTre;
+      document.getElementById("stat-phep").innerText = phep;
+      document.getElementById("stat-khong-quet").innerText = khongQuet;
+      document.getElementById("stat-khong-phep").innerText = khongPhep;
+    }
+
+    function debounceFilter() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(filterData, 100);
+    }
+
+    function filterData() {
+      const search = document.getElementById("search-input").value.toLowerCase().trim();
+      const selectedClass = document.getElementById("class-filter").value;
+      const selectedStatus = document.getElementById("status-filter").value;
+
+      filteredStudents = allStudents.filter(s => {
+        const matchSearch = !search || s.name.toLowerCase().includes(search) || s.maHs.toLowerCase().includes(search);
+        const matchClass = !selectedClass || s.lop === selectedClass;
+        const matchStatus = !selectedStatus || s.status === selectedStatus;
+        return matchSearch && matchClass && matchStatus;
+      });
+
+      updateFilteredStats();
+      renderTable();
+    }
+
+    function toggleSelectAll(master) {
+      const checked = master.checked;
+      filteredStudents.forEach(s => s.selected = checked);
+      const checkboxes = document.querySelectorAll('#attendance-tbody input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = checked);
+    }
+
+    function onRowSelectChange(idx, element) {
+      filteredStudents[idx].selected = element.checked;
+      const tr = element.closest('tr');
+      if (element.checked) {
+        tr.classList.add('bg-indigo-50/30');
+      } else {
+        tr.classList.remove('bg-indigo-50/30');
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("attendance-tbody");
+      const total = filteredStudents.length;
+
+      if (total === 0) {
+        const colSpan = currentUser ? 7 : 6;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400">Không có dữ liệu phù hợp.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      for (let idx = 0; idx < total; idx++) {
+        let s = filteredStudents[idx];
+        html += `<tr class="hover:bg-slate-50/80 ${s.selected ? 'bg-indigo-50/30' : ''}">` +
+          (currentUser ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${idx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
+          `<td class="p-2.5 text-center text-slate-400 font-medium">${idx + 1}</td>` +
+          `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
+          `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
+          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>` +
+          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.time}</td>` +
+          `<td class="p-2.5"><span class="px-2 py-0.5 rounded-md text-[11px] font-bold border inline-block ${s.badgeClass}">${s.status}</span></td>` +
+        `</tr>`;
+      }
+
+      tbody.innerHTML = html;
+    }
+
+    function openApproveModal() {
+      if (!currentUser) {
+        alert("Bạn chưa đăng nhập! Vui lòng đăng nhập.");
+        openLoginModal();
+        return;
+      }
+
+      const selected = filteredStudents.filter(s => s.selected);
+      if (selected.length === 0) {
+        alert("Vui lòng tích chọn ít nhất 1 học sinh!");
+        return;
+      }
+
+      const selectedClasses = [...new Set(selected.map(s => s.lop))];
+      if (currentUser.role === "gvcn" && selectedClasses.some(c => c !== currentUser.className)) {
+        alert("Tài khoản của bạn chỉ có quyền duyệt điểm danh cho lớp " + currentUser.className + "!");
+        return;
+      }
+
+      const targetClass = selectedClasses[0];
+
+      const typeChoice = prompt(
+        `Đang duyệt điểm danh cho LỚP ${targetClass} (${selected.length} học sinh).\n` +
+        `Nhập số tương ứng với trạng thái duyệt:\n` +
+        `1. CÓ PHÉP (Ghi chữ "P")\n` +
+        `2. KHÔNG QUÉT (Ghi chữ "KQ")`,
+        "1"
+      );
+
+      if (!typeChoice) return;
+
+      let statusValue = "P";
+      if (typeChoice.trim() === "2") {
+        statusValue = "KQ";
+      } else if (typeChoice.trim() !== "1") {
+        alert("Lựa chọn không hợp lệ!");
+        return;
+      }
+
+      const selectedRowIndexes = selected.map(s => s.rowIndex);
+      const newStatusText = statusValue === "P" ? "PHÉP" : "KHÔNG QUÉT";
+      const newBadgeClass = statusValue === "P" 
+        ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
+        : "bg-slate-200 text-slate-700 border-slate-300 font-medium";
+
+      const backupData = JSON.parse(JSON.stringify(allStudents));
+      const backupPending = JSON.parse(JSON.stringify(pendingApprovals));
+
+      allStudents.forEach(s => {
+        if (selectedRowIndexes.includes(s.rowIndex)) {
+          s.status = newStatusText;
+          s.badgeClass = newBadgeClass;
+          s.selected = false;
+
+          pendingApprovals[s.rowIndex] = {
+            text: newStatusText,
+            badgeClass: newBadgeClass
+          };
+        }
+      });
+
+      const selectAllCb = document.getElementById('select-all');
+      if (selectAllCb) selectAllCb.checked = false;
+
+      filterData();
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ 
+          action: "approvePhep", 
+          className: targetClass,
+          password: currentUser.password,
+          sessionRole: currentUser.role,
+          statusValue: statusValue,
+          rowIndexes: selectedRowIndexes 
+        }),
+        redirect: "follow"
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (!res.success) {
+          alert("❌ " + res.message);
+          allStudents = backupData;
+          pendingApprovals = backupPending;
+          filterData();
+        }
+      })
+      .catch(err => {
+        alert("Lỗi kết nối tới Server. Đã hoàn tác dữ liệu!");
+        allStudents = backupData;
+        pendingApprovals = backupPending;
+        filterData();
+      });
+    }
+
+    // THAO TÁC RÚT LỊCH SỬ DÀNH CHO ADMIN
+    function exportHistoryToSheet() {
+      if (!currentUser || currentUser.role !== "admin") return;
+
+      const todayStr = new Date().toLocaleDateString("vi-VN");
+      const customDate = prompt("XÁC NHẬN RÚT ĐIỂM DANH SANG SHEET 'lichsu'\n\nNhập ngày cần trích xuất (định dạng Ngày/Tháng/Năm):", todayStr);
+      
+      if (!customDate) return;
+
+      const btn = document.getElementById("btn-export-history");
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4 animate-spin"></i> <span>Đang rút...</span>`;
+      btn.disabled = true;
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "exportHistory",
+          adminPassword: currentUser.password,
+          dateString: customDate.trim()
+        }),
+        redirect: "follow"
+      })
+      .then(res => res.json())
+      .then(res => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        if (res.success) {
+          alert("✅ " + res.message);
+        } else {
+          alert("❌ " + res.message);
+        }
+      })
+      .catch(err => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        alert("Lỗi kết nối khi rút lịch sử!");
+      });
+    }
+
+    function openChangePassModal() {
+      if (!currentUser) return;
+
+      const oldPassword = prompt(`Đang đổi mật khẩu cho tài khoản ${currentUser.username}.\nNhập mật khẩu HIỆN TẠI:`);
+      if (!oldPassword) return;
+
+      const newPassword = prompt(`Nhập mật khẩu MỚI (từ 4 ký tự trở lên):`);
+      if (!newPassword) return;
+
+      const confirmPassword = prompt("Nhập lại mật khẩu MỚI để xác nhận:");
+      if (newPassword !== confirmPassword) {
+        alert("Mật khẩu mới xác nhận không khớp!");
+        return;
+      }
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "changeGvcnPassword",
+          className: currentUser.username,
+          oldPassword: oldPassword,
+          newPassword: newPassword
+        }),
+        redirect: "follow"
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          currentUser.password = newPassword.trim();
+          sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
+          alert("✅ " + res.message);
+        } else {
+          alert("❌ " + res.message);
+        }
+      })
+      .catch(err => {
+        alert("Lỗi kết nối khi đổi mật khẩu!");
+      });
+    }
+
+    function openAdminResetModal() {
+      if (!currentUser || currentUser.role !== "admin") return;
+
+      const targetClass = prompt(
+        "ADMIN RESET MẬT KHẨU\n" +
+        "Nhập Tên Lớp cần Reset mật khẩu về mặc định:\n" +
+        "(Để trống nếu muốn RESET MẬT KHẨU CỦA TẤT CẢ CÁC LỚP)"
+      );
+
+      if (targetClass === null) return;
+
+      const confirmAdminPass = prompt("Xác nhận MK Admin để hoàn tất Reset:");
+      if (!confirmAdminPass) return;
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "resetGvcnPasswordByAdmin",
+          targetClass: targetClass,
+          adminPassword: confirmAdminPass
+        }),
+        redirect: "follow"
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          alert("✅ " + res.message);
+        } else {
+          alert("❌ " + res.message);
+        }
+      })
+      .catch(err => {
+        alert("Lỗi kết nối khi Reset mật khẩu!");
+      });
+    }
   </script>
 </body>
 </html>
