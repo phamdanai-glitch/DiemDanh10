@@ -36,12 +36,10 @@
 
       <!-- THANH CÔNG CỤ -->
       <div class="flex flex-wrap items-center gap-2" id="action-buttons">
-        <!-- NÚT LÀM MỚI (LUÔN GIỮ LẠI) -->
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
-        <!-- NÚT LẤY LINK PHỤ HUYNH -->
         <button id="btn-copy-parent-link" onclick="copyParentLink()" class="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 active:scale-95 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="share-2" class="w-4 h-4"></i> <span>Link Phụ Huynh</span>
         </button>
@@ -61,7 +59,6 @@
             <i data-lucide="shield-check" class="w-4 h-4"></i> <span id="approve-label">Duyệt Trạng Thái</span>
           </button>
 
-          <!-- NÚT RÚT LỊCH SỬ DÀNH CHO ADMIN -->
           <button id="btn-export-history" onclick="exportHistoryToSheet()" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span>Rút Lịch Sử</span>
           </button>
@@ -182,6 +179,9 @@
 
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
+    
+    // ĐƯỜNG LINK CSV ĐÃ XUẤT BẢN LÊN WEB
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_SHEET_ID/pub?gid=0&single=true&output=csv";
 
     let allStudents = [];
     let filteredStudents = [];
@@ -196,11 +196,12 @@
 
       updateUserUI();
 
+      // Đọc ngay từ LocalStorage đệm nếu có trong 0.01 giây
       const localData = localStorage.getItem("local_attendance_data");
       if (localData) {
         try {
           parseSheetData(JSON.parse(localData), true);
-          document.getElementById("status-text").innerText = "Đã tải từ bộ nhớ đệm (Đang đồng bộ...)";
+          document.getElementById("status-text").innerText = "Tải từ bộ nhớ đệm";
         } catch(e) {}
       }
 
@@ -228,15 +229,13 @@
       const isParentView = urlParams.get('role') === 'phuhuynh';
 
       if (isParentView) {
-        // GIAO DIỆN PHỤ HUYNH: ẨN TOÀN BỘ NÚT QUẢN TRỊ & ĐĂNG NHẬP, GIỮ NÚT LÀM MỚI
         if (loginSec) loginSec.classList.add("hidden");
         if (loggedSec) loggedSec.classList.add("hidden");
         if (btnCopyParent) btnCopyParent.classList.add("hidden");
-        if (btnRefresh) btnRefresh.classList.remove("hidden"); // Giữ nút Làm mới
+        if (btnRefresh) btnRefresh.classList.remove("hidden");
         if (colCheckbox) colCheckbox.classList.add("hidden");
         classFilter.disabled = false;
       } else if (currentUser) {
-        // GIAO DIỆN ĐÃ ĐĂNG NHẬP (GVCN / ADMIN)
         if (loginSec) loginSec.classList.add("hidden");
         if (loggedSec) loggedSec.classList.remove("hidden");
         if (btnCopyParent) btnCopyParent.classList.remove("hidden");
@@ -256,7 +255,6 @@
           classFilter.disabled = true;
         }
       } else {
-        // GIAO DIỆN CHƯA ĐĂNG NHẬP (MẶC ĐỊNH)
         if (loginSec) loginSec.classList.remove("hidden");
         if (loggedSec) loggedSec.classList.add("hidden");
         if (btnCopyParent) btnCopyParent.classList.remove("hidden");
@@ -268,7 +266,6 @@
       filterData();
     }
 
-    // HÀM SAO CHÉP LINK PHỤ HUYNH
     function copyParentLink() {
       const baseUrl = window.location.origin + window.location.pathname;
       const parentUrl = baseUrl + "?role=phuhuynh";
@@ -343,6 +340,7 @@
       }
     }
 
+    // LẤY DỮ LIỆU TỨC THÌ TỪ API SCRIPT BẰNG CHẾ ĐỘ NHANH
     function fetchDataFromSheet(isManual = false, isSilent = false) {
       if (isFetching) return;
       isFetching = true;
@@ -608,6 +606,7 @@
       const backupData = JSON.parse(JSON.stringify(allStudents));
       const backupPending = JSON.parse(JSON.stringify(pendingApprovals));
 
+      // OPTIMISTIC UPDATE: Đổi giao diện tức thì
       allStudents.forEach(s => {
         if (selectedRowIndexes.includes(s.rowIndex)) {
           s.status = newStatusText;
@@ -626,6 +625,7 @@
 
       filterData();
 
+      // Gửi request ngầm về Apps Script để ghi đè vào Google Sheet
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -656,7 +656,6 @@
       });
     }
 
-    // THAO TÁC RÚT LỊCH SỬ DÀNH CHO ADMIN
     function exportHistoryToSheet() {
       if (!currentUser || currentUser.role !== "admin") return;
 
