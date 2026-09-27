@@ -145,6 +145,20 @@
       </table>
     </div>
 
+    <!-- THANH PHÂN TRANG (PAGINATION) -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs sm:text-sm text-slate-600" id="pagination-wrapper">
+      <div id="page-info" class="font-medium">Hiển thị 0 - 0 trong số 0 học sinh</div>
+      <div class="flex items-center gap-2">
+        <button id="btn-prev-page" onclick="changePage(-1)" class="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent font-medium transition-all flex items-center gap-1 cursor-pointer">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i> <span>Trước</span>
+        </button>
+        <span class="font-semibold text-slate-700" id="page-number-display">Trang 1 / 1</span>
+        <button id="btn-next-page" onclick="changePage(1)" class="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent font-medium transition-all flex items-center gap-1 cursor-pointer">
+          <span>Sau</span> <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
   </div>
 
   <!-- MODAL ĐĂNG NHẬP -->
@@ -163,7 +177,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu:</label>
-          <input type="password" id="login-password" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <input type="password" id="login-password" onkeydown="if(event.key==='Enter') submitLogin()" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
       </div>
 
@@ -187,6 +201,10 @@
     let searchTimeout = null;
     let isFetching = false;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // CAI DAT PHAN TRANG
+    let currentPage = 1;
+    const pageSize = 50;
 
     window.onload = function() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -259,6 +277,7 @@
         classFilter.disabled = false;
       }
 
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       filterData();
     }
 
@@ -381,16 +400,14 @@
         });
     }
 
-    // TỐI ƯU HÀM ĐỊNH DẠNG THỜI GIAN
     function formatTimeValue(rawTime) {
       if (!rawTime) return "";
       let str = String(rawTime).trim();
       
-      // Nếu là chuỗi dạng ISO (2026-09-27T07:15:00.000Z)
       if (str.includes("T")) {
         let parts = str.split("T");
         if (parts[1]) {
-          str = parts[1].split(".")[0]; // Lấy phần HH:mm:ss
+          str = parts[1].split(".")[0];
         }
       }
       return str;
@@ -402,7 +419,6 @@
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
         
-        // CẬP NHẬT: Dùng colAD thay cho colL (Thay AD cho L)
         let statusObj = computeStatus(item.colF, item.colAD || item.colL, item.colP, item.colQ);
 
         if (pendingApprovals[item.rowIndex]) {
@@ -417,7 +433,6 @@
           }
         }
 
-        // CẬP NHẬT: Ưu tiên lấy colAC thay cho K (Thay AC cho K), đồng thời định dạng lại thời gian chuẩn xác
         let timeDisplay = formatTimeValue(item.colAC || item.time);
 
         allStudents.push({
@@ -525,8 +540,19 @@
         return matchSearch && matchClass && matchStatus;
       });
 
+      currentPage = 1; // Reset ve trang 1 khi loc
       updateFilteredStats();
       renderTable();
+    }
+
+    function changePage(direction) {
+      const totalPages = Math.ceil(filteredStudents.length / pageSize) || 1;
+      const newPage = currentPage + direction;
+
+      if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        renderTable();
+      }
     }
 
     function toggleSelectAll(master) {
@@ -536,8 +562,8 @@
       checkboxes.forEach(cb => cb.checked = checked);
     }
 
-    function onRowSelectChange(idx, element) {
-      filteredStudents[idx].selected = element.checked;
+    function onRowSelectChange(globalIdx, element) {
+      filteredStudents[globalIdx].selected = element.checked;
       const tr = element.closest('tr');
       if (element.checked) {
         tr.classList.add('bg-indigo-50/30');
@@ -553,15 +579,29 @@
       if (total === 0) {
         const colSpan = currentUser ? 7 : 6;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400">Không có dữ liệu phù hợp.</td></tr>`;
+        document.getElementById("page-info").innerText = "Hiển thị 0 - 0 trong số 0 học sinh";
+        document.getElementById("page-number-display").innerText = "Trang 1 / 1";
+        document.getElementById("btn-prev-page").disabled = true;
+        document.getElementById("btn-next-page").disabled = true;
         return;
       }
 
+      // CHIA TRANG 50 MỤC
+      const totalPages = Math.ceil(total / pageSize);
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, total);
+      const pageStudents = filteredStudents.slice(startIndex, endIndex);
+
       let html = '';
-      for (let idx = 0; idx < total; idx++) {
-        let s = filteredStudents[idx];
+      for (let i = 0; i < pageStudents.length; i++) {
+        let s = pageStudents[i];
+        let globalIdx = startIndex + i;
+
         html += `<tr class="hover:bg-slate-50/80 ${s.selected ? 'bg-indigo-50/30' : ''}">` +
-          (currentUser ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${idx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
-          `<td class="p-2.5 text-center text-slate-400 font-medium">${idx + 1}</td>` +
+          (currentUser ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${globalIdx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
+          `<td class="p-2.5 text-center text-slate-400 font-medium">${globalIdx + 1}</td>` +
           `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
           `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>` +
@@ -571,6 +611,14 @@
       }
 
       tbody.innerHTML = html;
+
+      // CAP NHAT THANH PHAN TRANG
+      document.getElementById("page-info").innerText = `Hiển thị ${startIndex + 1} - ${endIndex} trong số ${total} học sinh`;
+      document.getElementById("page-number-display").innerText = `Trang ${currentPage} / ${totalPages}`;
+      document.getElementById("btn-prev-page").disabled = (currentPage === 1);
+      document.getElementById("btn-next-page").disabled = (currentPage === totalPages);
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     function openApproveModal() {
@@ -731,8 +779,8 @@
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
-          action: "changeGvcnPassword",
-          className: currentUser.username,
+          action: "changeGvcnPass",
+          username: currentUser.username,
           oldPassword: oldPassword,
           newPassword: newPassword
         }),
@@ -741,15 +789,48 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          alert("✅ " + res.message);
           currentUser.password = newPassword;
           sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
+          alert("✅ " + res.message);
         } else {
           alert("❌ " + res.message);
         }
       })
       .catch(err => {
         alert("Lỗi kết nối khi đổi mật khẩu!");
+      });
+    }
+
+    function openAdminResetModal() {
+      if (!currentUser || currentUser.role !== "admin") return;
+
+      const targetUser = prompt("Nhập tên tài khoản cần đặt lại mật khẩu (VD: gvcn10a1):");
+      if (!targetUser) return;
+
+      const newPass = prompt(`Nhập mật khẩu mới cho tài khoản ${targetUser}:`);
+      if (!newPass) return;
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "adminResetPass",
+          adminPassword: currentUser.password,
+          targetUsername: targetUser.trim(),
+          newPassword: newPass.trim()
+        }),
+        redirect: "follow"
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          alert("✅ " + res.message);
+        } else {
+          alert("❌ " + res.message);
+        }
+      })
+      .catch(err => {
+        alert("Lỗi kết nối khi thiết lập lại mật khẩu!");
       });
     }
   </script>
