@@ -188,25 +188,29 @@
     let isFetching = false;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    // HÀM CHUYỂN ĐỔI CHUỖI NÀY VỀ GIỜ DẠNG HH:mm:ss GỌN GÀNG
+    // HÀM CHUYỂN ĐỔI CHUỖI VỀ MÚI GIỜ VIỆT NAM (GMT+7)
     function formatTimeDisplay(timeStr) {
       if (!timeStr) return "";
       let str = String(timeStr).trim();
-      
-      // Nếu đã đúng định dạng HH:mm:ss hoặc HH:mm
+
+      // Trường hợp dữ liệu trả về dạng HH:mm:ss sẵn
       if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
         return str;
       }
-      
-      // Nếu là định dạng Date của JS
+
+      // Trường hợp dữ liệu là chuỗi Date của Google Sheets (vd: Sat Dec 30 1899...)
       let dateObj = new Date(str);
       if (!isNaN(dateObj.getTime())) {
-        let hours = String(dateObj.getHours()).padStart(2, '0');
-        let minutes = String(dateObj.getMinutes()).padStart(2, '0');
-        let seconds = String(dateObj.getSeconds()).padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
+        // Chuyển sang chuỗi giờ chuẩn Việt Nam (Asia/Ho_Chi_Minh - GMT+7)
+        return dateObj.toLocaleTimeString("vi-VN", {
+          timeZone: "Asia/Ho_Chi_Minh",
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
       }
-      
+
       return str;
     }
 
@@ -422,7 +426,7 @@
           }
         }
 
-        // ĐỊNH DẠNG LẠI THỜI GIAN HIỂN THỊ
+        // ĐỊNH DẠNG LẠI THỜI GIAN HIỂN THỊ DÙNG Asia/Ho_Chi_Minh
         let rawTime = item.colAC || item.time || "";
         let formattedTime = formatTimeDisplay(rawTime);
 
