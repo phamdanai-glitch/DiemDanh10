@@ -36,10 +36,12 @@
 
       <!-- THANH CÔNG CỤ -->
       <div class="flex flex-wrap items-center gap-2" id="action-buttons">
+        <!-- NÚT LÀM MỚI (LUÔN GIỮ LẠI) -->
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
+        <!-- NÚT LẤY LINK PHỤ HUYNH -->
         <button id="btn-copy-parent-link" onclick="copyParentLink()" class="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 active:scale-95 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="share-2" class="w-4 h-4"></i> <span>Link Phụ Huynh</span>
         </button>
@@ -59,6 +61,7 @@
             <i data-lucide="shield-check" class="w-4 h-4"></i> <span id="approve-label">Duyệt Trạng Thái</span>
           </button>
 
+          <!-- NÚT RÚT LỊCH SỬ DÀNH CHO ADMIN -->
           <button id="btn-export-history" onclick="exportHistoryToSheet()" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span>Rút Lịch Sử</span>
           </button>
@@ -123,7 +126,7 @@
       </select>
     </div>
 
-    <!-- BẢNG ĐIỂM DANH -->
+    <!-- BẢNG HIỂN THỊ DỮ LIỆU -->
     <div class="overflow-x-auto rounded-xl border border-slate-200 table-container">
       <table class="w-full text-left border-collapse text-xs sm:text-sm">
         <thead>
@@ -381,41 +384,13 @@
         });
     }
 
-    // ĐỊNH DẠNG VÀ XỬ LÝ CHUỖI THỜI GIAN TỪ CỘT AC
-    function formatTimeValue(rawVal) {
-      if (rawVal === null || rawVal === undefined || rawVal === "") return "---";
-
-      let str = String(rawVal).trim();
-      if (!str) return "---";
-
-      // Nếu chứa định dạng ISO Date (VD: 2026-09-27T07:30:00.000Z)
-      if (str.includes("T") && str.includes("Z")) {
-        try {
-          let d = new Date(str);
-          if (!isNaN(d.getTime())) {
-            let hh = String(d.getHours()).padStart(2, '0');
-            let mm = String(d.getMinutes()).padStart(2, '0');
-            let ss = String(d.getSeconds()).padStart(2, '0');
-            return `${hh}:${mm}:${ss}`;
-          }
-        } catch(e) {}
-      }
-
-      return str;
-    }
-
     function parseSheetData(items, isFromLocal = false) {
       allStudents = [];
 
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
-
-        // Lấy dữ liệu thô từ các trường AC/AD hoặc K/L/time
-        let rawAC = item.colAC !== undefined ? item.colAC : (item.colK !== undefined ? item.colK : (item.time !== undefined ? item.time : ""));
-        let rawAD = item.colAD !== undefined ? item.colAD : (item.colL !== undefined ? item.colL : "");
-
-        let timeVal = formatTimeValue(rawAC);
-        let statusObj = computeStatus(item.colF, rawAD, item.colP, item.colQ);
+        // Đổi colL -> colAD
+        let statusObj = computeStatus(item.colF, item.colAD, item.colP, item.colQ);
 
         if (pendingApprovals[item.rowIndex]) {
           const valP = String(item.colP || "").toLowerCase().trim();
@@ -431,10 +406,10 @@
 
         allStudents.push({
           rowIndex: item.rowIndex,
-          name: item.name || "",
-          lop: item.lop || "",
-          maHs: item.maHs || "",
-          time: timeVal,
+          name: item.name,
+          lop: item.lop,
+          maHs: item.maHs,
+          time: item.colAC || item.time || "", // Đổi K -> AC
           status: statusObj.text,
           badgeClass: statusObj.badgeClass,
           selected: false
@@ -454,10 +429,11 @@
       filterData();
     }
 
-    function computeStatus(colF, delayCol, colP, colQ) {
+    // Đổi tham số colL thành colAD
+    function computeStatus(colF, colAD, colP, colQ) {
       const qVal = String(colQ || "").toLowerCase().trim();
       const pVal = String(colP || "").toLowerCase().trim();
-      const dVal = String(delayCol || "").toLowerCase().trim();
+      const adVal = String(colAD || "").toLowerCase().trim();
 
       if (qVal !== "") {
         if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
@@ -487,7 +463,7 @@
       } 
       
       if (pVal === "") {
-        if (dVal === "" || dVal === "đúng giờ" || dVal === "dung gio") {
+        if (adVal === "" || adVal === "đúng giờ" || adVal === "dung gio") {
           return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
         } else {
           return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
@@ -574,7 +550,7 @@
           `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
           `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>` +
-          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.time || "---"}</td>` +
+          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.time}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 rounded-md text-[11px] font-bold border inline-block ${s.badgeClass}">${s.status}</span></td>` +
         `</tr>`;
       }
@@ -750,29 +726,26 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          alert("✅ " + res.message);
           currentUser.password = newPassword;
           sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
+          alert("✅ " + res.message);
         } else {
           alert("❌ " + res.message);
         }
       })
-      .catch(err => {
-        alert("Lỗi khi kết nối đổi mật khẩu!");
-      });
+      .catch(err => alert("Lỗi khi kết nối tới máy chủ!"));
     }
 
     function openAdminResetModal() {
       if (!currentUser || currentUser.role !== "admin") return;
 
-      const targetClass = prompt("NHẬP TÊN LỚP CẦN RESET MẬT KHẨU VỀ 123456:\n(Để trống nếu muốn Reset TẤT CẢ các lớp về 123456)");
+      const targetClass = prompt("RESET MẬT KHẨU TÀI KHOẢN\n\n- Nhập TÊN LỚP cụ thể (Ví dụ: 10A1) để reset lớp đó về '123456'.\n- Hoặc để TRỐNG để reset TẤT CẢ các lớp về '123456':");
+      
       if (targetClass === null) return;
 
-      const confirmMsg = targetClass.trim() === "" 
-        ? "CẢNH BÁO: Bạn có chắc chắn muốn Reset mật khẩu TẤT CẢ CÁC LỚP về '123456'?" 
-        : `Xác nhận reset mật khẩu Lớp ${targetClass.trim().toUpperCase()} về '123456'?`;
-
-      if (!confirm(confirmMsg)) return;
+      if (!confirm(targetClass ? `Xác nhận reset mật khẩu Lớp ${targetClass} về '123456'?` : "Xác nhận reset mật khẩu TẤT CẢ các lớp về '123456'?")) {
+        return;
+      }
 
       fetch(SCRIPT_URL, {
         method: "POST",
@@ -792,9 +765,7 @@
           alert("❌ " + res.message);
         }
       })
-      .catch(err => {
-        alert("Lỗi khi kết nối reset mật khẩu!");
-      });
+      .catch(err => alert("Lỗi khi kết nối tới máy chủ!"));
     }
   </script>
 </body>
