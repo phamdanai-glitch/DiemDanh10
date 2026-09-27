@@ -29,17 +29,19 @@
           </p>
           <p class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
             <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span id="status-text">Đang khởi tạo...</span>
+            <span id="status-text">Đang tải dữ liệu tức thì...</span>
           </p>
         </div>
       </div>
 
       <!-- THANH CÔNG CỤ -->
       <div class="flex flex-wrap items-center gap-2" id="action-buttons">
+        <!-- NÚT LÀM MỚI (LUÔN GIỮ LẠI) -->
         <button id="btn-refresh" onclick="fetchDataFromSheet(true)" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform" id="refresh-icon"></i> <span id="refresh-label">Làm Mới</span>
         </button>
 
+        <!-- NÚT LẤY LINK PHỤ HUYNH -->
         <button id="btn-copy-parent-link" onclick="copyParentLink()" class="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 active:scale-95 px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="share-2" class="w-4 h-4"></i> <span>Link Phụ Huynh</span>
         </button>
@@ -59,6 +61,7 @@
             <i data-lucide="shield-check" class="w-4 h-4"></i> <span id="approve-label">Duyệt Trạng Thái</span>
           </button>
 
+          <!-- NÚT RÚT LỊCH SỬ DÀNH CHO ADMIN -->
           <button id="btn-export-history" onclick="exportHistoryToSheet()" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span>Rút Lịch Sử</span>
           </button>
@@ -145,20 +148,6 @@
       </table>
     </div>
 
-    <!-- THANH PHÂN TRANG (PAGINATION 50 HS) -->
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs sm:text-sm text-slate-600" id="pagination-wrapper">
-      <div id="page-info" class="font-medium">Hiển thị 0 - 0 trong số 0 học sinh</div>
-      <div class="flex items-center gap-2">
-        <button id="btn-prev-page" onclick="changePage(-1)" class="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent font-medium transition-all flex items-center gap-1 cursor-pointer">
-          <i data-lucide="chevron-left" class="w-4 h-4"></i> <span>Trước</span>
-        </button>
-        <span class="font-semibold text-slate-700" id="page-number-display">Trang 1 / 1</span>
-        <button id="btn-next-page" onclick="changePage(1)" class="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent font-medium transition-all flex items-center gap-1 cursor-pointer">
-          <span>Sau</span> <i data-lucide="chevron-right" class="w-4 h-4"></i>
-        </button>
-      </div>
-    </div>
-
   </div>
 
   <!-- MODAL ĐĂNG NHẬP -->
@@ -177,7 +166,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu:</label>
-          <input type="password" id="login-password" onkeydown="if(event.key==='Enter') submitLogin()" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <input type="password" id="login-password" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
       </div>
 
@@ -202,35 +191,25 @@
     let isFetching = false;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    // PHÂN TRANG 50 HỌC SINH
-    let currentPage = 1;
-    const pageSize = 50;
-
-    // TẦN SUẤT ĐỒNG BỘ NGHẦM (30 GIÂY ĐỂ TRÁNH NGHẼN SERVER)
-    const AUTO_SYNC_INTERVAL = 30000;
-
     window.onload = function() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
 
       updateUserUI();
 
-      // Tối ưu Tốc Độ: Đọc dữ liệu Cache cũ ngay lập tức (0 giây chờ)
       const localData = localStorage.getItem("local_attendance_data");
       if (localData) {
         try {
           parseSheetData(JSON.parse(localData), true);
-          document.getElementById("status-text").innerText = "Đã nạp từ bộ nhớ đệm (Đang cập nhật...)";
+          document.getElementById("status-text").innerText = "Đã tải từ bộ nhớ đệm (Đang đồng bộ...)";
         } catch(e) {}
       }
 
-      // Tải ngầm dữ liệu mới nhất
       fetchDataFromSheet(false, false);
 
-      // Đồng bộ ngầm với tần suất tối ưu
       if (!isMobile) {
         setInterval(() => {
           fetchDataFromSheet(false, true);
-        }, AUTO_SYNC_INTERVAL);
+        }, 12000);
       }
     };
 
@@ -249,13 +228,15 @@
       const isParentView = urlParams.get('role') === 'phuhuynh';
 
       if (isParentView) {
+        // GIAO DIỆN PHỤ HUYNH: ẨN TOÀN BỘ NÚT QUẢN TRỊ & ĐĂNG NHẬP, GIỮ NÚT LÀM MỚI
         if (loginSec) loginSec.classList.add("hidden");
         if (loggedSec) loggedSec.classList.add("hidden");
         if (btnCopyParent) btnCopyParent.classList.add("hidden");
-        if (btnRefresh) btnRefresh.classList.remove("hidden");
+        if (btnRefresh) btnRefresh.classList.remove("hidden"); // Giữ nút Làm mới
         if (colCheckbox) colCheckbox.classList.add("hidden");
         classFilter.disabled = false;
       } else if (currentUser) {
+        // GIAO DIỆN ĐÃ ĐĂNG NHẬP (GVCN / ADMIN)
         if (loginSec) loginSec.classList.add("hidden");
         if (loggedSec) loggedSec.classList.remove("hidden");
         if (btnCopyParent) btnCopyParent.classList.remove("hidden");
@@ -275,6 +256,7 @@
           classFilter.disabled = true;
         }
       } else {
+        // GIAO DIỆN CHƯA ĐĂNG NHẬP (MẶC ĐỊNH)
         if (loginSec) loginSec.classList.remove("hidden");
         if (loggedSec) loggedSec.classList.add("hidden");
         if (btnCopyParent) btnCopyParent.classList.remove("hidden");
@@ -283,10 +265,10 @@
         classFilter.disabled = false;
       }
 
-      if (typeof lucide !== 'undefined') lucide.createIcons();
       filterData();
     }
 
+    // HÀM SAO CHÉP LINK PHỤ HUYNH
     function copyParentLink() {
       const baseUrl = window.location.origin + window.location.pathname;
       const parentUrl = baseUrl + "?role=phuhuynh";
@@ -391,7 +373,7 @@
 
           if (Array.isArray(data)) {
             localStorage.setItem("local_attendance_data", JSON.stringify(data));
-            document.getElementById("status-text").innerText = "Đã đồng bộ dữ liệu mới nhất";
+            document.getElementById("status-text").innerText = "Đã kết nối dữ liệu mới nhất";
             parseSheetData(data);
           }
         })
@@ -402,21 +384,8 @@
             if (label) label.innerText = "Làm Mới";
             if (btnRefresh) btnRefresh.classList.remove('opacity-75', 'pointer-events-none');
           }
-          document.getElementById("status-text").innerText = "Dùng dữ liệu từ bộ nhớ tạm";
+          document.getElementById("status-text").innerText = "Kết nối chậm, đang dùng dữ liệu lưu tạm";
         });
-    }
-
-    function formatTimeValue(rawTime) {
-      if (!rawTime) return "";
-      let str = String(rawTime).trim();
-      
-      if (str.includes("T")) {
-        let parts = str.split("T");
-        if (parts[1]) {
-          str = parts[1].split(".")[0];
-        }
-      }
-      return str;
     }
 
     function parseSheetData(items, isFromLocal = false) {
@@ -424,8 +393,7 @@
 
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
-        
-        let statusObj = computeStatus(item.colF, item.colAD || item.colL, item.colP, item.colQ);
+        let statusObj = computeStatus(item.colF, item.colL, item.colP, item.colQ);
 
         if (pendingApprovals[item.rowIndex]) {
           const valP = String(item.colP || "").toLowerCase().trim();
@@ -439,14 +407,12 @@
           }
         }
 
-        let timeDisplay = formatTimeValue(item.colAC || item.time);
-
         allStudents.push({
           rowIndex: item.rowIndex,
           name: item.name,
           lop: item.lop,
           maHs: item.maHs,
-          time: timeDisplay,
+          time: item.time,
           status: statusObj.text,
           badgeClass: statusObj.badgeClass,
           selected: false
@@ -466,10 +432,10 @@
       filterData();
     }
 
-    function computeStatus(colF, colAD, colP, colQ) {
+    function computeStatus(colF, colL, colP, colQ) {
       const qVal = String(colQ || "").toLowerCase().trim();
       const pVal = String(colP || "").toLowerCase().trim();
-      const adVal = String(colAD || "").toLowerCase().trim();
+      const lVal = String(colL || "").toLowerCase().trim();
 
       if (qVal !== "") {
         if (qVal === "không phép" || qVal === "khong phep" || qVal === "kp") {
@@ -499,7 +465,7 @@
       } 
       
       if (pVal === "") {
-        if (adVal === "" || adVal === "đúng giờ" || adVal === "dung gio") {
+        if (lVal === "" || lVal === "đúng giờ" || lVal === "dung gio") {
           return { text: "ĐÚNG GIỜ", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" };
         } else {
           return { text: "ĐI TRỄ", badgeClass: "bg-amber-100 text-amber-800 border-amber-200" };
@@ -546,19 +512,8 @@
         return matchSearch && matchClass && matchStatus;
       });
 
-      currentPage = 1;
       updateFilteredStats();
       renderTable();
-    }
-
-    function changePage(direction) {
-      const totalPages = Math.ceil(filteredStudents.length / pageSize) || 1;
-      const newPage = currentPage + direction;
-
-      if (newPage >= 1 && newPage <= totalPages) {
-        currentPage = newPage;
-        renderTable();
-      }
     }
 
     function toggleSelectAll(master) {
@@ -568,8 +523,8 @@
       checkboxes.forEach(cb => cb.checked = checked);
     }
 
-    function onRowSelectChange(globalIdx, element) {
-      filteredStudents[globalIdx].selected = element.checked;
+    function onRowSelectChange(idx, element) {
+      filteredStudents[idx].selected = element.checked;
       const tr = element.closest('tr');
       if (element.checked) {
         tr.classList.add('bg-indigo-50/30');
@@ -585,28 +540,15 @@
       if (total === 0) {
         const colSpan = currentUser ? 7 : 6;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400">Không có dữ liệu phù hợp.</td></tr>`;
-        document.getElementById("page-info").innerText = "Hiển thị 0 - 0 trong số 0 học sinh";
-        document.getElementById("page-number-display").innerText = "Trang 1 / 1";
-        document.getElementById("btn-prev-page").disabled = true;
-        document.getElementById("btn-next-page").disabled = true;
         return;
       }
 
-      const totalPages = Math.ceil(total / pageSize);
-      if (currentPage > totalPages) currentPage = totalPages;
-
-      const startIndex = (currentPage - 1) * pageSize;
-      const endIndex = Math.min(startIndex + pageSize, total);
-      const pageStudents = filteredStudents.slice(startIndex, endIndex);
-
       let html = '';
-      for (let i = 0; i < pageStudents.length; i++) {
-        let s = pageStudents[i];
-        let globalIdx = startIndex + i;
-
+      for (let idx = 0; idx < total; idx++) {
+        let s = filteredStudents[idx];
         html += `<tr class="hover:bg-slate-50/80 ${s.selected ? 'bg-indigo-50/30' : ''}">` +
-          (currentUser ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${globalIdx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
-          `<td class="p-2.5 text-center text-slate-400 font-medium">${globalIdx + 1}</td>` +
+          (currentUser ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${idx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
+          `<td class="p-2.5 text-center text-slate-400 font-medium">${idx + 1}</td>` +
           `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
           `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>` +
@@ -616,13 +558,6 @@
       }
 
       tbody.innerHTML = html;
-
-      document.getElementById("page-info").innerText = `Hiển thị ${startIndex + 1} - ${endIndex} trong số ${total} học sinh`;
-      document.getElementById("page-number-display").innerText = `Trang ${currentPage} / ${totalPages}`;
-      document.getElementById("btn-prev-page").disabled = (currentPage === 1);
-      document.getElementById("btn-next-page").disabled = (currentPage === totalPages);
-
-      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     function openApproveModal() {
@@ -721,6 +656,7 @@
       });
     }
 
+    // THAO TÁC RÚT LỊCH SỬ DÀNH CHO ADMIN
     function exportHistoryToSheet() {
       if (!currentUser || currentUser.role !== "admin") return;
 
@@ -783,8 +719,8 @@
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
-          action: "changeGvcnPass",
-          username: currentUser.username,
+          action: "changeGvcnPassword",
+          className: currentUser.username,
           oldPassword: oldPassword,
           newPassword: newPassword
         }),
@@ -793,7 +729,7 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          currentUser.password = newPassword;
+          currentUser.password = newPassword.trim();
           sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
           alert("✅ " + res.message);
         } else {
@@ -808,20 +744,24 @@
     function openAdminResetModal() {
       if (!currentUser || currentUser.role !== "admin") return;
 
-      const targetUser = prompt("Nhập tên tài khoản cần đặt lại mật khẩu (VD: gvcn10a1):");
-      if (!targetUser) return;
+      const targetClass = prompt(
+        "ADMIN RESET MẬT KHẨU\n" +
+        "Nhập Tên Lớp cần Reset mật khẩu về mặc định:\n" +
+        "(Để trống nếu muốn RESET MẬT KHẨU CỦA TẤT CẢ CÁC LỚP)"
+      );
 
-      const newPass = prompt(`Nhập mật khẩu mới cho tài khoản ${targetUser}:`);
-      if (!newPass) return;
+      if (targetClass === null) return;
+
+      const confirmAdminPass = prompt("Xác nhận MK Admin để hoàn tất Reset:");
+      if (!confirmAdminPass) return;
 
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
-          action: "adminResetPass",
-          adminPassword: currentUser.password,
-          targetUsername: targetUser.trim(),
-          newPassword: newPass.trim()
+          action: "resetGvcnPasswordByAdmin",
+          targetClass: targetClass,
+          adminPassword: confirmAdminPass
         }),
         redirect: "follow"
       })
@@ -834,7 +774,7 @@
         }
       })
       .catch(err => {
-        alert("Lỗi kết nối khi thiết lập lại mật khẩu!");
+        alert("Lỗi kết nối khi Reset mật khẩu!");
       });
     }
   </script>
