@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Quản Lý Điểm Danh Trực Tuyến - THPT Vị Thanh</title>
+  <title>Điểm Danh Trực Tuyến - THPT Vị Thanh</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -187,33 +187,6 @@
     let searchTimeout = null;
     let isFetching = false;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    // HÀM TRÍCH XUẤT CHUỖI GIỜ NGUYÊN BẢN TỪ GOOGLE SHEETS
-    // Giải quyết vấn đề tự động ép kiểu làm lệch giờ sang 21:xx / 22:xx
-    function formatTimeDisplay(timeStr) {
-      if (!timeStr) return "";
-      let str = String(timeStr).trim();
-
-      // 1. Trường hợp là định dạng chuẩn HH:mm:ss hoặc HH:mm (vd: 06:57:24)
-      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
-        return str;
-      }
-
-      // 2. Trường hợp trả về chuỗi Date đầy đủ (vd: "Sat Dec 30 1899 06:57:24 GMT+...")
-      // Dùng Regex trích xuất chuỗi HH:mm:ss chính xác không thông qua Múi giờ
-      let match = str.match(/(\d{2}:\d{2}:\d{2})/);
-      if (match) {
-        return match[1];
-      }
-
-      // 3. Trường hợp dạng chuỗi ISO (vd: "1899-12-30T06:57:24.000Z")
-      if (str.includes("T")) {
-        let timePart = str.split("T")[1];
-        if (timePart) return timePart.substring(0, 8);
-      }
-
-      return str;
-    }
 
     window.onload = function() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -408,12 +381,29 @@
         });
     }
 
+    // TỐI ƯU HÀM ĐỊNH DẠNG THỜI GIAN
+    function formatTimeValue(rawTime) {
+      if (!rawTime) return "";
+      let str = String(rawTime).trim();
+      
+      // Nếu là chuỗi dạng ISO (2026-09-27T07:15:00.000Z)
+      if (str.includes("T")) {
+        let parts = str.split("T");
+        if (parts[1]) {
+          str = parts[1].split(".")[0]; // Lấy phần HH:mm:ss
+        }
+      }
+      return str;
+    }
+
     function parseSheetData(items, isFromLocal = false) {
       allStudents = [];
 
       for (let i = 0; i < items.length; i++) {
         let item = items[i];
-        let statusObj = computeStatus(item.colF, item.colAD, item.colP, item.colQ);
+        
+        // CẬP NHẬT: Dùng colAD thay cho colL (Thay AD cho L)
+        let statusObj = computeStatus(item.colF, item.colAD || item.colL, item.colP, item.colQ);
 
         if (pendingApprovals[item.rowIndex]) {
           const valP = String(item.colP || "").toLowerCase().trim();
@@ -427,16 +417,15 @@
           }
         }
 
-        // XỬ LÝ CHUỖI THỜI GIAN THEO FORMAT CHUẨN TỪ COL_AC
-        let rawTime = item.colAC || item.time || "";
-        let formattedTime = formatTimeDisplay(rawTime);
+        // CẬP NHẬT: Ưu tiên lấy colAC thay cho K (Thay AC cho K), đồng thời định dạng lại thời gian chuẩn xác
+        let timeDisplay = formatTimeValue(item.colAC || item.time);
 
         allStudents.push({
           rowIndex: item.rowIndex,
           name: item.name,
           lop: item.lop,
           maHs: item.maHs,
-          time: formattedTime,
+          time: timeDisplay,
           status: statusObj.text,
           badgeClass: statusObj.badgeClass,
           selected: false
@@ -576,7 +565,7 @@
           `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
           `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>` +
-          `<td class="p-2.5 text-slate-500 font-mono text-xs font-semibold">${s.time}</td>` +
+          `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.time}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 rounded-md text-[11px] font-bold border inline-block ${s.badgeClass}">${s.status}</span></td>` +
         `</tr>`;
       }
@@ -752,46 +741,16 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
+          alert("✅ " + res.message);
           currentUser.password = newPassword;
           sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
-          alert("✅ " + res.message);
         } else {
           alert("❌ " + res.message);
         }
       })
-      .catch(err => alert("Lỗi khi kết nối tới máy chủ!"));
-    }
-
-    function openAdminResetModal() {
-      if (!currentUser || currentUser.role !== "admin") return;
-
-      const targetClass = prompt("RESET MẬT KHẨU TÀI KHOẢN\n\n- Nhập TÊN LỚP cụ thể (Ví dụ: 10A1) để reset lớp đó về '123456'.\n- Hoặc để TRỐNG để reset TẤT CẢ các lớp về '123456':");
-      
-      if (targetClass === null) return;
-
-      if (!confirm(targetClass ? `Xác nhận reset mật khẩu Lớp ${targetClass} về '123456'?` : "Xác nhận reset mật khẩu TẤT CẢ các lớp về '123456'?")) {
-        return;
-      }
-
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "resetGvcnPasswordByAdmin",
-          adminPassword: currentUser.password,
-          targetClass: targetClass.trim()
-        }),
-        redirect: "follow"
-      })
-      .then(res => res.json())
-      .then(res => {
-        if (res.success) {
-          alert("✅ " + res.message);
-        } else {
-          alert("❌ " + res.message);
-        }
-      })
-      .catch(err => alert("Lỗi khi kết nối tới máy chủ!"));
+      .catch(err => {
+        alert("Lỗi kết nối khi đổi mật khẩu!");
+      });
     }
   </script>
 </body>
