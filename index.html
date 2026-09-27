@@ -729,7 +729,7 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          currentUser.password = newPassword.trim();
+          currentUser.password = newPassword;
           sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
           alert("✅ " + res.message);
         } else {
@@ -737,31 +737,26 @@
         }
       })
       .catch(err => {
-        alert("Lỗi kết nối khi đổi mật khẩu!");
+        alert("Lỗi kết nối máy chủ khi đổi mật khẩu!");
       });
     }
 
     function openAdminResetModal() {
       if (!currentUser || currentUser.role !== "admin") return;
 
-      const targetClass = prompt(
-        "ADMIN RESET MẬT KHẨU\n" +
-        "Nhập Tên Lớp cần Reset mật khẩu về mặc định:\n" +
-        "(Để trống nếu muốn RESET MẬT KHẨU CỦA TẤT CẢ CÁC LỚP)"
-      );
+      const targetUser = prompt("Nhập TÊN TÀI KHOẢN cần khôi phục mật khẩu (Ví dụ: 10A1):");
+      if (!targetUser) return;
 
-      if (targetClass === null) return;
-
-      const confirmAdminPass = prompt("Xác nhận MK Admin để hoàn tất Reset:");
-      if (!confirmAdminPass) return;
+      const confirmReset = confirm(`Bạn có chắc muốn đặt lại mật khẩu mặc định cho tài khoản ${targetUser.toUpperCase()}?`);
+      if (!confirmReset) return;
 
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
-          action: "resetGvcnPasswordByAdmin",
-          targetClass: targetClass,
-          adminPassword: confirmAdminPass
+          action: "adminResetPassword",
+          adminPassword: currentUser.password,
+          targetUser: targetUser.trim().toUpperCase()
         }),
         redirect: "follow"
       })
@@ -774,7 +769,7 @@
         }
       })
       .catch(err => {
-        alert("Lỗi kết nối khi Reset mật khẩu!");
+        alert("Lỗi kết nối khi reset mật khẩu!");
       });
     }
   </script>
