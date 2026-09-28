@@ -178,10 +178,8 @@
   </div>
 
   <script>
+    // ⚠️ ĐỔI LINK NÀY THÀNH LINK EXEC GOOGLE APPS SCRIPT CỦA BẠN
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
-    
-    // ĐƯỜNG LINK CSV ĐÃ XUẤT BẢN LÊN WEB
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_SHEET_ID/pub?gid=0&single=true&output=csv";
 
     let allStudents = [];
     let filteredStudents = [];
@@ -196,7 +194,7 @@
 
       updateUserUI();
 
-      // Đọc ngay từ LocalStorage đệm nếu có trong 0.01 giây
+      // Đọc từ LocalStorage nếu có
       const localData = localStorage.getItem("local_attendance_data");
       if (localData) {
         try {
@@ -210,7 +208,7 @@
       if (!isMobile) {
         setInterval(() => {
           fetchDataFromSheet(false, true);
-        }, 12000);
+        }, 15000);
       }
     };
 
@@ -340,7 +338,7 @@
       }
     }
 
-    // LẤY DỮ LIỆU TỨC THÌ TỪ API SCRIPT BẰNG CHẾ ĐỘ NHANH
+    // LẤY DỮ LIỆU TỪ BACKEND APPS SCRIPT
     function fetchDataFromSheet(isManual = false, isSilent = false) {
       if (isFetching) return;
       isFetching = true;
@@ -355,8 +353,9 @@
         if (btnRefresh) btnRefresh.classList.add('opacity-75', 'pointer-events-none');
       }
 
+      // Khi bấm nút Làm Mới (isManual = true) -> Ép truyền &nocache=true để lấy dữ liệu mới nhất
       const fetchUrl = isManual 
-        ? SCRIPT_URL + "?cachebust=" + new Date().getTime() 
+        ? SCRIPT_URL + "?cachebust=" + new Date().getTime() + "&nocache=true"
         : SCRIPT_URL;
 
       fetch(fetchUrl, { method: "GET", redirect: "follow" })
@@ -558,6 +557,7 @@
       tbody.innerHTML = html;
     }
 
+    // DUYỆT TRẠNG THÁI (CÓ OPTIMISTIC UI TỨC THÌ)
     function openApproveModal() {
       if (!currentUser) {
         alert("Bạn chưa đăng nhập! Vui lòng đăng nhập.");
@@ -625,7 +625,7 @@
 
       filterData();
 
-      // Gửi request ngầm về Apps Script để ghi đè vào Google Sheet
+      // Gửi request ghi vào Apps Script
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -646,6 +646,9 @@
           allStudents = backupData;
           pendingApprovals = backupPending;
           filterData();
+        } else {
+          // Khi server báo thành công -> Ép làm mới lại giao diện bỏ qua Cache
+          fetchDataFromSheet(true, true);
         }
       })
       .catch(err => {
@@ -700,76 +703,11 @@
     }
 
     function openChangePassModal() {
-      if (!currentUser) return;
-
-      const oldPassword = prompt(`Đang đổi mật khẩu cho tài khoản ${currentUser.username}.\nNhập mật khẩu HIỆN TẠI:`);
-      if (!oldPassword) return;
-
-      const newPassword = prompt(`Nhập mật khẩu MỚI (từ 4 ký tự trở lên):`);
-      if (!newPassword) return;
-
-      const confirmPassword = prompt("Nhập lại mật khẩu MỚI để xác nhận:");
-      if (newPassword !== confirmPassword) {
-        alert("Mật khẩu mới xác nhận không khớp!");
-        return;
-      }
-
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "changeGvcnPassword",
-          className: currentUser.username,
-          oldPassword: oldPassword,
-          newPassword: newPassword
-        }),
-        redirect: "follow"
-      })
-      .then(res => res.json())
-      .then(res => {
-        if (res.success) {
-          currentUser.password = newPassword;
-          sessionStorage.setItem("attendance_user", JSON.stringify(currentUser));
-          alert("✅ " + res.message);
-        } else {
-          alert("❌ " + res.message);
-        }
-      })
-      .catch(err => {
-        alert("Lỗi kết nối máy chủ khi đổi mật khẩu!");
-      });
+      alert("Mật khẩu mặc định của tất cả các tài khoản Lớp và ADMIN là 123456!");
     }
 
     function openAdminResetModal() {
-      if (!currentUser || currentUser.role !== "admin") return;
-
-      const targetUser = prompt("Nhập TÊN TÀI KHOẢN cần khôi phục mật khẩu (Ví dụ: 10A1):");
-      if (!targetUser) return;
-
-      const confirmReset = confirm(`Bạn có chắc muốn đặt lại mật khẩu mặc định cho tài khoản ${targetUser.toUpperCase()}?`);
-      if (!confirmReset) return;
-
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "adminResetPassword",
-          adminPassword: currentUser.password,
-          targetUser: targetUser.trim().toUpperCase()
-        }),
-        redirect: "follow"
-      })
-      .then(res => res.json())
-      .then(res => {
-        if (res.success) {
-          alert("✅ " + res.message);
-        } else {
-          alert("❌ " + res.message);
-        }
-      })
-      .catch(err => {
-        alert("Lỗi kết nối khi reset mật khẩu!");
-      });
+      alert("Mật khẩu mặc định hệ thống hiện tại luôn là 123456!");
     }
   </script>
 </body>
