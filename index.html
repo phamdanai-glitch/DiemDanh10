@@ -10,6 +10,88 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
     .table-container { -webkit-overflow-scrolling: touch; }
+
+    /* CSS cho Thanh Phân Trang */
+    .pagination-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .page-info {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 500;
+    }
+    .pagination-buttons {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      gap: 4px;
+    }
+    .pagination-buttons button {
+      border: 1px solid #e2e8f0;
+      background-color: #fff;
+      color: #334155;
+      padding: 5px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .pagination-buttons button:hover:not(:disabled) {
+      background-color: #f1f5f9;
+      color: #4f46e5;
+      border-color: #c7d2fe;
+    }
+    .pagination-buttons button.active {
+      background-color: #4f46e5;
+      color: #ffffff;
+      border-color: #4f46e5;
+      font-weight: bold;
+    }
+    .pagination-buttons button:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    /* CSS Chân Trang Footer */
+    .site-footer {
+      width: 100%;
+      padding: 25px 15px;
+      margin-top: 30px;
+      background-color: #ffffff;
+      border-top: 1px solid #e0e0e0;
+      text-align: center;
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      color: #333333;
+    }
+    .footer-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #222222;
+      margin-bottom: 8px;
+    }
+    .footer-info {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #444444;
+      margin-bottom: 12px;
+    }
+    .footer-copyright {
+      font-size: 14px;
+      font-weight: 600;
+      color: #222222;
+      margin: 0;
+    }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 p-2 sm:p-5">
@@ -150,6 +232,12 @@
       </table>
     </div>
 
+    <!-- KHUNG PHÂN TRANG -->
+    <div class="pagination-container">
+      <div class="page-info" id="pageInfo">Hiển thị 0 - 0 / 0 học sinh</div>
+      <ul class="pagination-buttons" id="paginationControls"></ul>
+    </div>
+
   </div>
 
   <!-- MODAL ĐĂNG NHẬP -->
@@ -240,6 +328,18 @@
     </div>
   </div>
 
+  <!-- CHÂN TRANG (FOOTER) -->
+  <footer class="site-footer">
+    <h2 class="footer-title">WEB ĐIỂM DANH TRƯỜNG THPT VỊ THANH</h2>
+    <p class="footer-info">
+      Địa chỉ: 559 Trần Hưng Đạo, Phường Vị Thanh, Thành phố Cần Thơ<br>
+      Điện thoại: 0965163188 - Email: ptdai.thptvithanh@cantho.edu.vn
+    </p>
+    <p class="footer-copyright">
+      Thiết kế &amp; Phát triển bởi <strong>Nhóm quản trị của nhà trường</strong>
+    </p>
+  </footer>
+
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx94reum5wso6XB9SJSGQ3wOuYQ0Y1JjidcQKzSXc3v_x2duhHEDgTwe_G6oXqfW6o/exec";
 
@@ -250,6 +350,10 @@
     let searchTimeout = null;
     let isFetching = false;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // CẤU HÌNH PHÂN TRANG
+    let currentPage = 1;
+    const rowsPerPage = 50;
 
     window.onload = function() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -694,6 +798,7 @@
         return matchSearch && matchClass && matchStatus;
       });
 
+      currentPage = 1; // Về trang 1 khi lọc
       updateFilteredStats();
       renderTable();
     }
@@ -706,7 +811,11 @@
     }
 
     function onRowSelectChange(idx, element) {
-      filteredStudents[idx].selected = element.checked;
+      // Vị trí thực tế trên danh sách lọc
+      const realIndex = (currentPage - 1) * rowsPerPage + idx;
+      if (filteredStudents[realIndex]) {
+        filteredStudents[realIndex].selected = element.checked;
+      }
       const tr = element.closest('tr');
       if (element.checked) {
         tr.classList.add('bg-indigo-50/30');
@@ -715,22 +824,34 @@
       }
     }
 
+    // HÀM HIỂN THỊ BẢNG PHÂN TRANG (50 HỌC SINH / TRANG)
     function renderTable() {
       const tbody = document.getElementById("attendance-tbody");
+      const pageInfo = document.getElementById("pageInfo");
+      const paginationControls = document.getElementById("paginationControls");
       const total = filteredStudents.length;
 
       if (total === 0) {
         const colSpan = currentUser ? 7 : 6;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400">Không có dữ liệu phù hợp.</td></tr>`;
+        pageInfo.innerText = "Hiển thị 0 - 0 / 0 học sinh";
+        paginationControls.innerHTML = "";
         return;
       }
 
+      // Cắt danh sách theo trang hiện tại
+      const startIndex = (currentPage - 1) * rowsPerPage;
+      const endIndex = Math.min(startIndex + rowsPerPage, total);
+      const pageData = filteredStudents.slice(startIndex, endIndex);
+
       let html = '';
-      for (let idx = 0; idx < total; idx++) {
-        let s = filteredStudents[idx];
+      for (let idx = 0; idx < pageData.length; idx++) {
+        let s = pageData[idx];
+        let stt = startIndex + idx + 1;
+
         html += `<tr class="hover:bg-slate-50/80 ${s.selected ? 'bg-indigo-50/30' : ''}">` +
           (currentUser ? `<td class="p-2.5 text-center col-checkbox"><input type="checkbox" ${s.selected ? 'checked' : ''} onchange="onRowSelectChange(${idx}, this)" class="rounded text-indigo-600 cursor-pointer"></td>` : '') +
-          `<td class="p-2.5 text-center text-slate-400 font-medium">${idx + 1}</td>` +
+          `<td class="p-2.5 text-center text-slate-400 font-medium">${stt}</td>` +
           `<td class="p-2.5 font-semibold text-slate-800">${s.name}</td>` +
           `<td class="p-2.5"><span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[11px] font-bold">${s.lop}</span></td>` +
           `<td class="p-2.5 text-slate-500 font-mono text-xs">${s.maHs}</td>` +
@@ -740,6 +861,47 @@
       }
 
       tbody.innerHTML = html;
+      pageInfo.innerText = `Hiển thị ${startIndex + 1} - ${endIndex} / tổng số ${total} học sinh`;
+
+      renderPaginationControls(total);
+    }
+
+    // HÀM VẼ CÁC NÚT BẤM CHUYỂN TRANG
+    function renderPaginationControls(totalItems) {
+      const totalPages = Math.ceil(totalItems / rowsPerPage);
+      const controls = document.getElementById("paginationControls");
+      controls.innerHTML = "";
+
+      if (totalPages <= 1) return;
+
+      // Nút Trước
+      const prevBtn = document.createElement("button");
+      prevBtn.innerHTML = "&laquo; Trước";
+      prevBtn.disabled = currentPage === 1;
+      prevBtn.onclick = () => { currentPage--; renderTable(); };
+      controls.appendChild(prevBtn);
+
+      // Tính dải trang
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, startPage + 4);
+      if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+      }
+
+      for (let p = startPage; p <= endPage; p++) {
+        const pageBtn = document.createElement("button");
+        pageBtn.innerText = p;
+        if (p === currentPage) pageBtn.classList.add("active");
+        pageBtn.onclick = () => { currentPage = p; renderTable(); };
+        controls.appendChild(pageBtn);
+      }
+
+      // Nút Sau
+      const nextBtn = document.createElement("button");
+      nextBtn.innerHTML = "Sau &raquo;";
+      nextBtn.disabled = currentPage === totalPages;
+      nextBtn.onclick = () => { currentPage++; renderTable(); };
+      controls.appendChild(nextBtn);
     }
 
     function openApproveModal() {
@@ -882,53 +1044,6 @@
         alert("Lỗi kết nối khi rút lịch sử!");
       });
     }
-     <!-- DÁN ĐOẠN MÃ FOOTER VÀO ĐÂY (NGAY TRÊN THẺ </script>)
-  <footer class="site-footer">
-    <h2 class="footer-title">WEB ĐIỂM DANH TRƯỜNG THPT VỊ THANH</h2>
-    
-    <p class="footer-info">
-      Địa chỉ: 559 Trần Hưng Đạo, Phường Vị Thanh, Thành phố Cần Thơ<br>
-      Điện thoại: 0965163188 - Email: ptdai.thptvithanh@cantho.edu.vn
-    </p>
-    
-    <p class="footer-copyright">
-      Thiết kế &amp; Phát triển bởi <strong>Nhóm quản trị của nhà trường</strong>
-    </p>
-  </footer>
-
-  <style>
-    .site-footer {
-      width: 100%;
-      padding: 25px 15px;
-      margin-top: 30px;
-      background-color: #ffffff;
-      border-top: 1px solid #e0e0e0;
-      text-align: center;
-      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-      color: #333333;
-    }
-
-    .footer-title {
-      font-size: 24px;
-      font-weight: 700;
-      color: #222222;
-      margin-bottom: 12px;
-    }
-
-    .footer-info {
-      font-size: 15px;
-      line-height: 1.6;
-      color: #444444;
-      margin-bottom: 16px;
-    }
-
-    .footer-copyright {
-      font-size: 15px;
-      font-weight: 600;
-      color: #222222;
-      margin: 0;
-    }
-  </style>
   </script>
 </body>
 </html>
